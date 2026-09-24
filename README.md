@@ -1,20 +1,29 @@
 # STM32F405 有感 FOC 工程
 
-固件位于 [`STM32F405-FOC/`](STM32F405-FOC/)。本仓库已以 `F405_FOC_Fork` 的实现替换原有控制程序，参考版本为 `2ac684d`。控制对象是使用 **MT6835 磁编码器**、Motor 1 三相桥和两路相电流采样的 STM32F405 板卡；原有 M0/TLE5012B 程序可从 Git 历史中查看。
+本仓库保留两套独立固件。**默认方案是 Motor 0 + TLE5012B**，源码位于 [`STM32F405-FOC/`](STM32F405-FOC/)；原来的 M0 工程已恢复。参考项目的 **Motor 1 + MT6835** 电流环、速度环和位置环保留在 [`variants/m1-mt6835/`](STM32F405-FOC/variants/m1-mt6835/)，需要时单独构建。两套固件使用不同的引脚、编码器协议和电机参数，编译结果不能混用。
 
-**从这里开始阅读：**[《从零读懂这个 FOC 工程》](STM32F405-FOC/docs/FOC-从零读懂这个工程.md)。文档解释控制原理、每个项目文件的作用、实时调用链、命令、保护、构建和验证。
+M0 保留其原有控制实现与上板状态；M1 的速度、位置和 USB 日志功能没有自动移植到 M0。
 
-## 构建与验证
+| 方案 | 构建目录 | 固件文件 | 说明 |
+|---|---|---|---|
+| **M0 / TLE5012B（默认）** | `STM32F405-FOC/` | `build/Debug/STM32F405-FOC.elf` | 本工作区的 CMake 和 VS Code 默认打开此方案；当前 M0 上板状态见[调试记录](STM32F405-FOC/docs/m0-torque-bring-up.md)。 |
+| M1 / MT6835（可选） | `STM32F405-FOC/variants/m1-mt6835/` | `build/Debug/405_FOC.elf` | 参考项目 `F405_FOC_Fork` 的实现；入口见[方案说明](STM32F405-FOC/variants/m1-mt6835/README.md)。 |
 
-固件目录中的 `CMakePresets.json` 提供 Debug 和 Release。将 CMake、Ninja、`arm-none-eabi` 工具链加入 `PATH`，在该目录执行：
+## 构建默认 M0 方案
+
+安装 CMake、Ninja 与 `arm-none-eabi` 工具链，并确保它们在 `PATH` 中，然后在默认固件目录执行：
 
 ```sh
-cmake --preset Release
-cmake --build --preset Release
+cd STM32F405-FOC
+cmake --preset Debug
+cmake --build --preset Debug
 ```
 
-输出为 `build/Release/405_FOC.elf`、`.hex` 和 `.bin`。主机测试命令见 [`tests/README.md`](STM32F405-FOC/tests/README.md)。本机设置、构建产物和 Python 缓存不纳入 Git。
+当前电脑还保留本机专用的 `Debug-local` 预设和 VS Code 任务，它们现在也指向 **M0**。生成的 ELF、HEX、BIN 在 `STM32F405-FOC/build/Debug/`。切换到 M1 时请在其子工程目录配置、构建，输出留在该子工程自己的 `build/`；不要用默认烧录任务发送 M1 固件。
 
-## 硬件前提
+## 阅读资料
 
-当前代码按参考工程的具体板卡和电机编写：TIM8 驱动 M1，SPI3/PA0 连接 MT6835，B/C 相电流接 PC3/PC2，母线采样接 PA6，电机按 **7 极对**计算。`0.52°` 编码器误差补偿、电流增益、保护阈值和 Flash 校准记录也来自参考台架。**编译通过不代表本机板卡已完成接线核对或上板验收**；首次烧录前请先对照[硬件拓扑](STM32F405-FOC/硬件PCB拓扑.md)和教学文档的硬件章节。
+- 默认 M0 的[架构说明](STM32F405-FOC/docs/architecture.md)、[硬件映射](STM32F405-FOC/docs/hardware-map.md)和[上板记录](STM32F405-FOC/docs/m0-torque-bring-up.md)。
+- 可选 M1 的[FOC 初学者教程](STM32F405-FOC/variants/m1-mt6835/docs/FOC-从零读懂这个工程.md)与[逐文件导览](STM32F405-FOC/variants/m1-mt6835/docs/文件导览.md)。
+
+两套方案都已在电脑上编译验证；上板前应按所选方案核对 Motor 端口、编码器接线、电流采样和保护参数。
