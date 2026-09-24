@@ -32,6 +32,8 @@
 #include "foc.h"
 #include "app.h"
 #include "bsp_usb.h"
+#include "bsp_motor.h"
+#include "foc_profile.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,10 +96,13 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  bsp_motor_safe_pins();
   MX_DMA_Init();
+#ifndef FOC_BOARD_M0
   MX_TIM8_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
+#endif
   MX_SPI3_Init();
   MX_USART2_UART_Init();
   MX_CAN1_Init();

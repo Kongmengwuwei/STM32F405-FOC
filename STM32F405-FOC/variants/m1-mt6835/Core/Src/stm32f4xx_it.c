@@ -25,7 +25,8 @@
 #include "bsp_motor.h"
 #include "app.h"
 #include "bsp_adc.h"
-#include "mt6835_port_stm32.h"
+#include "bsp_encoder.h"
+#include "foc_profile.h"
 #include "bsp_uart.h"
 /* USER CODE END Includes */
 
@@ -233,8 +234,21 @@ void DMA1_Stream6_IRQHandler(void)
 void ADC_IRQHandler(void)
 {
   /* USER CODE BEGIN ADC_IRQn 0 */
+#ifdef FOC_BOARD_M0
+  uint32_t flags = ADC1->SR;
+  if (flags & ADC_SR_OVR) { app_fault(FOC_ADC); (void)bsp_adc_read(); return; }
+  if (flags & ADC_SR_JEOC) {
+    ADC1->SR &= ~ADC_SR_JEOC;
+    ADC2->CR2 |= ADC_CR2_SWSTART; /* Bus conversion overlaps encoder SPI. */
+    if (!bsp_motor_sample_begin()) app_fault(FOC_TIMING);
+    bsp_encoder_begin();
+    if (!bsp_adc_read()) app_fault(FOC_ADC);
+    app_sample();
+  }
+#else
   app_fault(FOC_ADC);
   (void)bsp_adc_read();
+#endif
   return;
   /* USER CODE END ADC_IRQn 0 */
   HAL_ADC_IRQHandler(&hadc1);
@@ -303,6 +317,7 @@ void OTG_FS_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+#ifndef FOC_BOARD_M0
 void DMA2_Stream0_IRQHandler(void)
 {
     /* First pair ready: overlap encoder SPI with the second (bus) ADC rank. */
@@ -312,12 +327,12 @@ void DMA2_Stream0_IRQHandler(void)
         (void)bsp_adc_read(); app_fault(FOC_ADC); return;
     }
     if (!bsp_motor_sample_begin()) app_fault(FOC_TIMING);
-    mt6835_start();
+    bsp_encoder_begin();
 }
 
 void DMA1_Stream0_IRQHandler(void)
 {
-    mt6835_finish();
+    bsp_encoder_finish();
     if (!bsp_adc_read()) app_fault(FOC_ADC); /* Both ranks must now be complete. */
     app_sample();
 }
@@ -326,5 +341,12 @@ void TIM8_UP_TIM13_IRQHandler(void)
 {
     if (!bsp_motor_update()) app_fault(FOC_TIMING);
 }
+#endif
+#ifdef FOC_BOARD_M0
+void TIM1_UP_TIM10_IRQHandler(void)
+{
+    if (!bsp_motor_update()) app_fault(FOC_TIMING);
+}
+#endif
 
 /* USER CODE END 1 */

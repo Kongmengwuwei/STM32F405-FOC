@@ -1,5 +1,7 @@
 # USB CDC 与 JustFloat
 
+> 本页的 20 kHz 数据率和原实机记录适用于 M1。共用固件的默认 M0 使用相同 CDC/JustFloat 协议，但采样为 10 kHz、约 520 kB/s；校验脚本须加 `--sample-hz 10000`。M0 的 USB 和电机时序仍待上板验证。
+
 本文覆盖原生 USB CDC 回传：帧布局、VOFA+ 使用、USB 命令、队列与完整性边界，以及 2026-09-22 的实机
 短测、900 秒长测和 CPU 插桩结果。串口（USART2）见 [UART_TEST.md](UART_TEST.md)，两者共用命令处理但组行独立。
 

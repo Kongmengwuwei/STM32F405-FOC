@@ -1,5 +1,7 @@
 # 固件结构与使用
 
+> 以下参数和实测结果描述 **M1/MT6835** 配置。`App/Control`、`App/FOC`、USB/UART/CAN 已供默认 M0 配置共用；M0 使用 `App/Config/foc_profile.h` 的保守参数、TIM1/ADC1 注入和 TLE5012B 驱动，详见 [统一固件指南](../../../docs/unified-firmware.md)。本页的 M1 实测不能当作 M0 验收结果。
+
 当前功能：M1 20 kHz 有感 FOC，Id_ref=0，Iq 命令范围 ±5 A、1 A/s 参考斜坡；MT6835 角度换相，实测母线补偿，居中 SVPWM。当前 PI 标称带宽 600 Hz。在电流环之上新增 **1 kHz 速度环与位置环（基础 P+I）**，输出仍是 Iq 参考；USB 20 kHz 改为 **`send 0..3` 四组分组日志**。每次启动先关断校零；已有 Flash 电角度记录时保持待机。首次/显式 cal 的对齐电压仍 0.6 V。本次实现与实测详见本地 [电流内环报告](../build/foc_analysis/REPORT.md)，旧 [tests/FOC_TEST.md](../tests/FOC_TEST.md) 属于历史电压模式。
 
 ## 模块

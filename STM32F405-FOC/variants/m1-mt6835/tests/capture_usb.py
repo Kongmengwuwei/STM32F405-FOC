@@ -1,4 +1,4 @@
-"""Validate one 20 kHz logging group of the 405_FOC USB stream.
+"""Validate one M0 10 kHz or M1 20 kHz USB logging group.
 
 Frame: 12 little-endian float32 + the JustFloat terminator = 52 bytes.
 Channel 0 packs t_u24 with the status word, channel 1 packs the sample counter
@@ -19,7 +19,7 @@ T_24_MASK = 0xFFFFFF
 GROUP_NAMES = {0: "raw", 1: "current", 2: "voltage", 3: "control"}
 
 
-def capture(port, seconds, group):
+def capture(port, seconds, group, sample_hz=20000):
     header = struct.Struct("<II")
     pending = bytearray()
     previous = None
@@ -70,7 +70,8 @@ def capture(port, seconds, group):
                 seq = index & T_24_MASK
                 if previous is not None:
                     previous_time, previous_seq = previous
-                    if not 45 <= ((time_us - previous_time) & T_24_MASK) <= 55:
+                    period_us = 1000000 // sample_hz
+                    if not period_us - 5 <= ((time_us - previous_time) & T_24_MASK) <= period_us + 5:
                         raise RuntimeError(f"Timing excursion: {previous_time} -> {time_us} us")
                     if ((seq - previous_seq) & T_24_MASK) != 1:
                         raise RuntimeError(f"Sample counter jumped: {previous_seq} -> {seq}")
@@ -82,7 +83,7 @@ def capture(port, seconds, group):
                 started = now
         elapsed = time.monotonic() - started
         rate = frames / elapsed
-        if not 19800 <= rate <= 20200:
+        if not sample_hz * 0.99 <= rate <= sample_hz * 1.01:
             raise RuntimeError(f"Continuous frames but unexpected rate: {rate:.1f} samples/s")
         print(f"PASS: group {group} ({GROUP_NAMES[group]}), {frames} consecutive frames, "
               f"{elapsed:.2f} s, {rate:.1f} samples/s, {frames * FRAME_BYTES / elapsed:.0f} bytes/s")
@@ -98,7 +99,9 @@ if __name__ == "__main__":
     parser.add_argument("--seconds", type=float, default=60)
     parser.add_argument("--group", type=int, default=0, choices=sorted(GROUP_NAMES),
                         help="logging group to validate with `send X`")
+    parser.add_argument("--sample-hz", type=int, default=20000, choices=(10000, 20000),
+                        help="10000 for M0/TLE5012B; 20000 for M1/MT6835")
     args = parser.parse_args()
     if args.seconds < 10:
         parser.error("Use at least 10 seconds for rate validation")
-    capture(args.port, args.seconds, args.group)
+    capture(args.port, args.seconds, args.group, args.sample_hz)

@@ -3,22 +3,15 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-
-#define FOC_BUS_MIN 8.0f
-#define FOC_BUS_MAX 36.0f
-#define FOC_SPEED_MAX 9400.0f /* 5010-KV360 rated maximum, RPM. */
-#define FOC_CURRENT_MAX 5.0f  /* Commandable Iq, A; also the outer-loop limit. */
+#include "foc_profile.h"
 
 /* Nominal timing, pending scope validation of ADC/driver/analog delays. */
-#ifndef FOC_TRIGGER_TICKS
-#define FOC_TRIGGER_TICKS 4100u
-#endif
 #define FOC_APERTURE_TICKS 224u
 #define FOC_TRIGGER_ALLOWANCE 24u
 #define FOC_SETTLE_TICKS 588u /* 500 ns dead time + 3 us analog settling. */
 #define FOC_HOLD_TICKS (FOC_TRIGGER_TICKS + FOC_APERTURE_TICKS + FOC_TRIGGER_ALLOWANCE)
-#define FOC_EDGE_LIMIT ((FOC_TRIGGER_TICKS < 8400u - FOC_HOLD_TICKS ? \
-                        FOC_TRIGGER_TICKS : 8400u - FOC_HOLD_TICKS) - FOC_SETTLE_TICKS - 2u)
+#define FOC_EDGE_LIMIT ((FOC_TRIGGER_TICKS < FOC_PWM_PERIOD_TICKS - FOC_HOLD_TICKS ? \
+                        FOC_TRIGGER_TICKS : FOC_PWM_PERIOD_TICKS - FOC_HOLD_TICKS) - FOC_SETTLE_TICKS - 2u)
 
 enum { FOC_IDLE, FOC_PRECHARGE, FOC_CALIBRATE, FOC_SAVE, FOC_RUN, FOC_FAULT, FOC_OFFSET };
 enum { FOC_OK, FOC_SENSOR, FOC_ADC, FOC_TIMING, FOC_WINDOW, FOC_ALIGNMENT,

@@ -15,33 +15,64 @@ static uint32_t sample_start, last_sample;
 volatile float motor_duty[3];
 volatile uint32_t motor_cycles, motor_period_min = UINT32_MAX, motor_period_max, motor_work_max;
 volatile uint32_t motor_sample_us;
-volatile uint32_t motor_write_min = 4200u, motor_timing_fault;
+volatile uint32_t motor_write_min = FOC_PWM_ARR, motor_timing_fault;
+
+void bsp_motor_safe_pins(void)
+{
+#ifdef FOC_BOARD_M0
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    GPIOA->BSRR = (GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10) << 16;
+    GPIOB->BSRR = (GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15) << 16;
+    GPIOA->OTYPER &= ~(GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10);
+    GPIOB->OTYPER &= ~(GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15);
+    GPIOA->OSPEEDR |= 63u << 16;
+    GPIOB->OSPEEDR |= 63u << 26;
+    GPIOA->PUPDR &= ~(63u << 16);
+    GPIOB->PUPDR &= ~(63u << 26);
+    GPIOA->AFR[1] = (GPIOA->AFR[1] & ~0xfffu) | 0x111u;
+    GPIOB->AFR[1] = (GPIOB->AFR[1] & ~(0xfffu << 20)) | (0x111u << 20);
+    GPIOA->MODER = (GPIOA->MODER & ~(63u << 16)) | (21u << 16);
+    GPIOB->MODER = (GPIOB->MODER & ~(63u << 26)) | (21u << 26);
+#endif
+}
 
 void bsp_motor_arm(void) { inhibited = false; }
 
 void bsp_motor_off(void)
 {
     inhibited = true;
-    TIM8->CCER &= ~GATE_CHANNELS; /* CH4 remains running for acquisition. */
+    FOC_PWM_TIMER->CCER &= ~GATE_CHANNELS; /* CH4 remains for acquisition. */
+#ifdef FOC_BOARD_M0
+    GPIOA->BSRR = (GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10) << 16;
+    GPIOB->BSRR = (GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15) << 16;
+    GPIOA->MODER = (GPIOA->MODER & ~(63u << 16)) | (21u << 16);
+    GPIOB->MODER = (GPIOB->MODER & ~(63u << 26)) | (21u << 26);
+#else
     GPIOA->BSRR = GPIO_PIN_7 << 16;
     GPIOB->BSRR = (GPIO_PIN_0 | GPIO_PIN_1) << 16;
     GPIOC->BSRR = (GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8) << 16;
     GPIOA->MODER = (GPIOA->MODER & ~(3u << 14)) | (1u << 14);
     GPIOB->MODER = (GPIOB->MODER & ~15u) | 5u;
     GPIOC->MODER = (GPIOC->MODER & ~(63u << 12)) | (21u << 12);
+#endif
     motor_mode = pending_mode = MOTOR_OFF;
     for (unsigned i = 0; i < 3; ++i) motor_duty[i] = 0.0f;
 }
 
 void bsp_motor_init(void)
 {
+#ifdef FOC_BOARD_M0
+    __HAL_RCC_TIM1_CLK_ENABLE();
+    bsp_motor_safe_pins();
+#endif
     bsp_motor_off();
     ready = false;
     inhibited = false; /* Initial sampling starts with gates disconnected. */
     last_sample = 0u;
     motor_period_min = UINT32_MAX;
     motor_period_max = motor_work_max = motor_cycles = 0u;
-    motor_write_min = 4200u; motor_timing_fault = 0u;
+    motor_write_min = FOC_PWM_ARR; motor_timing_fault = 0u;
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
     /* APB1 timer clock is 84 MHz. TIM5 is dedicated to acquisition timestamps. */
@@ -53,35 +84,48 @@ void bsp_motor_init(void)
     TIM5->CNT = 0u;
     DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_TIM5_STOP;
     TIM5->CR1 = TIM_CR1_CEN;
+#ifdef FOC_BOARD_M0
+    DBGMCU->APB2FZ |= DBGMCU_APB2_FZ_DBG_TIM1_STOP;
+#endif
     /* UG loads RCR=1 at CNT=0: overflow counts down, underflow latches CCRs.
        Force CH4 low before toggle mode so rising trigger is on the up-count. */
-    TIM8->CR1 = TIM_CR1_CMS_0 | TIM_CR1_ARPE;
-    TIM8->PSC = 0u; TIM8->ARR = 4200u; TIM8->RCR = 1u;
-    TIM8->CCMR1 = TIM_CCMR1_OC1PE | TIM_CCMR1_OC2PE | (6u << 4) | (6u << 12);
-    TIM8->CCMR2 = TIM_CCMR2_OC3PE | (6u << 4) | (4u << 12);
-    TIM8->CCR1 = TIM8->CCR2 = TIM8->CCR3 = 2100u;
-    TIM8->CCR4 = FOC_TRIGGER_TICKS;
-    TIM8->BDTR = 84u; /* 84 / 168 MHz = 500 ns. No automatic restart. */
-    TIM8->CNT = 0u; TIM8->EGR = TIM_EGR_UG;
-    TIM8->CCMR2 = TIM_CCMR2_OC3PE | (6u << 4) | (3u << 12);
-    TIM8->SR = 0u;
-    TIM8->DIER = TIM_DIER_UIE;
+    FOC_PWM_TIMER->CR1 = TIM_CR1_CMS_0 | TIM_CR1_ARPE;
+    FOC_PWM_TIMER->PSC = 0u; FOC_PWM_TIMER->ARR = FOC_PWM_ARR; FOC_PWM_TIMER->RCR = 1u;
+    FOC_PWM_TIMER->CCMR1 = TIM_CCMR1_OC1PE | TIM_CCMR1_OC2PE | (6u << 4) | (6u << 12);
+    FOC_PWM_TIMER->CCMR2 = TIM_CCMR2_OC3PE | (6u << 4) | (4u << 12);
+    FOC_PWM_TIMER->CCR1 = FOC_PWM_TIMER->CCR2 = FOC_PWM_TIMER->CCR3 = FOC_PWM_ARR / 2u;
+    FOC_PWM_TIMER->CCR4 = FOC_TRIGGER_TICKS;
+#ifdef FOC_BOARD_M0
+    FOC_PWM_TIMER->BDTR = 127u; /* Existing M0 0.76 us dead time. */
+#else
+    FOC_PWM_TIMER->BDTR = 84u;
+#endif
+    FOC_PWM_TIMER->CNT = 0u; FOC_PWM_TIMER->EGR = TIM_EGR_UG;
+    FOC_PWM_TIMER->CCMR2 = TIM_CCMR2_OC3PE | (6u << 4) | (3u << 12);
+    FOC_PWM_TIMER->SR = 0u;
+    FOC_PWM_TIMER->DIER = TIM_DIER_UIE;
+#ifdef FOC_BOARD_M0
+    HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0u, 0u);
+    HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM10_IRQn);
+    HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+#else
     HAL_NVIC_SetPriority(TIM8_UP_TIM13_IRQn, 0u, 0u);
     HAL_NVIC_ClearPendingIRQ(TIM8_UP_TIM13_IRQn);
     HAL_NVIC_EnableIRQ(TIM8_UP_TIM13_IRQn);
+#endif
 }
 
 bool bsp_motor_write(const float duty[3], unsigned mode)
 {
     /* All three preloads must be written before the next valley, never across it. */
-    uint32_t counter = TIM8->CNT;
+    uint32_t counter = FOC_PWM_TIMER->CNT;
     if (counter < motor_write_min) motor_write_min = counter;
-    if (inhibited || !(TIM8->CR1 & TIM_CR1_DIR) || counter < 600u) {
+    if (inhibited || !(FOC_PWM_TIMER->CR1 & TIM_CR1_DIR) || counter < 600u) {
         motor_timing_fault = 1u | (counter << 8); return false;
     }
-    TIM8->CCR1 = mode == MOTOR_PWM ? (uint32_t)(duty[0] * 4200.0f + 0.5f) : 0u;
-    TIM8->CCR2 = mode == MOTOR_PWM ? (uint32_t)(duty[1] * 4200.0f + 0.5f) : 0u;
-    TIM8->CCR3 = mode == MOTOR_PWM ? (uint32_t)(duty[2] * 4200.0f + 0.5f) : 0u;
+    FOC_PWM_TIMER->CCR1 = mode == MOTOR_PWM ? (uint32_t)(duty[0] * (float)FOC_PWM_ARR + 0.5f) : 0u;
+    FOC_PWM_TIMER->CCR2 = mode == MOTOR_PWM ? (uint32_t)(duty[1] * (float)FOC_PWM_ARR + 0.5f) : 0u;
+    FOC_PWM_TIMER->CCR3 = mode == MOTOR_PWM ? (uint32_t)(duty[2] * (float)FOC_PWM_ARR + 0.5f) : 0u;
     pending_mode = mode;
     ready = true;
     return !inhibited;
@@ -89,10 +133,10 @@ bool bsp_motor_write(const float duty[3], unsigned mode)
 
 bool bsp_motor_update(void)
 {
-    TIM8->SR = ~TIM_SR_UIF;
-    if ((TIM8->CR1 & TIM_CR1_DIR) || TIM8->CNT > 600u ||
+    FOC_PWM_TIMER->SR = ~TIM_SR_UIF;
+    if ((FOC_PWM_TIMER->CR1 & TIM_CR1_DIR) || FOC_PWM_TIMER->CNT > 600u ||
         (!ready && motor_mode != MOTOR_OFF)) {
-        motor_timing_fault = 2u | (TIM8->CNT << 8);
+        motor_timing_fault = 2u | (FOC_PWM_TIMER->CNT << 8);
         bsp_motor_off(); return false;
     }
     /* A priority-0 fault may interrupt the priority-1 FOC write. Never let
@@ -103,25 +147,38 @@ bool bsp_motor_update(void)
             unsigned mode = pending_mode;
             if (mode == MOTOR_OFF) bsp_motor_off();
             else if (mode == MOTOR_PRECHARGE) {
+#ifdef FOC_BOARD_M0
+                GPIOB->BSRR = GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+#else
                 GPIOA->BSRR = GPIO_PIN_7;
                 GPIOB->BSRR = GPIO_PIN_0 | GPIO_PIN_1;
+#endif
             } else {
                 /* GPIO precharge lows must fall before any high-side AF is exposed. */
+#ifdef FOC_BOARD_M0
+                GPIOB->BSRR = (GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15) << 16;
+#else
                 GPIOA->BSRR = GPIO_PIN_7 << 16;
                 GPIOB->BSRR = (GPIO_PIN_0 | GPIO_PIN_1) << 16;
+#endif
                 uint32_t deadtime = DWT->CYCCNT;
                 while (DWT->CYCCNT - deadtime < 100u) {}
-                TIM8->CCER |= GATE_CHANNELS;
+                FOC_PWM_TIMER->CCER |= GATE_CHANNELS;
+#ifdef FOC_BOARD_M0
+                GPIOA->MODER = (GPIOA->MODER & ~(63u << 16)) | (42u << 16);
+                GPIOB->MODER = (GPIOB->MODER & ~(63u << 26)) | (42u << 26);
+#else
                 GPIOA->MODER = (GPIOA->MODER & ~(3u << 14)) | (2u << 14);
                 GPIOB->MODER = (GPIOB->MODER & ~15u) | 10u;
                 GPIOC->MODER = (GPIOC->MODER & ~(63u << 12)) | (42u << 12);
+#endif
             }
             motor_mode = mode;
         }
         /* Report quantized CCR/ARR, not the unrounded floating command. */
-        motor_duty[0] = motor_mode == MOTOR_PWM ? (float)TIM8->CCR1 / 4200.0f : 0.0f;
-        motor_duty[1] = motor_mode == MOTOR_PWM ? (float)TIM8->CCR2 / 4200.0f : 0.0f;
-        motor_duty[2] = motor_mode == MOTOR_PWM ? (float)TIM8->CCR3 / 4200.0f : 0.0f;
+        motor_duty[0] = motor_mode == MOTOR_PWM ? (float)FOC_PWM_TIMER->CCR1 / (float)FOC_PWM_ARR : 0.0f;
+        motor_duty[1] = motor_mode == MOTOR_PWM ? (float)FOC_PWM_TIMER->CCR2 / (float)FOC_PWM_ARR : 0.0f;
+        motor_duty[2] = motor_mode == MOTOR_PWM ? (float)FOC_PWM_TIMER->CCR3 / (float)FOC_PWM_ARR : 0.0f;
     }
     ready = false;
     return true;
@@ -132,7 +189,8 @@ bool bsp_motor_sample_begin(void)
     motor_sample_us = TIM5->CNT & 0xffffffu;
     uint32_t now = DWT->CYCCNT;
     uint32_t period = now - last_sample;
-    bool valid = !last_sample || (period >= 8000u && period <= 8800u);
+    bool valid = !last_sample ||
+        (period >= FOC_SAMPLE_CYCLES_MIN && period <= FOC_SAMPLE_CYCLES_MAX);
     if (!valid) motor_timing_fault = 3u | (period << 8);
     if (last_sample) {
         if (period < motor_period_min) motor_period_min = period;
@@ -159,8 +217,9 @@ bool bsp_motor_load(foc_calibration_t *calibration)
 
 bool bsp_motor_save(const foc_calibration_t *calibration)
 {
-    if (motor_mode != MOTOR_OFF || (TIM8->CR1 & TIM_CR1_CEN)) return false;
-    record_t r = {.version = 1u, .poles = 7u, .cal = *calibration, .magic = 0x464f4331u};
+    if (motor_mode != MOTOR_OFF || (FOC_PWM_TIMER->CR1 & TIM_CR1_CEN)) return false;
+    record_t r = {.version = 2u, .poles = (FOC_CALIBRATION_ID << 16) | FOC_POLE_PAIRS,
+                  .cal = *calibration, .magic = 0x464f4331u};
     r.checksum = checksum(&r);
     FLASH_EraseInitTypeDef erase = {.TypeErase = FLASH_TYPEERASE_SECTORS,
         .VoltageRange = FLASH_VOLTAGE_RANGE_3, .Sector = FLASH_SECTOR_11, .NbSectors = 1u};

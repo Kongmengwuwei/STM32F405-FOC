@@ -8,9 +8,9 @@
    the outer loop can never ask for more than a manual `Iq` command could.
    Tuning order: speed Kp first until it tracks without oscillating, then speed
    Ki to remove the steady-state error, then position Kp. */
-#define SPEED_KP 0.005f         /* A/RPM. 100 RPM error -> 0.5 A. */
-#define SPEED_KI 0.01f          /* A/(RPM*s). */
-#define POSITION_KP 4.0f       /* RPM per degree. */
+#define SPEED_KP FOC_SPEED_KP
+#define SPEED_KI FOC_SPEED_KI
+#define POSITION_KP FOC_POSITION_KP
 #define CONTROL_BANDWIDTH 0.1f  /* Integrator back-calculation gain. */
 #define CONTROL_PERIOD_US 1000u /* Outer-loop period; runs once per millisecond. */
 #define CONTROL_JUMP_US 4000u   /* Gap above this is a discontinuity, not a dt. */
@@ -134,7 +134,7 @@ static float outer_output(float dt)
 {
     if (mode == CONTROL_POSITION) {
         float omega = POSITION_KP * (position_target - position);
-        float ceiling = 100.0f;
+        float ceiling = FOC_POSITION_SPEED_MAX;
         if (omega > ceiling) omega = ceiling;
         if (omega < -ceiling) omega = -ceiling;
         speed_target = omega;

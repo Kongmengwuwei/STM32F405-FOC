@@ -7,7 +7,7 @@
 #include "bsp_usb.h"
 #include "control.h"
 #include "foc.h"
-#include "mt6835_port_stm32.h"
+#include "bsp_encoder.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -17,7 +17,8 @@ volatile bsp_uart_stats_t g_uart_stats;
 volatile bsp_usb_stats_t g_usb_stats;
 volatile bsp_adc_sample_t adc_sample = {1.652f, 1.648f, 24.0f};
 volatile uint16_t adc_raw_b = 2050u, adc_raw_c = 2045u, adc_raw_bus = 1040u;
-volatile float mt6835_angle_deg = 20.0f, mt6835_raw_deg = 20.0f, mt6835_sample_delay = 2e-6f;
+volatile float encoder_angle_deg = 20.0f, encoder_raw_deg = 20.0f, encoder_sample_delay = 2e-6f;
+volatile uint32_t encoder_errors;
 volatile float motor_duty[3] = {0.4f, 0.5f, 0.6f};
 volatile unsigned motor_mode;
 volatile uint32_t motor_sample_us;
@@ -40,8 +41,8 @@ void bsp_adc_start(void) {}
 void bsp_adc_stop(void) {}
 bool bsp_uart_init(void) { return true; }
 bool bsp_can_init(void) { return true; }
-bool mt6835_init(void) { return true; }
-void mt6835_stop(void) {}
+bool bsp_encoder_init(void) { return true; }
+void bsp_encoder_stop(void) {}
 static uint32_t s_millis;
 uint32_t bsp_uart_millis(void) { return s_millis; }
 void bsp_uart_tick(void) {}
@@ -151,7 +152,7 @@ int main(void)
         if (group == 0u) {
             assert(channel(2) == 2050.0f && channel(3) == 2045.0f && channel(4) == 1040.0f);
             assert(channel(5) == adc_sample.b_voltage && channel(7) == adc_sample.bus_voltage);
-            assert(channel(8) == mt6835_raw_deg && channel(9) == (float)motor_sample_us);
+            assert(channel(8) == encoder_raw_deg && channel(9) == (float)motor_sample_us);
             assert(channel(11) == foc.b_offset);
         } else if (group == 1u) {
             assert(fabsf(channel(2) - 0.1f) < 1e-5f && fabsf(channel(3) + 0.1f) < 1e-5f);
@@ -160,8 +161,8 @@ int main(void)
             assert(channel(10) == foc.b_offset && channel(11) == foc.c_offset);
         } else if (group == 2u) {
             assert(channel(2) == foc.ud && channel(3) == foc.uq);
-            assert(channel(4) == (float)(uint32_t)(foc.duty[0] * 4200.0f + 0.5f));
-            assert(channel(10) == 0.1211428571f * adc_sample.bus_voltage);
+            assert(channel(4) == (float)(uint32_t)(foc.duty[0] * (float)FOC_PWM_ARR + 0.5f));
+            assert(channel(10) == ((float)FOC_EDGE_LIMIT / (float)FOC_PWM_ARR) * adc_sample.bus_voltage);
             assert(channel(11) == 0.5773502692f * adc_sample.bus_voltage);
         } else {
             assert(channel(3) == foc.command && channel(10) == 0.0f);

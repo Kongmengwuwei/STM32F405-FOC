@@ -3,15 +3,12 @@
 #include "bsp_uart.h"
 #include "control.h"
 #include "foc.h"
-#include "mt6835_port_stm32.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
 #define RADS_PER_RPM 0.1047197551f
 
-volatile float mt6835_angle_deg = NAN, mt6835_raw_deg = NAN, mt6835_sample_delay;
-volatile uint32_t mt6835_errors;
 static uint32_t s_millis;
 static unsigned tick20;
 

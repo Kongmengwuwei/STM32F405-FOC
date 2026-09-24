@@ -6,15 +6,15 @@
 #include "bsp_usb.h"
 #include "control.h"
 #include "justfloat.h"
-#include "mt6835_port_stm32.h"
+#include "bsp_encoder.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define FOC_FRAME_CHANNELS 12u /* 2 header words plus 10 payload channels. */
-/* FOC_EDGE_LIMIT / 4200 from foc.c: sample-window ceiling on the vector span. */
-#define FOC_EDGE_FRACTION 0.1211428571f
+#define FOC_EDGE_FRACTION ((float)FOC_EDGE_LIMIT / (float)FOC_PWM_ARR)
+#define UART_SAMPLE_DIVIDER (FOC_SAMPLE_HZ / 2000u)
 
 /* High-speed USB logging group, selected by `send X`; telemetry only. */
 static volatile uint8_t telemetry_group;
@@ -42,7 +42,7 @@ volatile uint32_t app_command_rejected;
 bool app_init(void)
 {
     if (!bsp_uart_init() || !bsp_can_init()) return false;
-    if (!mt6835_init()) { app_fault(FOC_SENSOR); return false; }
+    if (!bsp_encoder_init()) { app_fault(FOC_SENSOR); return false; }
     foc_calibration_t calibration;
     foc_init(bsp_motor_load(&calibration) ? &calibration : NULL);
     bsp_adc_start();
@@ -85,7 +85,7 @@ static void telemetry_usb(void)
         payload[5] = adc_sample.b_voltage;
         payload[6] = adc_sample.c_voltage;
         payload[7] = adc_sample.bus_voltage;
-        payload[8] = mt6835_raw_deg;
+        payload[8] = encoder_raw_deg;
         payload[9] = (float)motor_sample_us;
         payload[10] = adc_sample.bus_voltage; /* Raw codes times the nominal gain. */
         payload[11] = foc.b_offset;
@@ -93,8 +93,8 @@ static void telemetry_usb(void)
     case 1: { /* Phase currents, electrical angle, PI state, pre-limit command. */
         float integral_d, integral_q;
         foc_integrators(&integral_d, &integral_q);
-        payload[2] = foc.zero_ready ? (adc_sample.b_voltage - foc.b_offset) * 50.0f : NAN;
-        payload[3] = foc.zero_ready ? (adc_sample.c_voltage - foc.c_offset) * 50.0f : NAN;
+        payload[2] = foc.zero_ready ? (adc_sample.b_voltage - foc.b_offset) * FOC_CURRENT_A_PER_V : NAN;
+        payload[3] = foc.zero_ready ? (adc_sample.c_voltage - foc.c_offset) * FOC_CURRENT_A_PER_V : NAN;
         payload[4] = foc.electrical_deg;
         payload[5] = foc.iq_ref;
         payload[6] = integral_d;
@@ -108,9 +108,9 @@ static void telemetry_usb(void)
     case 2: /* Applied voltage: the CCRs live for this period, and the limits. */
         payload[2] = foc.ud;
         payload[3] = foc.uq;
-        payload[4] = (float)(uint32_t)(foc.duty[0] * 4200.0f + 0.5f);
-        payload[5] = (float)(uint32_t)(foc.duty[1] * 4200.0f + 0.5f);
-        payload[6] = (float)(uint32_t)(foc.duty[2] * 4200.0f + 0.5f);
+        payload[4] = (float)(uint32_t)(foc.duty[0] * (float)FOC_PWM_ARR + 0.5f);
+        payload[5] = (float)(uint32_t)(foc.duty[1] * (float)FOC_PWM_ARR + 0.5f);
+        payload[6] = (float)(uint32_t)(foc.duty[2] * (float)FOC_PWM_ARR + 0.5f);
         payload[7] = motor_duty[0];
         payload[8] = motor_duty[1];
         payload[9] = motor_duty[2];
@@ -140,8 +140,8 @@ void app_sample(void)
     float duty[3] = {motor_duty[0], motor_duty[1], motor_duty[2]};
     bool valid = sampled_mode != MOTOR_PWM || foc_window(duty);
     if (!valid) app_fault(FOC_WINDOW); /* Validate measured period BEFORE PI integration. */
-    foc_step(mt6835_angle_deg, adc_sample.bus_voltage, adc_sample.b_voltage,
-             adc_sample.c_voltage, mt6835_sample_delay);
+    foc_step(encoder_angle_deg, adc_sample.bus_voltage, adc_sample.b_voltage,
+             adc_sample.c_voltage, encoder_sample_delay);
     uint32_t key = bsp_motor_lock();
     if (foc.fault) foc_trip(foc.fault); /* Preserve a preempting priority-0 fault. */
     if (previous_state == FOC_OFFSET && foc.state == FOC_PRECHARGE) bsp_motor_arm();
@@ -161,16 +161,16 @@ void app_sample(void)
     if (capturing) {
         capture[capture_count++] = (capture_t){sequence,
             {adc_debug[0], adc_debug[1], adc_debug[2]}, adc_debug[3],
-            {(uint16_t)(duty[0]*4200.0f+0.5f), (uint16_t)(duty[1]*4200.0f+0.5f), (uint16_t)(duty[2]*4200.0f+0.5f)},
+            {(uint16_t)(duty[0]*(float)FOC_PWM_ARR+0.5f), (uint16_t)(duty[1]*(float)FOC_PWM_ARR+0.5f), (uint16_t)(duty[2]*(float)FOC_PWM_ARR+0.5f)},
             (uint16_t)(foc.state | (foc.fault << 3) | (sampled_mode << 7) | ((uint32_t)valid << 9)),
-            mt6835_angle_deg, foc.electrical_deg, foc.id, foc.iq, foc.iq_ref, foc.ud, foc.uq};
+            encoder_angle_deg, foc.electrical_deg, foc.id, foc.iq, foc.iq_ref, foc.ud, foc.uq};
         if (capture_count == 2048u || foc.fault) {
             capturing = false;
             key = bsp_motor_lock(); bsp_motor_off(); foc_stop(); bsp_motor_unlock(key);
         }
     }
 #endif
-    if (++divider == 10u) {
+    if (++divider == UART_SAMPLE_DIVIDER) {
         divider = 0u;
         last_frame = bsp_uart_millis();
 #ifdef FOC_CAPTURE
@@ -267,7 +267,7 @@ bool app_command(const char *line)
     case CAL: ok = foc_calibrate(); break;
     case HELLO: break; /* No state change; the caller prints the banner. */
     case CLEAR:
-        ok = foc.state == FOC_FAULT && bsp_uart_millis() - last_frame < 2u && isfinite(mt6835_angle_deg) &&
+        ok = foc.state == FOC_FAULT && bsp_uart_millis() - last_frame < 2u && isfinite(encoder_angle_deg) &&
              isfinite(adc_sample.b_voltage) && isfinite(adc_sample.c_voltage) &&
              isfinite(adc_sample.bus_voltage) && adc_sample.bus_voltage >= FOC_BUS_MIN && adc_sample.bus_voltage <= FOC_BUS_MAX &&
              fabsf(foc.rpm) < FOC_SPEED_MAX &&
@@ -368,7 +368,7 @@ void app_poll(void)
     if (foc.state == FOC_SAVE && divider == 0u) {
         uint32_t key = bsp_motor_lock();
         bsp_adc_stop();
-        mt6835_stop();
+        bsp_encoder_stop();
         bsp_motor_unlock(key);
         bool ok = bsp_motor_save(&foc.calibration);
         if (ok) { foc.calibrated = true; foc.state = FOC_IDLE; }
@@ -379,7 +379,7 @@ void app_poll(void)
     /* Recover acquisition after a stalled DMA/ADC, never motor operation. */
     if (foc.state == FOC_FAULT && bsp_uart_millis() - last_frame >= 2u) {
         uint32_t key = bsp_motor_lock();
-        bsp_adc_stop(); mt6835_stop();
+        bsp_adc_stop(); bsp_encoder_stop();
         bsp_motor_unlock(key);
         divider = 0u;
         bsp_adc_start();

@@ -1,9 +1,11 @@
 #ifndef APP_BSP_MOTOR_RECORD_H
 #define APP_BSP_MOTOR_RECORD_H
 #include "foc.h"
+#include "foc_profile.h"
 #include <stddef.h>
 
-/* On-flash ABI: sector 11, magic committed last. */
+/* On-flash ABI: sector 11, magic committed last. In v2, poles packs
+ * calibration identity in the high 16 bits and pole pairs in the low 16. */
 typedef struct { uint32_t version, poles; foc_calibration_t cal; uint32_t checksum, magic; } record_t;
 static inline uint32_t checksum(const record_t *record)
 {
@@ -14,7 +16,13 @@ static inline uint32_t checksum(const record_t *record)
 }
 static inline bool record_valid(const record_t *r)
 {
-    return r->magic == 0x464f4331u && r->version == 1u && r->poles == 7u &&
+    bool profile_match = r->version == 2u &&
+        r->poles == ((FOC_CALIBRATION_ID << 16) | FOC_POLE_PAIRS);
+#ifndef FOC_BOARD_M0
+    /* Preserve valid calibration from the original M1 firmware. */
+    profile_match = profile_match || (FOC_MOTOR_ID == 1u && r->version == 1u && r->poles == 7u);
+#endif
+    return r->magic == 0x464f4331u && profile_match &&
         r->checksum == checksum(r) && (r->cal.direction == 1 || r->cal.direction == -1) &&
         r->cal.zero >= 0.0f && r->cal.zero < 6.2831853072f;
 }

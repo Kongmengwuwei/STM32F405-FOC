@@ -13,6 +13,7 @@ extern volatile uint32_t motor_write_min, motor_timing_fault;
 uint32_t bsp_motor_lock(void);
 void bsp_motor_unlock(uint32_t key);
 void bsp_motor_init(void);
+void bsp_motor_safe_pins(void); /* Before any peripheral changes pin modes. */
 void bsp_motor_arm(void); /* Foreground, IRQ locked, accepted start/cal only. */
 void bsp_motor_off(void); /* Immediate, also safe from fault handlers. */
 bool bsp_motor_write(const float duty[3], unsigned mode);
