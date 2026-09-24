@@ -140,7 +140,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         }
     }
     float s, c;
-    /* This encoder: repeatable second harmonic measured during unpowered coast. */
+    /* Optional correction measured for one encoder/magnet installation. */
     sincos_fast(mechanical_deg * (PI / 90.0f), &s, &c);
     mechanical_deg += FOC_ENCODER_HARMONIC_DEG * c;
     float delta = mechanical_deg - previous;
@@ -195,7 +195,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         foc.state = aligning ? FOC_CALIBRATE : FOC_RUN;
     }
     if (foc.state == FOC_RUN) {
-        /* 1 A/s command ramp, slewed at the fixed 20 kHz control rate. */
+        /* 1 A/s command ramp at the selected-port sample rate. */
         float step = foc.command - previous_command;
         const float ramp_step = 1.0f / (float)FOC_SAMPLE_HZ;
         if (step > ramp_step) step = ramp_step;
@@ -204,13 +204,13 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         foc.iq_ref = previous_command;
         /* The 1 kHz outer loop, when scheduled, replaces the reference. It only
            produces a value on its own millisecond, so hold the torque reference
-           on the nineteen samples in between. */
+           between outer-loop updates. */
         uint32_t outer_fault = control_fault();
         if (outer_fault) { foc_trip(outer_fault); return; }
         if (control_mode() != CONTROL_TORQUE && control_scheduled())
             foc.iq_ref = control_iq_ref();
-        /* 600 Hz PI, R=.12 ohm, L=50 uH; no feedback low-pass.
-           Back calculation Tt=L/R. Feedforward uses nominal motor parameters. */
+        /* PI and optional feedforward use the selected motor's parameters.
+           Back calculation uses its resistance estimate. */
         float ed = -foc.id, eq = foc.iq_ref - foc.iq;
         float ud = FOC_CURRENT_KP * ed + integral_d - omega * FOC_MOTOR_INDUCTANCE_H * foc.iq;
         float uq = FOC_CURRENT_KP * eq + integral_q + omega * (FOC_MOTOR_INDUCTANCE_H * foc.id + FOC_MOTOR_FLUX_WB);
@@ -219,8 +219,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         float norm2 = ud * ud + uq * uq;
         float scale = norm2 > limit * limit ? limit / sqrtf(norm2) : 1.0f;
         foc.ud = ud * scale; foc.uq = uq * scale;
-        /* Predict to next PWM centre (next valley + 25 us). At <=8600 RPM,
-           |advance|<.32 rad: rotation error <2.9e-5, one sin/cos pair. */
+        /* Predict to the next PWM centre using the selected timer period. */
         float advance = omega * (((float)(3u * FOC_PWM_ARR - FOC_HOLD_TICKS)) / 168e6f);
         float a2 = advance * advance;
         float sa = advance * (1.0f - a2 / 6.0f), ca = 1.0f - a2 * (0.5f - a2 / 24.0f);

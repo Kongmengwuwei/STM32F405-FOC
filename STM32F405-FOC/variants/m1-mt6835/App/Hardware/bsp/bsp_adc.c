@@ -79,9 +79,9 @@ bool bsp_adc_read(void)
     adc_raw_b = (uint16_t)phases;
     adc_raw_c = (uint16_t)(phases >> 16);
     adc_raw_bus = (uint16_t)s_raw[1];
-    adc_sample.b_voltage = (float)adc_raw_b * (3.3f / 4095.0f);
-    adc_sample.c_voltage = (float)adc_raw_c * (3.3f / 4095.0f);
-    adc_sample.bus_voltage = (float)adc_raw_bus * ((3.3f / 4095.0f) * (41.2f / 2.2f));
+    adc_sample.b_voltage = (float)adc_raw_b * (FOC_ADC_VDDA / 4095.0f);
+    adc_sample.c_voltage = (float)adc_raw_c * (FOC_ADC_VDDA / 4095.0f);
+    adc_sample.bus_voltage = (float)adc_raw_bus * ((FOC_ADC_VDDA / 4095.0f) * (41.2f / 2.2f));
     return true;
 }
 

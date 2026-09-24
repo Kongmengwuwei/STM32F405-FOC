@@ -1,81 +1,51 @@
 #ifndef FOC_PROFILE_H
 #define FOC_PROFILE_H
 
-/* The application, control loops and communication protocol are common to both
- * builds. Only this profile and the encoder/PWM/ADC board adapters differ.
- * A new motor must have its own measured values before its gates are enabled. */
-#ifdef FOC_BOARD_M0
-#define FOC_BOARD_ID 2u
-#define FOC_MOTOR_ID 1u /* Change when motor or encoder installation changes. */
-#define FOC_BOARD_NAME "M0/TLE5012B"
-#define FOC_PWM_TIMER TIM1
-#define FOC_PWM_ARR 8400u
-#define FOC_SAMPLE_HZ 10000u
-#define FOC_SAMPLE_CYCLES_MIN 16000u
-#define FOC_SAMPLE_CYCLES_MAX 17600u
-#define FOC_TRIGGER_TICKS 8200u
-#define FOC_POLE_PAIRS 7u /* Provisional: ZH3620-1 pole count needs verification. */
-#define FOC_BUS_MIN 8.0f
-#define FOC_BUS_MAX 14.0f
-#define FOC_SPEED_MAX 100.0f
-#define FOC_CURRENT_MAX 0.30f
-#define FOC_PHASE_TRIP 0.80f
-#define FOC_ALIGNMENT_VOLTS 0.08f
-#define FOC_ENCODER_HARMONIC_DEG 0.0f
-#define FOC_RPM_FILTER_ALPHA 0.02f
-#define FOC_STATIONARY_STEP_DEG 0.05f /* TLE5012B quantises to 0.011 deg. */
-#define FOC_MAX_STEP_DEG 0.50f
-#define FOC_CURRENT_A_PER_V 50.0f
-#define FOC_ADC_VDDA 3.13f
-#define FOC_MOTOR_RESISTANCE_OHM 0.12f /* Anti-windup estimate; still provisional. */
-#define FOC_MOTOR_INDUCTANCE_H 0.0f /* Disable unmeasured feedforward. */
-#define FOC_MOTOR_FLUX_WB 0.0f
-#define FOC_CURRENT_KP 0.20f /* From the short M0 0.2 A bench trial. */
-#define FOC_CURRENT_KI_STEP 0.002f
-#define FOC_VOLTAGE_FRACTION 0.10f
-#define FOC_SPEED_KP 0.002f
-#define FOC_SPEED_KI 0.004f
-#define FOC_POSITION_KP 1.0f
-#define FOC_POSITION_SPEED_MAX 30.0f
-#define FOC_AUTOCALIBRATE 0 /* Explicit `cal` avoids uncommanded M0 motion. */
-#else
-#define FOC_BOARD_ID 1u
-#define FOC_MOTOR_ID 1u
-#define FOC_BOARD_NAME "M1/MT6835"
-#define FOC_PWM_TIMER TIM8
-#define FOC_PWM_ARR 4200u
-#define FOC_SAMPLE_HZ 20000u
-#define FOC_SAMPLE_CYCLES_MIN 8000u
-#define FOC_SAMPLE_CYCLES_MAX 8800u
-#define FOC_TRIGGER_TICKS 4100u
-#define FOC_POLE_PAIRS 7u
-#define FOC_BUS_MIN 8.0f
-#define FOC_BUS_MAX 36.0f
-#define FOC_SPEED_MAX 9400.0f
-#define FOC_CURRENT_MAX 5.0f
-#define FOC_PHASE_TRIP 10.0f
-#define FOC_ALIGNMENT_VOLTS 0.6f
-#define FOC_ENCODER_HARMONIC_DEG 0.52f
-#define FOC_RPM_FILTER_ALPHA 0.01f
-#define FOC_STATIONARY_STEP_DEG (5.0f * 6.0f / (float)FOC_SAMPLE_HZ)
-#define FOC_MAX_STEP_DEG 10.0f
-#define FOC_CURRENT_A_PER_V 50.0f
-#define FOC_ADC_VDDA 3.30f
-#define FOC_MOTOR_RESISTANCE_OHM 0.12f
-#define FOC_MOTOR_INDUCTANCE_H 50e-6f
-#define FOC_MOTOR_FLUX_WB 0.0021f
-#define FOC_CURRENT_KP 0.1884955592f
-#define FOC_CURRENT_KI_STEP 0.0226194671f
-#define FOC_VOLTAGE_FRACTION 0.5773502692f
-#define FOC_SPEED_KP 0.005f
-#define FOC_SPEED_KI 0.01f
-#define FOC_POSITION_KP 4.0f
-#define FOC_POSITION_SPEED_MAX 100.0f
-#define FOC_AUTOCALIBRATE 1
+/* Orthogonal build selections: power port, angle sensor and motor model.
+ * The installation number changes when the sensor magnet or phase wiring is
+ * moved. An unknown selection is an error, never an implicit M1 fallback. */
+#if (defined(FOC_PORT_M0) + defined(FOC_PORT_M1)) != 1
+#error Select exactly one FOC_PORT_M0 or FOC_PORT_M1
+#endif
+#if (defined(FOC_ENCODER_TLE5012B) + defined(FOC_ENCODER_MT6835)) != 1
+#error Select exactly one supported FOC_ENCODER
+#endif
+#if (defined(FOC_MOTOR_ZH3620_1) + defined(FOC_MOTOR_REFERENCE_24V)) != 1
+#error Select exactly one supported FOC_MOTOR
 #endif
 
+#include "foc_port.h"
+#include "foc_motor.h"
+#include "foc_encoder_profile.h"
+
+#ifndef FOC_INSTALLATION_ID
+#error FOC_INSTALLATION_ID must be set for the physical motor/encoder mounting
+#endif
+#if FOC_INSTALLATION_ID < 1 || FOC_INSTALLATION_ID > 15
+#error FOC_INSTALLATION_ID must be in 1..15
+#endif
+
+/* Both the motor and the output stage must allow a command. A data-sheet
+ * maximum or stall current is never treated as a first-run command limit. */
+#define FOC_BUS_MIN ((FOC_PORT_BUS_MIN > FOC_MOTOR_BUS_MIN) ? FOC_PORT_BUS_MIN : FOC_MOTOR_BUS_MIN)
+#define FOC_BUS_MAX ((FOC_PORT_BUS_MAX < FOC_MOTOR_BUS_MAX) ? FOC_PORT_BUS_MAX : FOC_MOTOR_BUS_MAX)
+#define FOC_CURRENT_MAX ((FOC_PORT_CURRENT_MAX < FOC_MOTOR_CURRENT_MAX) ? FOC_PORT_CURRENT_MAX : FOC_MOTOR_CURRENT_MAX)
+#define FOC_PHASE_TRIP ((FOC_PORT_PHASE_TRIP < FOC_MOTOR_PHASE_TRIP) ? FOC_PORT_PHASE_TRIP : FOC_MOTOR_PHASE_TRIP)
+#define FOC_SPEED_MAX FOC_MOTOR_SPEED_MAX
+#define FOC_ALIGNMENT_VOLTS FOC_MOTOR_ALIGNMENT_VOLTS
+#define FOC_CURRENT_KP FOC_MOTOR_CURRENT_KP
+#define FOC_CURRENT_KI_STEP (FOC_MOTOR_CURRENT_KI_PER_S / (float)FOC_SAMPLE_HZ)
+#define FOC_SPEED_KP FOC_MOTOR_SPEED_KP
+#define FOC_SPEED_KI FOC_MOTOR_SPEED_KI
+#define FOC_POSITION_KP FOC_MOTOR_POSITION_KP
+#define FOC_POSITION_SPEED_MAX FOC_MOTOR_POSITION_SPEED_MAX
+#define FOC_AUTOCALIBRATE 0 /* First physical test always requires explicit cal. */
+
+/* v3 Flash identity: port, motor model, encoder model, installation (4 bits
+ * each). The old v1/v2 records cannot prove all four and are not reused. */
+#define FOC_CALIBRATION_ID ((FOC_PORT_ID << 12) | (FOC_MOTOR_ID << 8) | \
+                            (FOC_ENCODER_ID << 4) | FOC_INSTALLATION_ID)
 #define FOC_PWM_PERIOD_TICKS (2u * FOC_PWM_ARR)
-#define FOC_CALIBRATION_ID ((FOC_BOARD_ID << 8) | FOC_MOTOR_ID)
 #define FOC_PRECHARGE_SAMPLES (FOC_SAMPLE_HZ / 500u)
 #define FOC_OFFSET_WAIT_SAMPLES (FOC_SAMPLE_HZ / 5u)
 #define FOC_CAL_TICKS(at_20khz) ((at_20khz) * FOC_SAMPLE_HZ / 20000u)
@@ -83,5 +53,13 @@
 #if FOC_PWM_ARR <= FOC_TRIGGER_TICKS || FOC_SAMPLE_HZ < 10000u
 #error Invalid PWM/ADC timing profile
 #endif
-
+_Static_assert(FOC_BUS_MIN < FOC_BUS_MAX, "Motor and port voltage ranges must overlap");
+_Static_assert(FOC_CURRENT_MAX > 0.0f && FOC_CURRENT_MAX < FOC_PHASE_TRIP,
+               "Command current must remain below the phase trip threshold");
+_Static_assert(FOC_POLE_PAIRS > 0u && FOC_POLE_PAIRS < 65536u,
+               "Pole pairs must fit the calibration record");
+#ifdef FOC_MOTOR_ZH3620_1
+_Static_assert(FOC_MOTOR_BUS_MAX < FOC_MOTOR_ABSOLUTE_VOLTAGE_MAX,
+               "ZH3620-1 test voltage must stay below its absolute maximum");
+#endif
 #endif

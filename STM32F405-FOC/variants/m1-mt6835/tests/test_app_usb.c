@@ -47,11 +47,15 @@ static uint32_t s_millis;
 uint32_t bsp_uart_millis(void) { return s_millis; }
 void bsp_uart_tick(void) {}
 static uint32_t s_uart_frames;
+static char s_banner[128];
 bool bsp_uart_write(const void *data, size_t size)
 {
-    (void)data;
     assert(size > 0u && size <= 256u); /* 15 float telemetry, or the hello banner. */
     if (size == 64u) ++s_uart_frames;
+    else if (size < sizeof s_banner && memcmp(data, "#FOC", 4u) == 0) {
+        memcpy(s_banner, data, size);
+        s_banner[size] = '\0';
+    }
     return true;
 }
 bool bsp_usb_ready(void) { return true; }
@@ -210,6 +214,8 @@ int main(void)
     /* `hello` answers on UART only, so the binary USB stream stays framed. */
     unsigned before = app_command_rejected;
     assert(app_command("hello") && app_command_rejected == before);
+    assert(strstr(s_banner, FOC_PORT_NAME) && strstr(s_banner, FOC_ENCODER_NAME) &&
+           strstr(s_banner, FOC_MOTOR_NAME) && strstr(s_banner, "install=1"));
     puts("PASS: 4-group 12-float USB layout, status word, send/rpm/pos/zero parsing,"
          " 20k frames, 1 A/s ramp, outer-loop reference selection");
     return 0;

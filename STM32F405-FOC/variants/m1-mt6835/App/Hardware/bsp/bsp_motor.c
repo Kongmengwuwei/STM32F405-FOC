@@ -19,7 +19,7 @@ volatile uint32_t motor_write_min = FOC_PWM_ARR, motor_timing_fault;
 
 void bsp_motor_safe_pins(void)
 {
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     GPIOA->BSRR = (GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10) << 16;
@@ -43,7 +43,7 @@ void bsp_motor_off(void)
 {
     inhibited = true;
     FOC_PWM_TIMER->CCER &= ~GATE_CHANNELS; /* CH4 remains for acquisition. */
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
     GPIOA->BSRR = (GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10) << 16;
     GPIOB->BSRR = (GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15) << 16;
     GPIOA->MODER = (GPIOA->MODER & ~(63u << 16)) | (21u << 16);
@@ -62,7 +62,7 @@ void bsp_motor_off(void)
 
 void bsp_motor_init(void)
 {
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
     __HAL_RCC_TIM1_CLK_ENABLE();
     bsp_motor_safe_pins();
 #endif
@@ -84,7 +84,7 @@ void bsp_motor_init(void)
     TIM5->CNT = 0u;
     DBGMCU->APB1FZ |= DBGMCU_APB1_FZ_DBG_TIM5_STOP;
     TIM5->CR1 = TIM_CR1_CEN;
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
     DBGMCU->APB2FZ |= DBGMCU_APB2_FZ_DBG_TIM1_STOP;
 #endif
     /* UG loads RCR=1 at CNT=0: overflow counts down, underflow latches CCRs.
@@ -95,7 +95,7 @@ void bsp_motor_init(void)
     FOC_PWM_TIMER->CCMR2 = TIM_CCMR2_OC3PE | (6u << 4) | (4u << 12);
     FOC_PWM_TIMER->CCR1 = FOC_PWM_TIMER->CCR2 = FOC_PWM_TIMER->CCR3 = FOC_PWM_ARR / 2u;
     FOC_PWM_TIMER->CCR4 = FOC_TRIGGER_TICKS;
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
     FOC_PWM_TIMER->BDTR = 127u; /* Existing M0 0.76 us dead time. */
 #else
     FOC_PWM_TIMER->BDTR = 84u;
@@ -104,7 +104,7 @@ void bsp_motor_init(void)
     FOC_PWM_TIMER->CCMR2 = TIM_CCMR2_OC3PE | (6u << 4) | (3u << 12);
     FOC_PWM_TIMER->SR = 0u;
     FOC_PWM_TIMER->DIER = TIM_DIER_UIE;
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
     HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0u, 0u);
     HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM10_IRQn);
     HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
@@ -147,7 +147,7 @@ bool bsp_motor_update(void)
             unsigned mode = pending_mode;
             if (mode == MOTOR_OFF) bsp_motor_off();
             else if (mode == MOTOR_PRECHARGE) {
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
                 GPIOB->BSRR = GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
 #else
                 GPIOA->BSRR = GPIO_PIN_7;
@@ -155,7 +155,7 @@ bool bsp_motor_update(void)
 #endif
             } else {
                 /* GPIO precharge lows must fall before any high-side AF is exposed. */
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
                 GPIOB->BSRR = (GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15) << 16;
 #else
                 GPIOA->BSRR = GPIO_PIN_7 << 16;
@@ -164,7 +164,7 @@ bool bsp_motor_update(void)
                 uint32_t deadtime = DWT->CYCCNT;
                 while (DWT->CYCCNT - deadtime < 100u) {}
                 FOC_PWM_TIMER->CCER |= GATE_CHANNELS;
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
                 GPIOA->MODER = (GPIOA->MODER & ~(63u << 16)) | (42u << 16);
                 GPIOB->MODER = (GPIOB->MODER & ~(63u << 26)) | (42u << 26);
 #else
@@ -218,7 +218,7 @@ bool bsp_motor_load(foc_calibration_t *calibration)
 bool bsp_motor_save(const foc_calibration_t *calibration)
 {
     if (motor_mode != MOTOR_OFF || (FOC_PWM_TIMER->CR1 & TIM_CR1_CEN)) return false;
-    record_t r = {.version = 2u, .poles = (FOC_CALIBRATION_ID << 16) | FOC_POLE_PAIRS,
+    record_t r = {.version = 3u, .poles = (FOC_CALIBRATION_ID << 16) | FOC_POLE_PAIRS,
                   .cal = *calibration, .magic = 0x464f4331u};
     r.checksum = checksum(&r);
     FLASH_EraseInitTypeDef erase = {.TypeErase = FLASH_TYPEERASE_SECTORS,

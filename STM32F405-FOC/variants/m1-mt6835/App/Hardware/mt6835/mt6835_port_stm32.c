@@ -52,7 +52,7 @@ bool mt6835_init(void)
 
 void mt6835_start(void)
 {
-    /* A transfer must finish within the preceding 50 us period. */
+    /* A transfer must finish before the next selected-port sample. */
     if ((DMA1_Stream0->CR | DMA1_Stream5->CR) & DMA_SxCR_EN) {
         mt6835_angle_deg = NAN;
         if (!mt6835_first_error) mt6835_first_error = 1u;
@@ -65,7 +65,13 @@ void mt6835_start(void)
     DMA1_Stream5->NDTR = sizeof s_tx;
     /* CS is only a proxy for angle time; internal sensor latency is uncalibrated.
        First-rank conversion finishes after the timer peak, before bus rank. */
+#ifdef FOC_PORT_M1
     mt6835_sample_delay = (8400.0f - (float)TIM8->CNT - FOC_HOLD_TICKS) / 168e6f;
+#else
+    /* M0's injected ADC finishes at a different phase. Do not apply the M1
+     * sensor-age estimate until that combined timing is measured. */
+    mt6835_sample_delay = 0.0f;
+#endif
     GPIOA->BSRR = GPIO_PIN_0 << 16;
     DMA1_Stream0->CR |= DMA_SxCR_EN;
     DMA1_Stream5->CR |= DMA_SxCR_EN;

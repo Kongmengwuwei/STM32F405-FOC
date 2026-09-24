@@ -65,7 +65,7 @@ static uint32_t status_word(void)
     return foc.state | (foc.fault << 3) | ((uint32_t)(motor_mode == MOTOR_PWM) << 7);
 }
 
-/* 20 kHz USB logging: one group at a time, 12 float32 plus the JustFloat
+/* One frame per selected-port sample: one group, 12 float32 plus the JustFloat
    terminator. Group 0 carries raw sensor truth, group 1 current-loop internals,
    group 2 the applied voltage, group 3 the reference and mechanical response.
    Channels that a host can reconstruct offline are deliberately absent. */
@@ -290,9 +290,11 @@ bool app_command(const char *line)
     bsp_motor_unlock(key);
     if (command == HELLO) {
         /* Text goes to UART only: the USB link is a binary frame stream. */
-        char banner[24];
-        unsigned length = (unsigned)snprintf(banner, sizeof banner, "#FOC 1.1 %lu\r\n",
-                                             (unsigned long)status_word());
+        char banner[128];
+        unsigned length = (unsigned)snprintf(banner, sizeof banner,
+            "#FOC 1.1 port=%s encoder=%s motor=%s install=%u state=%lu\r\n",
+            FOC_PORT_NAME, FOC_ENCODER_NAME, FOC_MOTOR_NAME,
+            (unsigned)FOC_INSTALLATION_ID, (unsigned long)status_word());
         (void)bsp_uart_write(banner, length);
         bsp_uart_tick();
     }

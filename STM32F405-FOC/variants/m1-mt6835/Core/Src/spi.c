@@ -42,7 +42,7 @@ void MX_SPI3_Init(void)
   hspi3.Init.Mode = SPI_MODE_MASTER;
   hspi3.Init.Direction = SPI_DIRECTION_2LINES;
   hspi3.Init.DataSize =
-#ifdef FOC_BOARD_M0
+#ifdef FOC_ENCODER_TLE5012B
       SPI_DATASIZE_16BIT;
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
 #else
@@ -52,7 +52,7 @@ void MX_SPI3_Init(void)
   hspi3.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
   hspi3.Init.BaudRatePrescaler =
-#ifdef FOC_BOARD_M0
+#ifdef FOC_ENCODER_TLE5012B
       SPI_BAUDRATEPRESCALER_8;
 #else
       SPI_BAUDRATEPRESCALER_4;

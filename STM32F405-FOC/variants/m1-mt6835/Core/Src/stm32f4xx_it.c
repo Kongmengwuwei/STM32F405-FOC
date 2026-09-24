@@ -234,7 +234,7 @@ void DMA1_Stream6_IRQHandler(void)
 void ADC_IRQHandler(void)
 {
   /* USER CODE BEGIN ADC_IRQn 0 */
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
   uint32_t flags = ADC1->SR;
   if (flags & ADC_SR_OVR) { app_fault(FOC_ADC); (void)bsp_adc_read(); return; }
   if (flags & ADC_SR_JEOC) {
@@ -242,8 +242,10 @@ void ADC_IRQHandler(void)
     ADC2->CR2 |= ADC_CR2_SWSTART; /* Bus conversion overlaps encoder SPI. */
     if (!bsp_motor_sample_begin()) app_fault(FOC_TIMING);
     bsp_encoder_begin();
+#ifdef FOC_ENCODER_TLE5012B
     if (!bsp_adc_read()) app_fault(FOC_ADC);
     app_sample();
+#endif
   }
 #else
   app_fault(FOC_ADC);
@@ -317,7 +319,7 @@ void OTG_FS_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-#ifndef FOC_BOARD_M0
+#ifdef FOC_PORT_M1
 void DMA2_Stream0_IRQHandler(void)
 {
     /* First pair ready: overlap encoder SPI with the second (bus) ADC rank. */
@@ -328,21 +330,30 @@ void DMA2_Stream0_IRQHandler(void)
     }
     if (!bsp_motor_sample_begin()) app_fault(FOC_TIMING);
     bsp_encoder_begin();
+#ifdef FOC_ENCODER_TLE5012B
+    /* The three SPI words outlast ADC rank two. Reject a late ADC sample. */
+    if (!bsp_adc_read()) app_fault(FOC_ADC);
+    app_sample();
+#endif
 }
+#endif
 
+#ifdef FOC_ENCODER_MT6835
 void DMA1_Stream0_IRQHandler(void)
 {
     bsp_encoder_finish();
     if (!bsp_adc_read()) app_fault(FOC_ADC); /* Both ranks must now be complete. */
     app_sample();
 }
+#endif
 
+#ifdef FOC_PORT_M1
 void TIM8_UP_TIM13_IRQHandler(void)
 {
     if (!bsp_motor_update()) app_fault(FOC_TIMING);
 }
 #endif
-#ifdef FOC_BOARD_M0
+#ifdef FOC_PORT_M0
 void TIM1_UP_TIM10_IRQHandler(void)
 {
     if (!bsp_motor_update()) app_fault(FOC_TIMING);

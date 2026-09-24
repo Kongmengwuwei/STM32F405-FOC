@@ -9,9 +9,10 @@
 |---|---|---|---|
 | `test_mt6835_crc.c` | 主机测试 | 当前 | 磁编解码：边界角度、独立逐位 CRC 参考、全部单比特损坏、传感器故障状态、历史真实帧 |
 | `test_justfloat.c` | 主机测试 | 当前 | 两种传输的帧字节：精确帧、参数单次求值、16 通道上限、NaN、发送被拒 |
-| `test_app_usb.c` | 主机测试 | 当前 | 真实 `app.c` + `foc.c` + `control.c`：四组 12 float 帧布局、头字位打包、`send` 切组、`Iq`/`rpm`/`pos`/`zero`/`hello` 解析与拒绝、CR/LF/CRLF、拆包/粘包、UART/USB 独立组行、会话切换、20,000 帧、1 A/s 斜坡、外环参考替换 |
+| `test_app_usb.c` | 主机测试 | 当前 | 真实 `app.c` + `foc.c` + `control.c`：四组 12 float 帧布局、头字位打包、`send` 切组、`Iq`/`rpm`/`pos`/`zero`/`hello` 解析与拒绝、`hello` 组合标识、CR/LF/CRLF、拆包/粘包、UART/USB 独立组行、会话切换、20,000 帧、1 A/s 斜坡、外环参考替换 |
 | `test_m0_unified.c` | 主机测试 | 当前 | 默认 M0 配置：无校准记录时保持待机、显式 `cal`、统一 USB 命令/遥测和三种控制模式 |
-| `test_motor_record.c` | 主机测试 | 当前 | Flash 校准记录按板卡/电机安装编号隔离，保留 M1 v1 记录兼容 |
+| `test_motor_record.c` | 主机测试 | 当前 | v3 Flash 校准记录按接口/电机/编码器/安装编号隔离，拒绝身份不全的 v1/v2 记录 |
+| `test_profile_matrix.c` | 主机测试 | 当前 | 八种接口/编码器/电机参数组合的电压、电流、校准身份与不自动启动约束 |
 | `test_control_pid.c` | 主机测试 | 当前 | 真实 `control.c` + 一阶被控对象：速度跟踪（±）、输出限幅与抗饱和、200 ms 主机看门狗、多圈位置收敛与反向、`zero`、`stop` 复位 |
 | `test_usb_queue.c` | 主机测试 | 当前 | 直接包含生产 `bsp_usb.c`：20,000 帧逐字节比对、BUSY 重试、缓冲所有权、环形/计数器回绕、溢出锁存、复位统计、RX 背压（用 `usb_stubs/` 替代 CDC 回调） |
 | `test_foc_recalibration.c` | 主机测试 | 当前 | 校准状态机回归：零偏采集 → `foc_calibrate()` → 对齐 → `FOC_SAVE`，方向判定与 600 转滑行 |
@@ -34,28 +35,28 @@ gcc -std=c11 -Wall -Wextra -Werror -O2 -I App/Hardware/mt6835 tests/test_mt6835_
 ./build/test_mt6835_crc.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -I App/Protocols/JustFloat -I App/Hardware/bsp tests/test_justfloat.c -o build/test_justfloat.exe
 ./build/test_justfloat.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_app_usb.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_app_usb.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_app_usb.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_app_usb.exe
 ./build/test_app_usb.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_BOARD_M0 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_m0_unified.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_m0_unified.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_m0_unified.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_m0_unified.exe
 ./build/test_m0_unified.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_motor_record.c -o build/test_motor_record_m1.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_motor_record.c -o build/test_motor_record_m1.exe
 ./build/test_motor_record_m1.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_BOARD_M0 -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_motor_record.c -o build/test_motor_record_m0.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_motor_record.c -o build/test_motor_record_m0.exe
 ./build/test_motor_record_m0.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -I App/Control -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_control_pid.c tests/foc_stub.c App/Control/control.c -lm -o build/test_control_pid.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_control_pid.c tests/foc_stub.c App/Control/control.c -lm -o build/test_control_pid.exe
 ./build/test_control_pid.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -I tests/usb_stubs -I App/Hardware/bsp tests/test_usb_queue.c -o build/test_usb_queue.exe
 ./build/test_usb_queue.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -I App/FOC -I App/Control -I App/Hardware/bsp -I App/Config tests/test_foc_recalibration.c App/FOC/foc.c App/Control/control.c -lm -o build/test_foc_recalibration.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/FOC -I App/Control -I App/Hardware/bsp -I App/Config tests/test_foc_recalibration.c App/FOC/foc.c App/Control/control.c -lm -o build/test_foc_recalibration.exe
 ./build/test_foc_recalibration.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/Config tests/test_profile_matrix.c -o build/test_profile_matrix.exe
+./build/test_profile_matrix.exe
 ```
 
 解析器自检无需硬件：`python tools/bench/selftest.py`（帧字节往返、错位重同步、
 丢帧检测、损坏拒绝、通道表、归档往返、工况限值）。
 
-2026-09-23 本机实测：六个 C 程序与 `selftest.py` 均构建通过（C 用
-`-Wall -Wextra -Werror` 无警告）并打印 PASS。它们不属于固件 CMake，不参与
-Debug/Release 构建。
+2026-09-24 本机已编译八种配置参数组合，默认 M0 与参考 M1 的共用命令及 v3 校准身份测试通过。主机侧测试不等于实机时序和电气验收。它们不属于固件 CMake，不参与 Debug/Release 构建。
 
 ## 历史资产（`tests/legacy/`）
 

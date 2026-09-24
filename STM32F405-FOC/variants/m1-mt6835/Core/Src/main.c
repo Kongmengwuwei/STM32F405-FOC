@@ -98,7 +98,7 @@ int main(void)
   MX_GPIO_Init();
   bsp_motor_safe_pins();
   MX_DMA_Init();
-#ifndef FOC_BOARD_M0
+#ifdef FOC_PORT_M1
   MX_TIM8_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();

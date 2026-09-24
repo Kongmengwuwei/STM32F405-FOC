@@ -66,11 +66,22 @@
 #define USBD_LANGID_STRING     1033
 #define USBD_MANUFACTURER_STRING     "STMicroelectronics"
 #define USBD_PID_FS     22336
-#ifdef FOC_BOARD_M0
-#define USBD_PRODUCT_STRING_FS     "FOC M0 TLE5012B"
+#ifdef FOC_MOTOR_ZH3620_1
+#define FOC_USB_MOTOR "ZH3620-1"
 #else
-#define USBD_PRODUCT_STRING_FS     "FOC M1 MT6835"
+#define FOC_USB_MOTOR "Reference24V"
 #endif
+#ifdef FOC_ENCODER_TLE5012B
+#define FOC_USB_ENCODER "TLE5012B"
+#else
+#define FOC_USB_ENCODER "MT6835"
+#endif
+#ifdef FOC_PORT_M0
+#define FOC_USB_PORT "M0"
+#else
+#define FOC_USB_PORT "M1"
+#endif
+#define USBD_PRODUCT_STRING_FS     "FOC " FOC_USB_MOTOR " " FOC_USB_ENCODER " " FOC_USB_PORT
 #define USBD_CONFIGURATION_STRING_FS     "CDC Config"
 #define USBD_INTERFACE_STRING_FS     "CDC Interface"
 

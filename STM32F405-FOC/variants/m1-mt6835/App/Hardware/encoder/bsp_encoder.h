@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 /* Both adapters publish mechanical degrees in [0,360), or NAN on failure.
- * begin() runs at the ADC first-rank interrupt. MT6835 completes via SPI DMA;
- * TLE5012B completes synchronously within that interrupt at the slower M0 rate. */
+ * begin() runs at the first ADC callback. MT6835 completes via SPI DMA;
+ * TLE5012B completes synchronously in that callback on either power port. */
 extern volatile float encoder_angle_deg, encoder_raw_deg, encoder_sample_delay;
 extern volatile uint32_t encoder_errors;
 bool bsp_encoder_init(void);
