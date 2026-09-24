@@ -11,9 +11,9 @@
 
 ## 图形化调试（F5）
 
-在左侧“运行和调试”中选 **`STM32F405: Debug default firmware (ST-Link)`**，再按绿色三角按钮或 `F5`。本机 `.vscode/launch.json` 已填写板上 STM32F405RGT6 的器件名、内核 `Cortex-M4`、工程目录和 Debug ELF 路径；启动前会执行 `STM32: Build Debug`，随后 ST-Link 下载固件并停在 `main`。调试时可以在源码行号旁下断点，查看变量、调用栈和寄存器。调试下载会改写板上程序，必须先确认接线、供电和当前默认组合适合实物。
+在左侧“运行和调试”中选 **`STM32F405: Debug default firmware (ST-Link)`**，再按绿色三角按钮或 `F5`。本机 `.vscode/launch.json` 已填写板上 STM32F405RGT6 的器件名、内核 `Cortex-M4` 和 Debug ELF 路径；启动前会执行 `STM32: Build Debug`，随后 ST-Link 下载固件并停在 `main`。调试时可以在源码行号旁下断点，查看变量、调用栈和寄存器。调试下载会改写板上程序，必须先确认接线、供电和当前默认组合适合实物。
 
-若弹出 `Device not found: run "Setup STM32Cube project(s)" command or set "deviceName" attribute`，表示 STM32 调试扩展尚未识别器件，错误发生在连接 ST-Link 之前。原始模板依赖扩展自动识别工程，但本仓库的 CMake 工程位于工作区下一层；上面的显式配置修正了这一点。本机也已安装调试扩展所需的 STM32F4 CMSIS 设备包 `STMicroelectronics.stm32f4xx_dfp.1.2.0`。修改配置后重新打开 VS Code 再试；如仍报错，在命令面板执行 `Setup STM32Cube project(s)` 并选择 `STM32F405-FOC/` 工程。这里只需设置工程识别，不要重新生成 CubeMX 源码。
+若弹出 `Device not found: run "Setup STM32Cube project(s)" command or set "deviceName" attribute`，表示 STM32 调试扩展尚未识别器件，错误发生在连接 ST-Link 之前。本机配置已显式指定器件，本机也已安装 STM32F4 CMSIS 设备包 `STMicroelectronics.stm32f4xx_dfp.1.2.0`。若弹出 `ENOENT ... .settings/ide.store.json`，表示扩展把本仓库的 CMake 工程当作已生成 STM32Cube IDE 设置的工程，尝试读取实际上不存在的文件。本机调试配置把 `cwd` 指向工作区根目录，让扩展跳过该工程的自动设置读取；构建仍由 `preLaunchTask` 在正确的 CMake 工程目录执行，ELF 使用明确路径。修改配置后重新打开 VS Code 再试。这里不需要运行 `Setup STM32Cube project(s)` 或重新生成 CubeMX 源码。
 
 也可用 CMake Tools 命令面板选择 `CMake: Select Configure Preset` → `Debug-local`，然后执行 `CMake: Configure`、`CMake: Build`；烧录仍使用上述 ST-Link 任务。若找不到 `Debug-local`，核对本机 `STM32F405-FOC/CMakeUserPresets.json` 与工作区根目录。若构建提示找不到 ARM GCC、Ninja 或 objcopy，检查该预设中的安装路径；若 ST-Link 连接失败，检查板卡逻辑供电、SWDIO/SWCLK/GND/目标电压参考，以及是否有别的程序占用调试器。`CMakeUserPresets.json` 和 `.vscode/tasks.json` 含本机绝对工具路径，按 `.gitignore` 仅保留在本机；换电脑需要重新配置对应路径。
 
