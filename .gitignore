@@ -1,0 +1,34 @@
+# Local editor and CMake settings
+.vscode/
+CMakeUserPresets.json
+
+# Generated STM32CubeMX metadata (the .ioc file is versioned)
+.mxproject
+
+# CMake and Ninja output
+**/build/
+**/cmake-build-*/
+**/CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+build.ninja
+.ninja_deps
+.ninja_log
+
+# Compiler and firmware artifacts outside the build directory
+*.o
+*.obj
+*.d
+*.elf
+*.hex
+*.bin
+*.map
+*.exe
+
+# Editor and operating system leftovers
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
