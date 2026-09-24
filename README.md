@@ -13,4 +13,4 @@
 
 图片中的 ZH3620-1 是 14 极（7 极对）、12 槽、500 KV、7.4–12.4 V，20 V 为最高电压，12 A 为堵转电流。默认固件仍采用首次测试的保守限值：**8–12.4 V 母线、±0.30 A 目标电流、0.80 A 相电流跳闸、±100 RPM**。堵转电流不是软件目标电流。所有组合首次上电均需显式发送 `cal`，旧版 Flash 校准记录不会被自动沿用。
 
-电机、编码器与接口的选择方法、通信命令见[统一固件指南](STM32F405-FOC/docs/unified-firmware.md)；在 VS Code 中操作请看[构建与烧录步骤](STM32F405-FOC/docs/vscode-build.md)；实机开始前按[ZH3620-1 首测清单](STM32F405-FOC/docs/zh3620-1-first-test.md)检查。旧 M0 [上板记录](STM32F405-FOC/docs/m0-torque-bring-up.md)和[FOC 初学者教程](STM32F405-FOC/variants/m1-mt6835/docs/FOC-从零读懂这个工程.md)用于了解硬件与算法；新组合只通过构建及主机侧测试，尚未完成实机验收。
+电机、编码器与接口的选择方法、通信命令见[统一固件指南](STM32F405-FOC/docs/unified-firmware.md)；在 VS Code 中操作请看[构建与烧录步骤](STM32F405-FOC/docs/vscode-build.md)；用 USB 和 VOFA+ 看数据请看[VOFA+ 快速上手](STM32F405-FOC/docs/vofa-quickstart.md)；实机开始前按[ZH3620-1 首测清单](STM32F405-FOC/docs/zh3620-1-first-test.md)检查。旧 M0 [上板记录](STM32F405-FOC/docs/m0-torque-bring-up.md)和[FOC 初学者教程](STM32F405-FOC/variants/m1-mt6835/docs/FOC-从零读懂这个工程.md)用于了解硬件与算法；新组合只通过构建及主机侧测试，尚未完成实机验收。
