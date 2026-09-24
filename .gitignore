@@ -32,3 +32,10 @@ build.ninja
 *~
 .DS_Store
 Thumbs.db
+Desktop.ini
+__pycache__/
+*.pyc
+*.ioc.bak
+*.ioc.original.bak
+scope.png
+scope*.csv

@@ -57,7 +57,7 @@ MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
 CCMRAM (xrw)      : ORIGIN = 0x10000000, LENGTH = 64K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 1024K
+FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 896K /* Sector 11 (128K) stores FOC calibration. */
 }
 
 /* Highest address of the user mode stack */
@@ -149,6 +149,12 @@ SECTIONS
   } >FLASH
 
   _siccmram = LOADADDR(.ccmram);
+
+  /* USB FS uses CPU FIFO copies, so its queue can occupy CPU-only CCM. */
+  .usb_buffer (NOLOAD) : ALIGN(4)
+  {
+    *(.usb_buffer)
+  } >CCMRAM
 
   /* CCM-RAM section
   *

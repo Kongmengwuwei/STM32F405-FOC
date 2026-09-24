@@ -22,7 +22,11 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "board_adc.h"
+#include "bsp_motor.h"
+#include "app.h"
+#include "bsp_adc.h"
+#include "mt6835_port_stm32.h"
+#include "bsp_uart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,7 +60,12 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-
+extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
+extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc2;
+extern CAN_HandleTypeDef hcan1;
+extern DMA_HandleTypeDef hdma_usart2_tx;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -70,6 +79,7 @@
 void NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
+  bsp_motor_off();
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
@@ -85,6 +95,7 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
+  bsp_motor_off();
 
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
@@ -100,6 +111,7 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
+  bsp_motor_off();
 
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
@@ -115,6 +127,7 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
+  bsp_motor_off();
 
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
@@ -130,6 +143,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
+  bsp_motor_off();
 
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
@@ -199,11 +213,118 @@ void SysTick_Handler(void)
 /* please refer to the startup file (startup_stm32f4xx.s).                    */
 /******************************************************************************/
 
-/* USER CODE BEGIN 1 */
+/**
+  * @brief This function handles DMA1 stream6 global interrupt.
+  */
+void DMA1_Stream6_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream6_IRQn 0 */
 
+  /* USER CODE END DMA1_Stream6_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart2_tx);
+  /* USER CODE BEGIN DMA1_Stream6_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream6_IRQn 1 */
+}
+
+/**
+  * @brief This function handles ADC1, ADC2 and ADC3 global interrupts.
+  */
 void ADC_IRQHandler(void)
 {
-  board_adc_irq_handler();
+  /* USER CODE BEGIN ADC_IRQn 0 */
+  app_fault(FOC_ADC);
+  (void)bsp_adc_read();
+  return;
+  /* USER CODE END ADC_IRQn 0 */
+  HAL_ADC_IRQHandler(&hadc1);
+  HAL_ADC_IRQHandler(&hadc2);
+  /* USER CODE BEGIN ADC_IRQn 1 */
+
+  /* USER CODE END ADC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles CAN1 TX interrupts.
+  */
+void CAN1_TX_IRQHandler(void)
+{
+  /* USER CODE BEGIN CAN1_TX_IRQn 0 */
+
+  /* USER CODE END CAN1_TX_IRQn 0 */
+  HAL_CAN_IRQHandler(&hcan1);
+  /* USER CODE BEGIN CAN1_TX_IRQn 1 */
+
+  /* USER CODE END CAN1_TX_IRQn 1 */
+}
+
+/**
+  * @brief This function handles CAN1 RX0 interrupts.
+  */
+void CAN1_RX0_IRQHandler(void)
+{
+  /* USER CODE BEGIN CAN1_RX0_IRQn 0 */
+
+  /* USER CODE END CAN1_RX0_IRQn 0 */
+  HAL_CAN_IRQHandler(&hcan1);
+  /* USER CODE BEGIN CAN1_RX0_IRQn 1 */
+
+  /* USER CODE END CAN1_RX0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+  bsp_uart_irq();
+  return;
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USB On The Go FS global interrupt.
+  */
+void OTG_FS_IRQHandler(void)
+{
+  /* USER CODE BEGIN OTG_FS_IRQn 0 */
+
+  /* USER CODE END OTG_FS_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
+  /* USER CODE BEGIN OTG_FS_IRQn 1 */
+
+  /* USER CODE END OTG_FS_IRQn 1 */
+}
+
+/* USER CODE BEGIN 1 */
+void DMA2_Stream0_IRQHandler(void)
+{
+    /* First pair ready: overlap encoder SPI with the second (bus) ADC rank. */
+    uint32_t flags = DMA2->LISR;
+    DMA2->LIFCR = DMA_LIFCR_CHTIF0;
+    if ((flags & (DMA_LISR_HTIF0 | DMA_LISR_TEIF0 | DMA_LISR_DMEIF0 | DMA_LISR_FEIF0)) != DMA_LISR_HTIF0) {
+        (void)bsp_adc_read(); app_fault(FOC_ADC); return;
+    }
+    if (!bsp_motor_sample_begin()) app_fault(FOC_TIMING);
+    mt6835_start();
+}
+
+void DMA1_Stream0_IRQHandler(void)
+{
+    mt6835_finish();
+    if (!bsp_adc_read()) app_fault(FOC_ADC); /* Both ranks must now be complete. */
+    app_sample();
+}
+
+void TIM8_UP_TIM13_IRQHandler(void)
+{
+    if (!bsp_motor_update()) app_fault(FOC_TIMING);
 }
 
 /* USER CODE END 1 */
