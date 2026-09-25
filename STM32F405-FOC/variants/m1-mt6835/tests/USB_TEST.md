@@ -47,7 +47,7 @@ USB IRQ 优先级 7，低于采样/编码器 IRQ 1。
 `zero` 把当前位置定义为 0°（需停机静止）；`stop` 立即关断；`cal` 仅静止待机可重校准，
 `clear` 仅清除已消失的故障且不自动启动；`hello` 只在 UART 回一行文本，不进 USB 二进制流。
 USB/UART 各自组行、共用命令处理，不向波形流混入文字 ACK；拒绝计数见 `app_command_rejected`。
-Speed/Position 模式有 200 ms 主机看门狗（见 [App/README.md](../App/README.md)），
+Torque/Speed/Position 模式都有 200 ms 主机看门狗（见 [App/README.md](../App/README.md)），
 用 VOFA 手动发一条目标后会因不再重发而在 200 ms 后停机，这是预期行为，不是故障。
 
 ## 队列、异常与完整性边界

@@ -87,12 +87,13 @@ int main(void)
     foc.calibration.zero = 0.0f;
     usb("send 3\rIq 0.20\r");
     assert(foc.state == FOC_PRECHARGE && control_mode() == CONTROL_TORQUE);
-    for (unsigned n = 0; n < 120u; ++n) {
+    const unsigned samples = 120u + FOC_PWM_ZERO_SETTLE_SAMPLES + FOC_PWM_ZERO_SAMPLES;
+    for (unsigned n = 0; n < samples; ++n) {
         motor_sample_us += 100u;
         app_sample();
     }
     assert(foc.state == FOC_RUN && fabsf(foc.iq_ref - 0.010f) < 0.0002f);
-    assert(frames == 120u && isinf(last_frame[12]));
+    assert(frames == samples && isinf(last_frame[12]));
     usb("rpm 10\r");
     assert(control_mode() == CONTROL_SPEED);
     usb("pos 90\r");

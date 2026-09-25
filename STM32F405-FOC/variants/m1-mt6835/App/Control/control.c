@@ -139,7 +139,10 @@ static float outer_output(float dt)
         if (omega < -ceiling) omega = -ceiling;
         speed_target = omega;
     }
-    float error = speed_target - speed;
+    /* Calibration.direction maps mechanical rotation to electrical rotation.
+       Positive Iq follows the electrical direction, so invert both P and I
+       for a motor whose calibrated mechanical direction is negative. */
+    float error = (float)foc.calibration.direction * (speed_target - speed);
     float wanted = SPEED_KP * error + integral_speed;
     float limited = wanted;
     if (limited > FOC_CURRENT_MAX) limited = FOC_CURRENT_MAX;
@@ -169,11 +172,11 @@ void control_step(uint32_t sample_us, float mechanical_deg)
     float dt = (float)elapsed * 1e-6f;
     previous_tick = sample_us;
     speed = foc.rpm;
-    if (!commanded || mode == CONTROL_TORQUE) return; /* Torque keeps its own Iq reference. */
-    /* The outer loops hold a computed reference, so they stop when the host
-       falls silent. Torque mode keeps the historical `Iq` semantics and has no
-       watchdog. A host that comes back clears the watchdog fault by itself. */
+    if (!commanded) return;
+    /* Every energizing mode needs a live host. A lost USB cable or crashed
+       controller must not leave a torque command latched indefinitely. */
     if (!control_scheduled()) { fault = FOC_UART; return; }
     if (fault == FOC_UART) fault = 0u;
+    if (mode == CONTROL_TORQUE) return; /* Its Iq ramp lives in foc_step(). */
     reference = outer_output(dt);
 }

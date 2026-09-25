@@ -45,7 +45,7 @@ UART 封装接口为 `uart_justfloat`，仍是 2 kHz、15 float。USB 需要 PC 
 
 参数在 `App/Control/control.c` 顶部常量块：`SPEED_KP=0.005`、`SPEED_KI=0.01`、`POSITION_KP=4`。位置环只有 P 项。外环输出限幅与 `Iq` 命令同为 ±5 A。
 
-**主机看门狗**：Speed/Position 模式下若超过 **200 ms** 没有收到新目标，置 `FOC_UART` 并停机——外环握着计算出的参考值，PC 挂死必须能自停。主机回来后重新下发目标即可清除该故障。Torque 模式保持历史语义，没有该看门狗。
+**主机看门狗**：Torque/Speed/Position 三种运行模式若超过 **200 ms** 没有收到新目标，置 `FOC_UART` 并停机；`Iq` 不再无限保持最后的非零目标。故障锁存后需在原因消失时显式 `clear`，然后重新发送运行目标，不会自动重启。
 
 外环在 `foc_step` 的 `FOC_RUN` 分支内调度：`control_step()` 以 `motor_sample_us` 计时，每毫秒执行一次；同一周期内的其余 19 个采样点沿用上一个参考值。电流环的 PI、抗饱和、预测角度与 SVPWM 未改动。
 

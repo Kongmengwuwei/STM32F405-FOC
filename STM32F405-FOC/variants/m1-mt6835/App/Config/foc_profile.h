@@ -33,6 +33,8 @@
 #define FOC_PHASE_TRIP ((FOC_PORT_PHASE_TRIP < FOC_MOTOR_PHASE_TRIP) ? FOC_PORT_PHASE_TRIP : FOC_MOTOR_PHASE_TRIP)
 #define FOC_SPEED_MAX FOC_MOTOR_SPEED_MAX
 #define FOC_ALIGNMENT_VOLTS FOC_MOTOR_ALIGNMENT_VOLTS
+#define FOC_ALIGNMENT_CURRENT_A FOC_MOTOR_ALIGNMENT_CURRENT_A
+#define FOC_ALIGNMENT_SWEEP_TICKS_20KHZ FOC_MOTOR_ALIGNMENT_SWEEP_TICKS_20KHZ
 #define FOC_CURRENT_KP FOC_MOTOR_CURRENT_KP
 #define FOC_CURRENT_KI_STEP (FOC_MOTOR_CURRENT_KI_PER_S / (float)FOC_SAMPLE_HZ)
 #define FOC_SPEED_KP FOC_MOTOR_SPEED_KP
@@ -47,6 +49,8 @@
                             (FOC_ENCODER_ID << 4) | FOC_INSTALLATION_ID)
 #define FOC_PWM_PERIOD_TICKS (2u * FOC_PWM_ARR)
 #define FOC_PRECHARGE_SAMPLES (FOC_SAMPLE_HZ / 500u)
+#define FOC_PWM_ZERO_SAMPLES FOC_PORT_PWM_ZERO_SAMPLES
+#define FOC_PWM_ZERO_SETTLE_SAMPLES (FOC_SAMPLE_HZ / 1000u)
 #define FOC_OFFSET_WAIT_SAMPLES (FOC_SAMPLE_HZ / 5u)
 #define FOC_CAL_TICKS(at_20khz) ((at_20khz) * FOC_SAMPLE_HZ / 20000u)
 
@@ -56,6 +60,10 @@
 _Static_assert(FOC_BUS_MIN < FOC_BUS_MAX, "Motor and port voltage ranges must overlap");
 _Static_assert(FOC_CURRENT_MAX > 0.0f && FOC_CURRENT_MAX < FOC_PHASE_TRIP,
                "Command current must remain below the phase trip threshold");
+_Static_assert(FOC_ALIGNMENT_CURRENT_A >= 0.0f && FOC_ALIGNMENT_CURRENT_A < FOC_PHASE_TRIP,
+               "Alignment current must remain below the phase trip threshold");
+_Static_assert(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ >= 40000u && FOC_ALIGNMENT_SWEEP_TICKS_20KHZ <= 80000u,
+               "Alignment scan timing is outside the validated range");
 _Static_assert(FOC_POLE_PAIRS > 0u && FOC_POLE_PAIRS < 65536u,
                "Pole pairs must fit the calibration record");
 #ifdef FOC_MOTOR_ZH3620_1

@@ -11,9 +11,10 @@
 | `test_justfloat.c` | 主机测试 | 当前 | 两种传输的帧字节：精确帧、参数单次求值、16 通道上限、NaN、发送被拒 |
 | `test_app_usb.c` | 主机测试 | 当前 | 真实 `app.c` + `foc.c` + `control.c`：四组 12 float 帧布局、头字位打包、`send` 切组、`Iq`/`rpm`/`pos`/`zero`/`hello` 解析与拒绝、`hello` 组合标识、CR/LF/CRLF、拆包/粘包、UART/USB 独立组行、会话切换、20,000 帧、1 A/s 斜坡、外环参考替换 |
 | `test_m0_unified.c` | 主机测试 | 当前 | 默认 M0 配置：无校准记录时保持待机、显式 `cal`、统一 USB 命令/遥测和三种控制模式 |
+| `test_pwm_zero_offset.c` | 主机测试 | 当前 | M0 在三相等占空比 PWM 下重新测量 B/C 相电流零点，并在对齐前使用新零点 |
 | `test_motor_record.c` | 主机测试 | 当前 | v3 Flash 校准记录按接口/电机/编码器/安装编号隔离，拒绝身份不全的 v1/v2 记录 |
 | `test_profile_matrix.c` | 主机测试 | 当前 | 八种接口/编码器/电机参数组合的电压、电流、校准身份与不自动启动约束 |
-| `test_control_pid.c` | 主机测试 | 当前 | 真实 `control.c` + 一阶被控对象：速度跟踪（±）、输出限幅与抗饱和、200 ms 主机看门狗、多圈位置收敛与反向、`zero`、`stop` 复位 |
+| `test_control_pid.c` | 主机测试 | 当前 | 真实 `control.c` + 一阶被控对象：速度跟踪（±）、反向安装的速度/位置方向、输出限幅与抗饱和、三种运行模式的 200 ms 主机看门狗、多圈位置收敛、`zero`、`stop` 复位 |
 | `test_usb_queue.c` | 主机测试 | 当前 | 直接包含生产 `bsp_usb.c`：20,000 帧逐字节比对、BUSY 重试、缓冲所有权、环形/计数器回绕、溢出锁存、复位统计、RX 背压（用 `usb_stubs/` 替代 CDC 回调） |
 | `test_foc_recalibration.c` | 主机测试 | 当前 | 校准状态机回归：零偏采集 → `foc_calibrate()` → 对齐 → `FOC_SAVE`，方向判定与 600 转滑行 |
 | `capture_usb.py` | PC 脚本 | 当前 | 单组 20 kHz 流长跑校验：DTR 会话排空、帧尾对齐、`seq` 差 1 与 µs 差 50 的连续性、速率 19,800..20,200 帧/s |
@@ -39,6 +40,8 @@ gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_
 ./build/test_app_usb.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_m0_unified.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_m0_unified.exe
 ./build/test_m0_unified.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_pwm_zero_offset.c App/FOC/foc.c App/Control/control.c -lm -o build/test_pwm_zero_offset.exe
+./build/test_pwm_zero_offset.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_motor_record.c -o build/test_motor_record_m1.exe
 ./build/test_motor_record_m1.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_motor_record.c -o build/test_motor_record_m0.exe

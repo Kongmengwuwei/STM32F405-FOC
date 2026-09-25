@@ -16,7 +16,7 @@ uint32_t bsp_uart_millis(void) { return s_millis; }
 void bsp_uart_tick(void) {}
 bool bsp_uart_write(const void *data, size_t size) { (void)data; return size != 0u; }
 
-static float angle = 30.0f, rpm;
+static float angle = 30.0f, rpm, plant_direction;
 static uint32_t sample_us;
 /* Independent multi-turn ground truth, fed to control_step as foc_step does. */
 static float plant_position, previous_plant_angle;
@@ -27,7 +27,7 @@ static void step(float torque_scale)
 {
     const float dt = 50e-6f;
     float omega = rpm * RADS_PER_RPM;
-    float drive = 1230.0f * foc.iq_ref * torque_scale - 0.0654f * omega - 0.27f;
+    float drive = 1230.0f * foc.iq_ref * torque_scale * plant_direction - 0.0654f * omega - 0.27f;
     if (fabsf(omega) < 1e-4f && fabsf(drive) <= 192.5f) omega = 0.0f;
     else omega += (drive - 192.5f * (omega > 0.0f ? 1.0f : omega < 0.0f ? -1.0f : copysignf(1.0f, drive))) * dt;
     rpm = omega / RADS_PER_RPM;
@@ -61,11 +61,13 @@ static void reset(void)
 {
     foc = (foc_t){0};
     foc.calibrated = true;
+    foc.calibration.direction = 1;
     foc.zero_ready = true;
     foc.state = FOC_IDLE;
     foc.b_offset = foc.c_offset = 1.65f;
     angle = 30.0f;
     rpm = 0.0f;
+    plant_direction = 1.0f;
     plant_position = 0.0f;
     previous_plant_angle = angle; /* Must match, or the first delta is bogus. */
     s_millis = 0u;
@@ -133,11 +135,13 @@ int main(void)
     run(40u, 0.0f); /* 220 ms since the last command. */
     assert(control_fault() == FOC_UART);
     printf("watchdog: tripped with FOC_UART after 220 ms of silence\n");
-    /* Torque mode keeps the historical `Iq` semantics and has no watchdog. */
+    /* Torque mode also stops when the host disappears. */
     reset();
     assert(control_torque(0.5f));
-    run(400u, 0.0f);
-    assert(control_fault() == 0u && foc.state != FOC_FAULT);
+    run(180u, 0.0f);
+    assert(control_fault() == 0u);
+    run(40u, 0.0f);
+    assert(control_fault() == FOC_UART);
 
     /* --- Position loop: converge on a multi-turn target, both directions. --- */
     reset();
@@ -147,6 +151,7 @@ int main(void)
     printf("position: target 720, reached %.2f deg, error %.2f deg, iq %.3f A\n",
            (double)plant_position, (double)error, (double)control_iq_ref());
     assert(fabsf(error) < 10.0f);
+
     assert(plant_position <= 750.0f); /* Overshoot bound on the way in. */
 
     assert(control_position(-360.0f));
@@ -155,6 +160,21 @@ int main(void)
     printf("position: target -360, reached %.2f deg, error %.2f deg\n",
            (double)plant_position, (double)error);
     assert(fabsf(error) < 10.0f);
+
+    /* Reversed encoder/phase orientation: positive Iq turns the mechanical
+       shaft backward. Both speed and position control must remain stable. */
+    reset();
+    foc.calibration.direction = -1;
+    plant_direction = -1.0f;
+    assert(control_speed(-500.0f));
+    hold(3000u, 1.0f);
+    assert(fabsf(control_speed_rpm() + 500.0f) < 60.0f);
+    reset();
+    foc.calibration.direction = -1;
+    plant_direction = -1.0f;
+    assert(control_position(-360.0f));
+    hold(4000u, 1.0f);
+    assert(fabsf(control_position_deg() + 360.0f) < 10.0f);
 
     /* --- zero() redefines the origin and needs a stationary drive. --- */
     foc.state = FOC_IDLE;

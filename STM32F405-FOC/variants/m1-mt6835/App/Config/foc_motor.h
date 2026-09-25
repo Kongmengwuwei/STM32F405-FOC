@@ -18,10 +18,12 @@
 #define FOC_MOTOR_AMBIENT_MAX_C 40.0f
 #define FOC_MOTOR_BUS_MIN 7.4f
 #define FOC_MOTOR_BUS_MAX 12.4f /* 20 V absolute maximum is not a test voltage. */
-#define FOC_MOTOR_CURRENT_MAX 0.30f
-#define FOC_MOTOR_PHASE_TRIP 0.80f
+#define FOC_MOTOR_CURRENT_MAX 0.30f /* Short, unloaded command limit pending hardware checks. */
+#define FOC_MOTOR_PHASE_TRIP 1.20f /* Controlled calibration was observed below this limit. */
 #define FOC_MOTOR_SPEED_MAX 100.0f /* First-test software limit. */
-#define FOC_MOTOR_ALIGNMENT_VOLTS 0.08f
+#define FOC_MOTOR_ALIGNMENT_VOLTS 0.20f /* Ceiling for current-regulated alignment. */
+#define FOC_MOTOR_ALIGNMENT_CURRENT_A 0.45f
+#define FOC_MOTOR_ALIGNMENT_SWEEP_TICKS_20KHZ 80000u /* Four seconds per electrical turn. */
 #define FOC_MOTOR_RESISTANCE_OHM 0.12f /* Provisional; measure phase resistance. */
 #define FOC_MOTOR_INDUCTANCE_H 0.0f /* Feedforward disabled until measured. */
 #define FOC_MOTOR_FLUX_WB 0.0f
@@ -43,6 +45,8 @@
 #define FOC_MOTOR_PHASE_TRIP 10.0f
 #define FOC_MOTOR_SPEED_MAX 9400.0f
 #define FOC_MOTOR_ALIGNMENT_VOLTS 0.6f
+#define FOC_MOTOR_ALIGNMENT_CURRENT_A 0.0f
+#define FOC_MOTOR_ALIGNMENT_SWEEP_TICKS_20KHZ 40000u
 #define FOC_MOTOR_RESISTANCE_OHM 0.12f
 #define FOC_MOTOR_INDUCTANCE_H 50e-6f
 #define FOC_MOTOR_FLUX_WB 0.0021f

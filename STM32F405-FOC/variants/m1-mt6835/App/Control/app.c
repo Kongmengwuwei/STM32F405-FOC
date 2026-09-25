@@ -146,7 +146,7 @@ void app_sample(void)
     if (foc.fault) foc_trip(foc.fault); /* Preserve a preempting priority-0 fault. */
     if (previous_state == FOC_OFFSET && foc.state == FOC_PRECHARGE) bsp_motor_arm();
     unsigned mode = foc.state == FOC_PRECHARGE ? MOTOR_PRECHARGE :
-        (foc.state == FOC_RUN || foc.state == FOC_CALIBRATE) ? MOTOR_PWM : MOTOR_OFF;
+        (foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) ? MOTOR_PWM : MOTOR_OFF;
 #ifdef FOC_CAPTURE
     if (capturing && capture_low && !foc.fault) mode = MOTOR_PRECHARGE;
 #endif

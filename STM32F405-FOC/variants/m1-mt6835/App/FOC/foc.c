@@ -6,10 +6,16 @@
 
 #define PI 3.14159265358979323846f
 #define TURN (2.0f * PI)
+#define ALIGN_HOLD_END FOC_CAL_TICKS(30000u)
+#define ALIGN_FORWARD_END FOC_CAL_TICKS(30000u + FOC_ALIGNMENT_SWEEP_TICKS_20KHZ)
+#define ALIGN_REVERSE_END FOC_CAL_TICKS(30000u + 2u * FOC_ALIGNMENT_SWEEP_TICKS_20KHZ)
+#define ALIGN_SETTLE_END FOC_CAL_TICKS(36000u + 2u * FOC_ALIGNMENT_SWEEP_TICKS_20KHZ)
+#define ALIGN_SAMPLE_END FOC_CAL_TICKS(40000u + 2u * FOC_ALIGNMENT_SWEEP_TICKS_20KHZ)
 foc_t foc;
 static float previous, position, origin, forward, sum_sin, sum_cos, low, high;
 static uint32_t ticks;
 static float integral_d, integral_q, variance_b, variance_c, previous_command;
+static float pwm_offset_sum_b, pwm_offset_sum_c;
 static bool tracking, aligning;
 
 static void sincos_fast(float theta, float *s, float *c)
@@ -77,6 +83,7 @@ void foc_stop(void)
 {
     foc.command = foc.iq_ref = foc.ud = foc.uq = 0.0f;
     integral_d = integral_q = 0.0f;
+    pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
     aligning = false;
     previous_command = 0.0f; /* Cancel any in-flight command ramp. */
     foc.duty[0] = foc.duty[1] = foc.duty[2] = 0.0f;
@@ -109,6 +116,7 @@ void foc_init(const foc_calibration_t *calibration)
     aligning = FOC_AUTOCALIBRATE && calibration == NULL;
     ticks = 0u;
     integral_d = integral_q = variance_b = variance_c = 0.0f;
+    pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
     if (calibration) { foc.calibration = *calibration; foc.calibrated = true; }
     foc.state = FOC_OFFSET; /* Gate-off current offsets precede any alignment. */
 }
@@ -134,7 +142,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     if (!isfinite(encoder_delay) || encoder_delay < 0.0f || encoder_delay > 50e-6f) {
         foc_trip(FOC_TIMING); return;
     }
-    if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE) {
+    if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         if (!isfinite(bus_voltage) || bus_voltage < FOC_BUS_MIN || bus_voltage > FOC_BUS_MAX) {
             foc_trip(FOC_BUS); return;
         }
@@ -184,7 +192,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     float ia = -ib - ic, beta = (ib - ic) * 0.5773502692f;
     foc.id = ia * c + beta * s;
     foc.iq = -ia * s + beta * c;
-    if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE) {
+    if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         float trip = FOC_PHASE_TRIP;
         if (fabsf(ia) >= trip || fabsf(ib) >= trip || fabsf(ic) >= trip) { foc_trip(FOC_CURRENT); return; }
         if (!aligning && fabsf(foc.rpm) >= FOC_SPEED_MAX) { foc_trip(FOC_SPEED); return; }
@@ -192,8 +200,40 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     if (foc.state == FOC_PRECHARGE) {
         if (++ticks < FOC_PRECHARGE_SAMPLES) return; /* 2 ms, low sides on. */
         ticks = 0u;
+        if (FOC_PWM_ZERO_SAMPLES != 0u) {
+            pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
+            foc.ud = foc.uq = 0.0f;
+            foc.duty[0] = foc.duty[1] = foc.duty[2] = 0.5f;
+            foc.state = FOC_PWM_ZERO;
+            return;
+        }
         foc.state = aligning ? FOC_CALIBRATE : FOC_RUN;
     }
+#if FOC_PWM_ZERO_SAMPLES > 0u
+    if (foc.state == FOC_PWM_ZERO) {
+        /* Equal PWM duty creates zero line-to-line voltage. Measure the ADC
+           zero with the power stage switching, after its first millisecond. */
+        if (fabsf(foc.rpm) >= 5.0f) { foc_trip(FOC_SPEED); return; }
+        ++ticks;
+        foc.duty[0] = foc.duty[1] = foc.duty[2] = 0.5f;
+        if (ticks > FOC_PWM_ZERO_SETTLE_SAMPLES) {
+            pwm_offset_sum_b += b_voltage;
+            pwm_offset_sum_c += c_voltage;
+        }
+        if (ticks == FOC_PWM_ZERO_SETTLE_SAMPLES + FOC_PWM_ZERO_SAMPLES) {
+            float next_b = pwm_offset_sum_b / (float)FOC_PWM_ZERO_SAMPLES;
+            float next_c = pwm_offset_sum_c / (float)FOC_PWM_ZERO_SAMPLES;
+            if (fabsf(next_b - foc.b_offset) > 0.01f || fabsf(next_c - foc.c_offset) > 0.01f) {
+                foc_trip(FOC_ZERO); return;
+            }
+            foc.b_offset = next_b; foc.c_offset = next_c;
+            integral_d = integral_q = 0.0f;
+            ticks = 0u;
+            foc.state = aligning ? FOC_CALIBRATE : FOC_RUN;
+        }
+        return;
+    }
+#endif
     if (foc.state == FOC_RUN) {
         /* 1 A/s command ramp at the selected-port sample rate. */
         float step = foc.command - previous_command;
@@ -231,27 +271,28 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     } else if (foc.state == FOC_CALIBRATE) {
         ++ticks;
         float theta = 0.0f, ud = FOC_ALIGNMENT_VOLTS;
-        if (ticks <= FOC_CAL_TICKS(10000u)) ud *= (float)ticks / (float)FOC_CAL_TICKS(10000u);
-        if (ticks == FOC_CAL_TICKS(30000u)) origin = position;
-        if (ticks > FOC_CAL_TICKS(30000u) && ticks <= FOC_CAL_TICKS(70000u))
-            theta = TURN * (float)(ticks - FOC_CAL_TICKS(30000u)) / (float)FOC_CAL_TICKS(40000u);
-        if (ticks == FOC_CAL_TICKS(70000u)) {
+        if (FOC_ALIGNMENT_CURRENT_A == 0.0f && ticks <= FOC_CAL_TICKS(10000u))
+            ud *= (float)ticks / (float)FOC_CAL_TICKS(10000u);
+        if (ticks == ALIGN_HOLD_END) origin = position;
+        if (ticks > ALIGN_HOLD_END && ticks <= ALIGN_FORWARD_END)
+            theta = TURN * (float)(ticks - ALIGN_HOLD_END) / (float)FOC_CAL_TICKS(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ);
+        if (ticks == ALIGN_FORWARD_END) {
             forward = position - origin;
             if (fabsf(forward) < (360.0f / (float)FOC_POLE_PAIRS) * 0.8f ||
                 fabsf(forward) > (360.0f / (float)FOC_POLE_PAIRS) * 1.2f) {
                 foc_trip(FOC_ALIGNMENT); return;
             }
         }
-        if (ticks > FOC_CAL_TICKS(70000u) && ticks <= FOC_CAL_TICKS(110000u))
-            theta = TURN * (1.0f - (float)(ticks - FOC_CAL_TICKS(70000u)) / (float)FOC_CAL_TICKS(40000u));
-        if (ticks == FOC_CAL_TICKS(116000u)) { sum_sin = sum_cos = 0.0f; low = high = position; }
-        if (ticks > FOC_CAL_TICKS(116000u)) {
+        if (ticks > ALIGN_FORWARD_END && ticks <= ALIGN_REVERSE_END)
+            theta = TURN * (1.0f - (float)(ticks - ALIGN_FORWARD_END) / (float)FOC_CAL_TICKS(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ));
+        if (ticks == ALIGN_SETTLE_END) { sum_sin = sum_cos = 0.0f; low = high = position; }
+        if (ticks > ALIGN_SETTLE_END) {
             float angle = mechanical_deg * (PI / 180.0f);
             sincos_fast(angle, &s, &c);
             sum_sin += s; sum_cos += c;
             low = fminf(low, position); high = fmaxf(high, position);
         }
-        if (ticks == FOC_CAL_TICKS(120000u)) {
+        if (ticks == ALIGN_SAMPLE_END) {
             if (fabsf(position - origin) > 1.0f || high - low > 1.0f) {
                 foc_trip(FOC_ALIGNMENT); return;
             }
@@ -261,8 +302,21 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             foc.state = FOC_SAVE;
             return;
         }
-        foc.ud = ud; foc.uq = 0.0f;
         sincos_fast(theta, &s, &c);
+        if (FOC_ALIGNMENT_CURRENT_A > 0.0f) {
+            /* Electrical zero is unknown; regulate current along the
+               commanded stator field rather than the encoder d-axis. */
+            float target = FOC_ALIGNMENT_CURRENT_A;
+            if (ticks <= FOC_CAL_TICKS(10000u))
+                target *= (float)ticks / (float)FOC_CAL_TICKS(10000u);
+            float measured = ia * c + beta * s;
+            float error = target - measured;
+            integral_d += FOC_CURRENT_KI_STEP * error;
+            float requested = FOC_CURRENT_KP * error + integral_d;
+            ud = fminf(fmaxf(requested, 0.0f), FOC_ALIGNMENT_VOLTS);
+            integral_d += 0.1f * (ud - requested);
+        }
+        foc.ud = ud; foc.uq = 0.0f;
         foc_modulate(ud * c, ud * s, bus_voltage, foc.duty);
     }
 }
