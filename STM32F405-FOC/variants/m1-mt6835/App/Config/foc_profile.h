@@ -32,6 +32,7 @@
 #define FOC_CURRENT_MAX ((FOC_PORT_CURRENT_MAX < FOC_MOTOR_CURRENT_MAX) ? FOC_PORT_CURRENT_MAX : FOC_MOTOR_CURRENT_MAX)
 #define FOC_PHASE_TRIP ((FOC_PORT_PHASE_TRIP < FOC_MOTOR_PHASE_TRIP) ? FOC_PORT_PHASE_TRIP : FOC_MOTOR_PHASE_TRIP)
 #define FOC_SPEED_MAX FOC_MOTOR_SPEED_MAX
+#define FOC_TORQUE_SPEED_TRIP_RPM FOC_MOTOR_TORQUE_SPEED_TRIP_RPM
 #define FOC_ALIGNMENT_VOLTS FOC_MOTOR_ALIGNMENT_VOLTS
 #define FOC_ALIGNMENT_CURRENT_A FOC_MOTOR_ALIGNMENT_CURRENT_A
 #define FOC_ALIGNMENT_SWEEP_TICKS_20KHZ FOC_MOTOR_ALIGNMENT_SWEEP_TICKS_20KHZ
@@ -60,6 +61,8 @@
 _Static_assert(FOC_BUS_MIN < FOC_BUS_MAX, "Motor and port voltage ranges must overlap");
 _Static_assert(FOC_CURRENT_MAX > 0.0f && FOC_CURRENT_MAX < FOC_PHASE_TRIP,
                "Command current must remain below the phase trip threshold");
+_Static_assert(FOC_TORQUE_SPEED_TRIP_RPM >= FOC_SPEED_MAX,
+               "Current-mode speed trip must not be below the speed-mode trip");
 _Static_assert(FOC_ALIGNMENT_CURRENT_A >= 0.0f && FOC_ALIGNMENT_CURRENT_A < FOC_PHASE_TRIP,
                "Alignment current must remain below the phase trip threshold");
 _Static_assert(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ >= 40000u && FOC_ALIGNMENT_SWEEP_TICKS_20KHZ <= 80000u,

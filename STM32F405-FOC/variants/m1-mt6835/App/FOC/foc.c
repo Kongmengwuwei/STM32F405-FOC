@@ -195,7 +195,8 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         float trip = FOC_PHASE_TRIP;
         if (fabsf(ia) >= trip || fabsf(ib) >= trip || fabsf(ic) >= trip) { foc_trip(FOC_CURRENT); return; }
-        if (!aligning && fabsf(foc.rpm) >= FOC_SPEED_MAX) { foc_trip(FOC_SPEED); return; }
+        float speed_trip = control_mode() == CONTROL_TORQUE ? FOC_TORQUE_SPEED_TRIP_RPM : FOC_SPEED_MAX;
+        if (!aligning && fabsf(foc.rpm) >= speed_trip) { foc_trip(FOC_SPEED); return; }
     }
     if (foc.state == FOC_PRECHARGE) {
         if (++ticks < FOC_PRECHARGE_SAMPLES) return; /* 2 ms, low sides on. */

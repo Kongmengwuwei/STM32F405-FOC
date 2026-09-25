@@ -16,10 +16,12 @@
 #define FOC_ENCODER_STEP_FLOOR_DEG 0.50f
 #endif
 
-/* Mechanical angle change per sample at the selected motor speed limit,
- * with headroom for acceleration. A fast motor must not inherit the slow
- * M0/TLE threshold merely because the sensor model is the same. */
-#define FOC_SPEED_STEP_DEG (FOC_MOTOR_SPEED_MAX * 6.0f / (float)FOC_SAMPLE_HZ)
+/* Mechanical angle change per sample at the highest permitted mode speed,
+ * with headroom for acceleration. A faster torque-mode trip must also raise
+ * the encoder plausibility threshold, or it would trip FOC_SENSOR first. */
+#define FOC_MAX_MODE_SPEED_RPM ((FOC_MOTOR_TORQUE_SPEED_TRIP_RPM > FOC_MOTOR_SPEED_MAX) ? \
+                                 FOC_MOTOR_TORQUE_SPEED_TRIP_RPM : FOC_MOTOR_SPEED_MAX)
+#define FOC_SPEED_STEP_DEG (FOC_MAX_MODE_SPEED_RPM * 6.0f / (float)FOC_SAMPLE_HZ)
 #define FOC_MAX_STEP_DEG ((FOC_SPEED_STEP_DEG * 1.5f > FOC_ENCODER_STEP_FLOOR_DEG) ? \
                           FOC_SPEED_STEP_DEG * 1.5f : FOC_ENCODER_STEP_FLOOR_DEG)
 

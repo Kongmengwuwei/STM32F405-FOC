@@ -20,7 +20,8 @@
 #define FOC_MOTOR_BUS_MAX 12.4f /* 20 V absolute maximum is not a test voltage. */
 #define FOC_MOTOR_CURRENT_MAX 0.30f /* Short, unloaded command limit pending hardware checks. */
 #define FOC_MOTOR_PHASE_TRIP 1.20f /* Controlled calibration was observed below this limit. */
-#define FOC_MOTOR_SPEED_MAX 100.0f /* First-test software limit. */
+#define FOC_MOTOR_SPEED_MAX 100.0f /* Unvalidated speed/position loops stay capped. */
+#define FOC_MOTOR_TORQUE_SPEED_TRIP_RPM 1000.0f /* Allow short current-loop tests below the 12 V no-load speed. */
 #define FOC_MOTOR_ALIGNMENT_VOLTS 0.20f /* Ceiling for current-regulated alignment. */
 #define FOC_MOTOR_ALIGNMENT_CURRENT_A 0.45f
 #define FOC_MOTOR_ALIGNMENT_SWEEP_TICKS_20KHZ 80000u /* Four seconds per electrical turn. */
@@ -44,6 +45,7 @@
 #define FOC_MOTOR_CURRENT_MAX 5.0f
 #define FOC_MOTOR_PHASE_TRIP 10.0f
 #define FOC_MOTOR_SPEED_MAX 9400.0f
+#define FOC_MOTOR_TORQUE_SPEED_TRIP_RPM FOC_MOTOR_SPEED_MAX
 #define FOC_MOTOR_ALIGNMENT_VOLTS 0.6f
 #define FOC_MOTOR_ALIGNMENT_CURRENT_A 0.0f
 #define FOC_MOTOR_ALIGNMENT_SWEEP_TICKS_20KHZ 40000u
