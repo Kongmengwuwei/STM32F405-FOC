@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Outer loops below the 20 kHz current loop. Only the 1 kHz ISR path
-   (control_step) owns their state; commands only publish targets. */
+/* Shared 1 kHz outer loops above the selected port's current loop. The ISR
+   owns observation/controller state; commands publish targets under IRQ lock. */
 enum { CONTROL_TORQUE, CONTROL_SPEED, CONTROL_POSITION };
 
 bool control_torque(float amps);      /* Target Iq, amps. */
@@ -15,11 +15,11 @@ bool control_hold_position(void);     /* Re-target the last position, still sche
 bool control_zero(void);              /* Redefine the current position as 0 deg. */
 void control_stop(void);              /* stop/trip: torque mode, cleared integrators. */
 
-/* Called at 20 kHz in RUN with foc_step's unwrapped mechanical position;
-   updates the outer loop once per millisecond. */
+/* Called every valid current-loop cycle, including idle, with the unwrapped
+   mechanical position. Observes always; produces torque only in RUN at 1 kHz. */
 void control_step(uint32_t sample_us, float mechanical_deg);
 
-/* Latched reason to trip the FOC state machine; read once per 20 kHz cycle. */
+/* Latched reason to trip the FOC state machine; read every current cycle. */
 uint32_t control_fault(void);
 bool control_scheduled(void);         /* Target was received recently enough to keep running. */
 uint32_t control_mode(void);          /* enum above; 0 means the current loop holds iq_ref. */

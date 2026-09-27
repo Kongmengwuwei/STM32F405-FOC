@@ -40,6 +40,6 @@
 
 ## 5. 上位机和需要留存的数据
 
-VOFA+ 选择 CDC COM、Serial、2000000 baud、8N1、无流控、JustFloat，打开 DTR；USB 命令必须以真正的回车或换行结束。`send 0` 看 ADC 原始码、母线、编码器原始角度；`send 1` 看电流和电角度；`send 3` 的通道 7 为 FOC 转速、8 为目标转速、9 为 Iq。M0 以 10 kHz 发 52 字节/帧，波形软件显示流畅不等于全帧无丢失。要核查连续性，从共用固件目录运行 `python tests/capture_usb.py COM端口 --sample-hz 10000 --seconds 30`。原 `bench.py run` 使用参考电机工况，暂不用于 ZH3620-1。
+VOFA+ 选择 CDC COM、Serial、1000000 baud、8N1、无流控、JustFloat，打开 DTR；USB 命令必须以真正的回车或换行结束。`send 0` 看 ADC 原始码、母线、编码器原始角度；`send 1` 看电流和电角度；`send 3` 的通道 7 为 FOC 转速、8 为目标转速、9 为 Iq。M0 电流环 10 kHz、默认 USB 5 kHz 发 52 字节/帧，波形软件显示流畅不等于全帧无丢失。要核查连续性，从共用固件目录运行 `python tests/capture_usb.py COM端口 --sample-hz 10000 --usb-divider 2 --seconds 30`。原 `bench.py run` 使用参考电机工况，暂不用于 ZH3620-1。
 
 每项试验记录：固件构建的四项选择、母线电压和电源限流、实际相间电阻、编码器机械角与错误计数、ADC 零偏和原始码、Iq 目标/实测、Id、速度、状态/故障码、最慢采样/写 PWM 时间、栅极示波截图及停机原因。下一步调大电流或带负载之前，应先实测相电阻/电感、采样增益与极性、持续温升及硬件快速过流路径；再按这些结果重新整定 PI 和保护值。

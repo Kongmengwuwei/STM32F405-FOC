@@ -1,7 +1,7 @@
 """Host side of the 405_FOC bench data system.
 
 One USB frame is 12 little-endian float32 plus the JustFloat terminator
-``00 00 80 7F``, 52 bytes total, sent at 20 kHz. Channels 0 and 1 are packed
+``00 00 80 7F``, 52 bytes total, sent at sample_hz / usb_divider. Channels 0 and 1 are packed
 header words; the ten remaining channels depend on the logging group selected
 with ``send X``. See README.md for the per-group channel map.
 """
@@ -26,7 +26,7 @@ TERMINATOR = b"\x00\x00\x80\x7f"
 SAMPLE_HZ = 20000.0
 SAMPLE_US = 50
 T_24_MASK = 0xFFFFFF
-SERIAL_SPEED = 2000000
+SERIAL_SPEED = 1000000  # USB CDC line coding; USART2 remains 2 Mbps.
 USB_VID_PID = (0x0483, 0x5740)
 
 # Channels 2..11 per logging group, exactly as App/Control/app.c fills them.
@@ -41,6 +41,8 @@ GROUP_CHANNELS = {
         "rpm_tgt", "iq", "mode", "bus_v"],
     4: ["iq_ref", "iq_ref_cmd", "warning_mask", "last_warning", "state_numeric",
         "rpm_encoder", "command_rejected", "iq", "fault_numeric", "bus_v"],
+    5: ["iq_ref", "iq_ref_cmd", "id", "ud", "uq", "rpm_encoder",
+        "voltage_scale", "iq", "warning_mask", "bus_v"],
 }
 CHANNEL_COUNT = 2 + 26  # union of the channels any group can carry
 
@@ -53,7 +55,7 @@ def _columns(group):
 
 COLUMNS = {group: _columns(group) for group in GROUP_CHANNELS}
 
-GROUP_NAMES = {0: "raw", 1: "current", 2: "voltage", 3: "control", 4: "diagnostics"}
+GROUP_NAMES = {0: "raw", 1: "current", 2: "voltage", 3: "control", 4: "diagnostics", 5: "current_step"}
 
 # FOC state machine and fault codes, App/FOC/foc.h.
 STATE_NAMES = ["IDLE", "PRECHARGE", "CALIBRATE", "SAVE", "RUN", "FAULT", "OFFSET", "PWM_ZERO"]
@@ -164,7 +166,7 @@ def parse_file(path):
     return table, offset + len(raw) - offset - usable, words
 
 
-def continuity(words, group):
+def continuity(words, group, sample_hz=20000, usb_divider=1):
     """Gap, sequence and status statistics for a single-group capture."""
     time_us = (words[:, 0] & T_24_MASK).astype(np.int64)
     seq = (words[:, 1] & T_24_MASK).astype(np.int64)
@@ -181,11 +183,12 @@ def continuity(words, group):
         return stats
     dt = (np.diff(time_us)) & T_24_MASK
     dseq = (np.diff(seq)) & T_24_MASK
-    stats["gaps"] = int(np.count_nonzero((dt < 45) | (dt > 55) | (dseq != 1)))
-    stats["timestamp_jitter"] = int(np.count_nonzero(dt != SAMPLE_US))
+    expected_us = 1000000 * usb_divider / sample_hz
+    stats["gaps"] = int(np.count_nonzero((dt < expected_us - 5) | (dt > expected_us + 5) | (dseq != usb_divider)))
+    stats["timestamp_jitter"] = int(np.count_nonzero(dt != expected_us))
     stats["max_gap_us"] = int(dt.max())
-    stats["missing"] = int(np.sum(dseq - 1))
-    stats["seq_ok"] = bool(np.all(dseq == 1))
+    stats["missing"] = int(np.sum(np.maximum(dseq // usb_divider - 1, 0)))
+    stats["seq_ok"] = bool(np.all(dseq == usb_divider))
     stats["dt_ok"] = bool(stats["gaps"] == 0)
     return stats
 
@@ -376,7 +379,8 @@ def load(path):
         table, dropped, words = parse_file(raw)
     meta["parsed_frames"] = int(len(table))
     meta["dropped_tail_bytes"] = int(dropped)
-    meta["continuity"] = continuity(words, meta["group"]) if len(words) else {}
+    meta["continuity"] = continuity(words, meta["group"], meta.get("sample_hz", 20000),
+                                    meta.get("usb_divider", 1)) if len(words) else {}
     meta["columns"] = COLUMNS[meta["group"]]
     return table, meta
 
@@ -386,7 +390,7 @@ def summarise(table, meta):
     group = meta["group"]
     stats = {
         "frames": int(table.shape[0]),
-        "seconds": round(table.shape[0] / SAMPLE_HZ, 3),
+        "seconds": round(table.shape[0] * meta.get("usb_divider", 1) / meta.get("sample_hz", 20000), 3),
         "group": group,
         "group_name": GROUP_NAMES[group],
     }
@@ -456,7 +460,18 @@ def discover(seconds=1.5, sn=None):
     }
     result["layout_ok"] = dropped < FRAME_BYTES * 2
     if frames:
-        result["continuity"] = continuity(words, 0)
+        # Probe only: infer cadence from headers. Repeated uniform losses
+        # cannot be excluded without explicit firmware timing metadata.
+        ds = np.diff((words[:, 1] & T_24_MASK).astype(np.int64)) & T_24_MASK
+        dt = np.diff((words[:, 0] & T_24_MASK).astype(np.int64)) & T_24_MASK
+        valid = ds > 0
+        if np.any(valid):
+            divider = int(np.median(ds[valid]))
+            control_us = float(np.median(dt[valid] / ds[valid]))
+            hz = round(1000000 / control_us) if control_us > 0 else 20000
+            result["inferred_sample_hz"] = hz
+            result["inferred_usb_divider"] = divider
+            result["continuity"] = continuity(words, 0, hz, divider)
     return result
 
 

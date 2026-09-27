@@ -23,6 +23,7 @@
 
 /* USER CODE BEGIN INCLUDE */
 #include "bsp_usb.h"
+#include "foc_telemetry.h"
 #include <string.h>
 /* USER CODE END INCLUDE */
 
@@ -95,7 +96,9 @@ uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-static uint8_t line_coding[7] = {0x00, 0x84, 0x03, 0x00, 0, 0, 8};
+static uint8_t line_coding[7] = {
+    (uint8_t)FOC_USB_BAUDRATE, (uint8_t)(FOC_USB_BAUDRATE >> 8),
+    (uint8_t)(FOC_USB_BAUDRATE >> 16), (uint8_t)(FOC_USB_BAUDRATE >> 24), 0, 0, 8};
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**

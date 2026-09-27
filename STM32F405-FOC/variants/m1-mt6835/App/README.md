@@ -8,7 +8,7 @@
 
 | 位置 | 职责 |
 |---|---|
-| `Control/app.c` | 初始化、串口命令、UART 2 kHz 和 USB 20 kHz 分组回传 |
+| `Control/app.c` | 初始化、串口命令、UART 2 kHz 和独立分频 USB 分组回传 |
 | `Control/control.c` | 1 kHz 速度环/位置环（串级），目标接收、看门狗、多圈位置累积 |
 | `FOC/foc.c` | 零偏、ABC/dq、双 PI/抗饱和、预测角度、SVPWM、校准状态、Iq 斜坡 |
 | `Hardware/bsp/bsp_motor.c` | TIM8 功率输出、谷底更新/超时关断、校准 Flash |
@@ -22,7 +22,7 @@
 
 应用和协议不依赖 HAL；硬件驱动不调用应用。`Core/Src/main.c` 只调用 `app_init()`，主循环处理命令/校准保存后休眠；`stm32f4xx_it.c` 连接各驱动和应用回调。自写代码只使用生成文件的 USER CODE 块，其他代码保持 CubeMX 所有权。
 
-USB 端口置 DTR 后，每个采样回调通过一次 `bsp_usb_write` 回传 **12 个小端 float32 + JustFloat 帧尾，共 52 字节**，1,040,000 B/s。下标 0 是打包时间戳/状态字，下标 1 是打包序号/组号，下标 2..11 由 `send X` 选定的日志组决定：
+USB 端口置 DTR 后，默认每两次采样通过一次 `bsp_usb_write` 回传 **12 个小端 float32 + JustFloat 帧尾，共 52 字节**；M0 5 kHz/260 kB/s，M1 10 kHz/520 kB/s。组 5 对窗口电流、电压等求平均，组 0–4 记录末端原始点。下标 0 是打包时间戳/状态字，下标 1 是打包序号/组号，下标 2..11 由 `send X` 选定的日志组决定：
 
 | 组 | 内容 |
 |---|---|
@@ -33,21 +33,21 @@ USB 端口置 DTR 后，每个采样回调通过一次 `bsp_usb_write` 回传 **
 
 通道表、位打包、时间/丢帧判据、分析配方见 [tools/bench/README.md](../tools/bench/README.md)。
 
-UART 封装接口为 `uart_justfloat`，仍是 2 kHz、15 float。USB 需要 PC 持续接收，溢出会锁存；命令经 USB 或 UART 前台解析，支持实际 CR、LF 或 CRLF，不混入文本回显。
+UART 封装接口为 `uart_justfloat`，仍是 2 kHz、15 float。USB 需要 PC 持续接收，WARN 溢出丢整帧并自动恢复，TRIP 锁存；命令经 USB 或 UART 前台解析，支持实际 CR、LF 或 CRLF，不混入文本回显。
 
 ## 控制模式
 
 `Iq <A>` / `rpm <v>` / `pos <deg>` 三条命令**命令即切模式**，无需额外 mode 命令。三者都通过同一个 PRECHARGE 联锁启动（2 ms 三低侧导通），`stop` 是唯一的下降路径。
 
-- **Torque**：目标 Iq，与既有语义一致；`Iq 0` 待机时不启动，运行中保持零目标电流环。参考按 **1 A/s** 从上一个值斜坡到新目标（20 kHz 定步长），`stop` 清零并取消未完成的斜坡。
-- **Speed**：1 kHz 速度环，目标 ±9400 RPM。复用 `foc.rpm` 的 20 kHz 编码器低通测速；外环计算在本周期 PWM 提交后进行，下一电流周期使用其 Iq 参考。
-- **Position**：位置环 P 输出转速目标，再串速度环 PI，最终输出 Iq 参考。目标为**绝对多圈角度**（如 `pos 720.00` 表示两整圈），`zero` 把当前位置定义为 0°（需停机且静止）。当前增益 4 RPM/°，位置模式目标转速限幅 ±100 RPM。
+- **Torque**：`Iq 0` 待机时不启动，运行中保持零目标电流环。WARN 直接使用电流目标，TRIP 保留 1 A/s 斜坡；`stop` 关闭输出并清理目标。
+- **Speed**：1 kHz PI，速度由每次采样的连续角度预滤波、1 ms 差分与时间相关低通获得，不再直接复用 `foc.rpm`。后者继续用于电流环角度预测。外环在 PWM 提交后计算，下一电流周期使用其 Iq 参考。
+- **Position**：位置 P 输出逼近速度，再串速度 PI。`zero` 在停机时定义机械原点；`pos 720.00` 是相对这个原点的两整圈位置，`hold` 捕获当前位置。速度按电机的逼近速度与加减速参数规划，到达后保持。
 
-参数在 `App/Control/control.c` 顶部常量块：`SPEED_KP=0.005`、`SPEED_KI=0.01`、`POSITION_KP=4`。位置环只有 P 项。外环输出限幅与 `Iq` 命令同为 ±5 A。
+参数在 `App/Config/foc_motor.h`：ZH3620-1 的速度 Kp/Ki=0.06/0.12，位置 Kp=2 rpm/°，逼近速度 30 rpm，加减速 100 rpm/s；参考电机保留独立增益。WARN 不按旧电流阈值裁剪输出，但在逆变器电压饱和时抑制积分继续增长。实测效果和使用步骤见[速度环与位置环调试记录](../../../docs/speed-position-debug-2026-09-27.md)。
 
-**主机看门狗**：Torque/Speed/Position 三种运行模式若超过 **200 ms** 没有收到新目标，置 `FOC_UART` 并停机；`Iq` 不再无限保持最后的非零目标。故障锁存后需在原因消失时显式 `clear`，然后重新发送运行目标，不会自动重启。
+**目标持续性**：WARN 下三种模式都保持单次目标，正常静默不记为通信超时。TRIP 保留 200 ms 主机看门狗和锁存策略。`stop` 关闭输出；`rpm 0` 与 `pos 0` 仍在执行闭环控制。
 
-外环在 `foc_step` 的 `FOC_RUN` 分支内调度：`control_step()` 以 `motor_sample_us` 计时，每毫秒执行一次；同一周期内的其余 19 个采样点沿用上一个参考值。电流环的 PI、抗饱和、预测角度与 SVPWM 未改动。
+`control_step()` 在 PWM 提交后每次有效采样调用，包括停机观察；速度和位置控制每毫秒执行一次，仅 RUN 产生电流参考。其余电流采样沿用该参考。预充电/PWM 校零期间可以更新目标，不积累外环转矩。电流 PI、角度预测和 SVPWM 保持本轮外环调试前的实现。
 
 ## 采样链路
 

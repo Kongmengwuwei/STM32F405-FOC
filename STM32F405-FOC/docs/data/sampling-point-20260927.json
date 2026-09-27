@@ -1,0 +1,409 @@
+{
+  "date": "2026-09-27",
+  "selected_trigger_ticks": 8200,
+  "selection_reason": "No repeatable noise improvement in tested trigger range",
+  "conditions": {
+    "port": "M0",
+    "encoder": "TLE5012B",
+    "motor": "ZH3620_1",
+    "kp": 0.2,
+    "ki_per_s": 24,
+    "sample_hz": 10000,
+    "usb_divider": 1,
+    "steps_a": [
+      -0.2,
+      -0.1,
+      -0.05,
+      0.05,
+      0.1,
+      0.2
+    ],
+    "exclude_after_target_edge_ms": 30
+  },
+  "runs": [
+    {
+      "label": "t8200a",
+      "tick": 8200,
+      "b_std_codes": 1.364077556836497,
+      "c_std_codes": 1.3284512287446366,
+      "start_angle_deg": 99.90597957937095,
+      "raw_rms_ma": 71.13185990601778,
+      "rms_1ms_ma": 17.501990621288616,
+      "mean_abs_bias_ma": 4.920142906485125,
+      "mean_abs_id_ma": 1.8292451920084811,
+      "segments": 12,
+      "saturated_samples": 0,
+      "gaps": 0,
+      "faults": 0,
+      "by_target": {
+        "-0.2": {
+          "rms_ma": 83.9502103626728,
+          "mean_iq_ma": -191.46127998828888
+        },
+        "-0.1": {
+          "rms_ma": 77.45785266160965,
+          "mean_iq_ma": -96.82707861065865
+        },
+        "-0.05": {
+          "rms_ma": 69.77016478776932,
+          "mean_iq_ma": -47.311361879110336
+        },
+        "0.05": {
+          "rms_ma": 73.99600744247437,
+          "mean_iq_ma": 42.75558330118656
+        },
+        "0.1": {
+          "rms_ma": 65.54346531629562,
+          "mean_iq_ma": 93.96316483616829
+        },
+        "0.2": {
+          "rms_ma": 56.07345886528492,
+          "mean_iq_ma": 198.16067814826965
+        }
+      }
+    },
+    {
+      "label": "t8116a",
+      "tick": 8116,
+      "b_std_codes": 1.3611994547440434,
+      "c_std_codes": 1.3017149338226586,
+      "start_angle_deg": 100.59905357592638,
+      "raw_rms_ma": 73.48872007181247,
+      "rms_1ms_ma": 17.565407557412982,
+      "mean_abs_bias_ma": 4.485580313485116,
+      "mean_abs_id_ma": 1.536439742873578,
+      "segments": 12,
+      "saturated_samples": 0,
+      "gaps": 0,
+      "faults": 0,
+      "by_target": {
+        "-0.2": {
+          "rms_ma": 84.049753844738,
+          "mean_iq_ma": -191.72129034996033
+        },
+        "-0.1": {
+          "rms_ma": 77.6229277253151,
+          "mean_iq_ma": -96.84310108423233
+        },
+        "-0.05": {
+          "rms_ma": 78.69600877165794,
+          "mean_iq_ma": -47.44770564138889
+        },
+        "0.05": {
+          "rms_ma": 77.0321972668171,
+          "mean_iq_ma": 43.77741552889347
+        },
+        "0.1": {
+          "rms_ma": 68.46001744270325,
+          "mean_iq_ma": 95.1654501259327
+        },
+        "0.2": {
+          "rms_ma": 55.07141537964344,
+          "mean_iq_ma": 198.13156127929688
+        }
+      },
+      "motor_work_max": 6438,
+      "work_max_us": 38.32142857142857,
+      "period_max_us": 101.14285714285714,
+      "motor_period_min": 16608,
+      "motor_write_min": 3697,
+      "motor_timing_fault": 0,
+      "adc_errors": 0,
+      "encoder_errors": 0
+    },
+    {
+      "label": "t7800a",
+      "tick": 7800,
+      "b_std_codes": 1.3556613310189627,
+      "c_std_codes": 1.30147240621828,
+      "start_angle_deg": 100.56260449689336,
+      "raw_rms_ma": 72.6554502422611,
+      "rms_1ms_ma": 17.32017200750609,
+      "mean_abs_bias_ma": 5.01744703312094,
+      "mean_abs_id_ma": 1.4291769577236362,
+      "segments": 12,
+      "saturated_samples": 0,
+      "gaps": 0,
+      "faults": 0,
+      "by_target": {
+        "-0.2": {
+          "rms_ma": 81.57361671328545,
+          "mean_iq_ma": -190.9237802028656
+        },
+        "-0.1": {
+          "rms_ma": 75.61803236603737,
+          "mean_iq_ma": -97.70580753684044
+        },
+        "-0.05": {
+          "rms_ma": 75.45075565576553,
+          "mean_iq_ma": -46.620288863778114
+        },
+        "0.05": {
+          "rms_ma": 79.48687672615051,
+          "mean_iq_ma": 42.81163215637207
+        },
+        "0.1": {
+          "rms_ma": 67.2907829284668,
+          "mean_iq_ma": 94.1668450832367
+        },
+        "0.2": {
+          "rms_ma": 56.51263706386089,
+          "mean_iq_ma": 197.6669728755951
+        }
+      },
+      "motor_work_max": 6438,
+      "work_max_us": 38.32142857142857,
+      "period_max_us": 100.07142857142857,
+      "motor_period_min": 16788,
+      "motor_write_min": 4013,
+      "motor_timing_fault": 0,
+      "adc_errors": 0,
+      "encoder_errors": 0
+    },
+    {
+      "label": "t8300a",
+      "tick": 8300,
+      "b_std_codes": 1.3566424624935,
+      "c_std_codes": 1.3121957272028053,
+      "start_angle_deg": 100.52714063646994,
+      "raw_rms_ma": 72.45242781937122,
+      "rms_1ms_ma": 17.91895933759709,
+      "mean_abs_bias_ma": 4.640974579767014,
+      "mean_abs_id_ma": 1.5590848852298222,
+      "segments": 12,
+      "saturated_samples": 0,
+      "gaps": 0,
+      "faults": 0,
+      "by_target": {
+        "-0.2": {
+          "rms_ma": 83.57266709208488,
+          "mean_iq_ma": -193.22505593299866
+        },
+        "-0.1": {
+          "rms_ma": 77.09726318717003,
+          "mean_iq_ma": -96.44162654876709
+        },
+        "-0.05": {
+          "rms_ma": 73.44023510813713,
+          "mean_iq_ma": -47.670820727944374
+        },
+        "0.05": {
+          "rms_ma": 73.10350611805916,
+          "mean_iq_ma": 39.94089737534523
+        },
+        "0.1": {
+          "rms_ma": 68.68135556578636,
+          "mean_iq_ma": 96.02044522762299
+        },
+        "0.2": {
+          "rms_ma": 58.81953984498978,
+          "mean_iq_ma": 198.85530322790146
+        }
+      },
+      "motor_work_max": 6525,
+      "work_max_us": 38.839285714285715,
+      "period_max_us": 100.0952380952381,
+      "motor_period_min": 16784,
+      "motor_write_min": 3443,
+      "motor_timing_fault": 0,
+      "adc_errors": 0,
+      "encoder_errors": 0
+    },
+    {
+      "label": "t8000a",
+      "tick": 8000,
+      "b_std_codes": 1.401553743090749,
+      "c_std_codes": 1.335139383981806,
+      "start_angle_deg": 100.5162084644763,
+      "raw_rms_ma": 74.539706731836,
+      "rms_1ms_ma": 18.497852220510442,
+      "mean_abs_bias_ma": 4.6017928689252585,
+      "mean_abs_id_ma": 1.3864901272124068,
+      "segments": 12,
+      "saturated_samples": 0,
+      "gaps": 0,
+      "faults": 0,
+      "by_target": {
+        "-0.2": {
+          "rms_ma": 78.47356051206589,
+          "mean_iq_ma": -193.32794100046158
+        },
+        "-0.1": {
+          "rms_ma": 76.61433517932892,
+          "mean_iq_ma": -97.07902744412422
+        },
+        "-0.05": {
+          "rms_ma": 79.50828969478607,
+          "mean_iq_ma": -46.92165181040764
+        },
+        "0.05": {
+          "rms_ma": 85.04381403326988,
+          "mean_iq_ma": 42.118072509765625
+        },
+        "0.1": {
+          "rms_ma": 71.27013057470322,
+          "mean_iq_ma": 95.49589082598686
+        },
+        "0.2": {
+          "rms_ma": 56.32811039686203,
+          "mean_iq_ma": 197.44665175676346
+        }
+      },
+      "motor_work_max": 6419,
+      "work_max_us": 38.208333333333336,
+      "period_max_us": 100.95238095238095,
+      "motor_period_min": 16640,
+      "motor_write_min": 3757,
+      "motor_timing_fault": 0,
+      "adc_errors": 0,
+      "encoder_errors": 0
+    },
+    {
+      "label": "t8200b",
+      "tick": 8200,
+      "b_std_codes": 1.3874970739348476,
+      "c_std_codes": 1.3431750514650163,
+      "start_angle_deg": 100.53962563453021,
+      "raw_rms_ma": 74.11113784958918,
+      "rms_1ms_ma": 18.024946640556056,
+      "mean_abs_bias_ma": 5.085778129190051,
+      "mean_abs_id_ma": 1.6219973106975278,
+      "segments": 12,
+      "saturated_samples": 0,
+      "gaps": 0,
+      "faults": 0,
+      "by_target": {
+        "-0.2": {
+          "rms_ma": 83.40181037783623,
+          "mean_iq_ma": -190.4841512441635
+        },
+        "-0.1": {
+          "rms_ma": 76.06197148561478,
+          "mean_iq_ma": -97.46526181697845
+        },
+        "-0.05": {
+          "rms_ma": 74.28700849413872,
+          "mean_iq_ma": -46.62523418664932
+        },
+        "0.05": {
+          "rms_ma": 83.65059271454811,
+          "mean_iq_ma": 42.12813451886177
+        },
+        "0.1": {
+          "rms_ma": 69.55040618777275,
+          "mean_iq_ma": 94.98537704348564
+        },
+        "0.2": {
+          "rms_ma": 57.71503783762455,
+          "mean_iq_ma": 197.79717922210693
+        }
+      },
+      "motor_work_max": 6505,
+      "work_max_us": 38.720238095238095,
+      "period_max_us": 100.0952380952381,
+      "motor_period_min": 16784,
+      "motor_write_min": 3535,
+      "motor_timing_fault": 0,
+      "adc_errors": 0,
+      "encoder_errors": 0
+    },
+    {
+      "label": "t8116b",
+      "tick": 8116,
+      "b_std_codes": 1.3443750539644976,
+      "c_std_codes": 1.3197637108026359,
+      "start_angle_deg": 100.58492237156551,
+      "raw_rms_ma": 72.35896463195483,
+      "rms_1ms_ma": 17.262980497131746,
+      "mean_abs_bias_ma": 4.951729298530457,
+      "mean_abs_id_ma": 2.413052997629469,
+      "segments": 12,
+      "saturated_samples": 0,
+      "gaps": 0,
+      "faults": 0,
+      "by_target": {
+        "-0.2": {
+          "rms_ma": 81.25492185354233,
+          "mean_iq_ma": -191.20199978351593
+        },
+        "-0.1": {
+          "rms_ma": 77.50033959746361,
+          "mean_iq_ma": -97.15700149536133
+        },
+        "-0.05": {
+          "rms_ma": 73.08414578437805,
+          "mean_iq_ma": -49.32025633752346
+        },
+        "0.05": {
+          "rms_ma": 75.86230710148811,
+          "mean_iq_ma": 38.17938454449177
+        },
+        "0.1": {
+          "rms_ma": 68.19546222686768,
+          "mean_iq_ma": 95.7416407763958
+        },
+        "0.2": {
+          "rms_ma": 58.2566112279892,
+          "mean_iq_ma": 198.68934899568558
+        }
+      },
+      "motor_work_max": 6451,
+      "work_max_us": 38.398809523809526,
+      "period_max_us": 100.07142857142857,
+      "motor_period_min": 16788,
+      "motor_write_min": 3701,
+      "motor_timing_fault": 0,
+      "adc_errors": 0,
+      "encoder_errors": 0
+    },
+    {
+      "label": "t8200c",
+      "tick": 8200,
+      "b_std_codes": 1.3815231334336162,
+      "c_std_codes": 1.320218813488797,
+      "start_angle_deg": 100.57777866638877,
+      "raw_rms_ma": 73.56363348662853,
+      "rms_1ms_ma": 17.720293253660202,
+      "mean_abs_bias_ma": 5.25929012898511,
+      "mean_abs_id_ma": 1.9958599126160457,
+      "segments": 12,
+      "saturated_samples": 0,
+      "gaps": 0,
+      "faults": 0,
+      "by_target": {
+        "-0.2": {
+          "rms_ma": 79.73462343215942,
+          "mean_iq_ma": -191.4549246430397
+        },
+        "-0.1": {
+          "rms_ma": 78.9964608848095,
+          "mean_iq_ma": -97.16684743762016
+        },
+        "-0.05": {
+          "rms_ma": 76.36528834700584,
+          "mean_iq_ma": -46.44710198044777
+        },
+        "0.05": {
+          "rms_ma": 77.87443697452545,
+          "mean_iq_ma": 40.495287626981735
+        },
+        "0.1": {
+          "rms_ma": 70.13411074876785,
+          "mean_iq_ma": 93.85976195335388
+        },
+        "0.2": {
+          "rms_ma": 58.27688053250313,
+          "mean_iq_ma": 199.02034103870392
+        }
+      },
+      "motor_work_max": 6437,
+      "work_max_us": 38.31547619047619,
+      "period_max_us": 100.07142857142857,
+      "motor_period_min": 16788,
+      "motor_write_min": 3537,
+      "motor_timing_fault": 0,
+      "adc_errors": 0,
+      "encoder_errors": 0
+    }
+  ]
+}

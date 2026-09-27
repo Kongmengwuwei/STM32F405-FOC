@@ -25,6 +25,13 @@ static float s_usb_frame[FOC_FRAME_CHANNELS + 1u];
 static volatile uint32_t last_frame;
 static volatile uint8_t divider;
 static uint32_t sequence;
+static uint16_t usb_divider;
+/* Group 5 integrates every control sample before decimation. Reset at a
+ * reference/state edge so a displayed point never averages two commands. */
+static struct {
+    float id, iq, ud, uq, rpm, bus, reference, scale;
+    unsigned count, state;
+} current_log;
 #ifdef FOC_CAPTURE
 /* Debug build only; frozen before foreground export. No DMA reads this array. */
 typedef struct {
@@ -75,8 +82,9 @@ static uint32_t status_word(void)
     return foc.state | (foc.fault << 3) | ((uint32_t)(motor_mode == MOTOR_PWM) << 7);
 }
 
-/* One frame per selected-port sample: one group, 12 float32 plus the JustFloat
-   terminator. Group 0 carries raw sensor truth, group 1 current-loop internals,
+/* One frame every FOC_USB_DIVIDER current samples: 12 float32 plus JustFloat.
+   Header sequence counts current samples, so its normal step is the divider.
+   Group 0 carries raw sensor truth, group 1 current-loop internals,
    group 2 the applied voltage, group 3 the reference and mechanical response,
    group 4 numeric diagnostics with compatible I2/I9 current plot channels.
    Channels that a host can reconstruct offline are deliberately absent. */
@@ -152,6 +160,20 @@ static void telemetry_usb(void)
         payload[10] = (float)foc.fault;
         payload[11] = adc_sample.bus_voltage;
         break;
+    case 5: { /* Current window ending at the header timestamp, no feedback filter. */
+        float inv = 1.0f / (float)current_log.count;
+        payload[2] = foc.iq_ref;
+        payload[3] = foc.command;
+        payload[4] = current_log.id * inv;
+        payload[5] = current_log.ud * inv;
+        payload[6] = current_log.uq * inv;
+        payload[7] = current_log.rpm * inv;
+        payload[8] = current_log.scale; /* Worst voltage ratio in this window. */
+        payload[9] = current_log.iq * inv;
+        payload[10] = (float)foc.warnings;
+        payload[11] = current_log.bus * inv;
+        break;
+    }
     }
     s_usb_frame[FOC_FRAME_CHANNELS] = INFINITY;
     (void)bsp_usb_write(&s_usb_frame, sizeof s_usb_frame);
@@ -179,7 +201,24 @@ void app_sample(void)
     bsp_motor_unlock(key);
     foc_outer_step();
     sequence = (sequence + 1u) & 0xffffffu;
-    if (bsp_usb_ready()) telemetry_usb(); /* Same 20 kHz sample, no averaging. */
+    if (telemetry_group == 5u) {
+        if (!current_log.count || current_log.state != foc.state || current_log.reference != foc.iq_ref) {
+            memset(&current_log, 0, sizeof current_log);
+            current_log.state = foc.state;
+            current_log.reference = foc.iq_ref;
+            current_log.scale = 1.0f;
+        }
+        current_log.id += foc.id; current_log.iq += foc.iq;
+        current_log.ud += foc.ud; current_log.uq += foc.uq;
+        current_log.rpm += foc.rpm; current_log.bus += adc_sample.bus_voltage;
+        if (foc.voltage_scale < current_log.scale) current_log.scale = foc.voltage_scale;
+        ++current_log.count;
+    } else current_log.count = 0u;
+    if (++usb_divider == FOC_USB_DIVIDER) {
+        usb_divider = 0u;
+        if (bsp_usb_ready()) telemetry_usb(); /* Decimate logging, never PI/ADC/PWM. */
+        current_log.count = 0u;
+    }
 #ifdef FOC_CAPTURE
     if (capturing) {
         capture[capture_count++] = (capture_t){sequence,
@@ -236,7 +275,7 @@ static bool parse_decimal(const char *p, float *value, float limit)
 /* Foreground parser; only state changes use the short critical section. */
 bool app_command(const char *line)
 {
-    enum { STOP, CAL, CLEAR, ZERO, TORQUE, SPEED, POS, HELLO } command;
+    enum { STOP, CAL, CLEAR, ZERO, TORQUE, SPEED, POS, HOLD, HELLO } command;
     float value = 0.0f;
 #ifdef FOC_CAPTURE
     if (!strcmp(line, "quiet 0") || !strcmp(line, "quiet 1")) {
@@ -266,11 +305,12 @@ bool app_command(const char *line)
     else if (!strcmp(line, "cal")) command = CAL;
     else if (!strcmp(line, "clear")) command = CLEAR;
     else if (!strcmp(line, "zero")) command = ZERO;
+    else if (!strcmp(line, "hold")) command = HOLD;
     else if (!strcmp(line, "hello")) command = HELLO;
     else if (!strncmp(line, "Iq ", 3u)) { command = TORQUE; if (!parse_decimal(line + 3, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "rpm ", 4u)) { command = SPEED; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "pos ", 4u)) { command = POS; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
-    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '4' && !line[6]) {
+    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '5' && !line[6]) {
         telemetry_group = (uint8_t)(line[5] - '0');
         return true;
     } else return false;
@@ -286,6 +326,7 @@ bool app_command(const char *line)
     case TORQUE: ok = control_torque(value); break;
     case SPEED: ok = control_speed(value); break;
     case POS: ok = control_position(value); break;
+    case HOLD: ok = control_hold_position(); break;
     case ZERO: ok = control_zero(); break;
     case CAL: ok = foc_calibrate(); break;
     case HELLO: break; /* No state change; the caller prints the banner. */

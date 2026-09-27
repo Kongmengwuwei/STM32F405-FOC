@@ -29,10 +29,12 @@
 #define FOC_MOTOR_INDUCTANCE_H 0.0f /* Feedforward disabled until measured. */
 #define FOC_MOTOR_FLUX_WB 0.0f
 #define FOC_MOTOR_CURRENT_KP 0.20f
-#define FOC_MOTOR_CURRENT_KI_PER_S 20.0f
-#define FOC_MOTOR_SPEED_KP 0.002f
-#define FOC_MOTOR_SPEED_KI 0.004f
-#define FOC_MOTOR_POSITION_KP 1.0f
+#define FOC_MOTOR_CURRENT_KI_PER_S 24.0f /* 2026-09-27 small-step A/B/A bench comparison. */
+#define FOC_MOTOR_CURRENT_AW_PER_S 1200.0f /* Independent back-calculation gain, 1/s. */
+#define FOC_MOTOR_SPEED_KP 0.060f /* A/rpm, unloaded M0/TLE bench 2026-09-27. */
+#define FOC_MOTOR_SPEED_KI 0.120f /* A/(rpm*s). Revalidate under load. */
+#define FOC_MOTOR_SPEED_SLEW_RPM_PER_S 100.0f
+#define FOC_MOTOR_POSITION_KP 2.0f
 #define FOC_MOTOR_POSITION_SPEED_MAX 30.0f
 #else
 /* Original reference firmware motor: exact model name has not been supplied.
@@ -54,8 +56,10 @@
 #define FOC_MOTOR_FLUX_WB 0.0021f
 #define FOC_MOTOR_CURRENT_KP 0.1884955592f
 #define FOC_MOTOR_CURRENT_KI_PER_S 452.389342f
+#define FOC_MOTOR_CURRENT_AW_PER_S 2400.0f /* Preserve reference 0.12/cycle at 20 kHz. */
 #define FOC_MOTOR_SPEED_KP 0.005f
 #define FOC_MOTOR_SPEED_KI 0.01f
+#define FOC_MOTOR_SPEED_SLEW_RPM_PER_S 1000.0f
 #define FOC_MOTOR_POSITION_KP 4.0f
 #define FOC_MOTOR_POSITION_SPEED_MAX 100.0f
 #endif

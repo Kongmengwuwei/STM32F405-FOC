@@ -6,6 +6,12 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+/* Console-only assertions also terminate predictably on Windows runners. */
+#undef assert
+#define assert(condition) do { if (!(condition)) { \
+    fprintf(stderr, "Assertion failed: %s (line %d)\n", #condition, __LINE__); \
+    exit(1); } } while (0)
 
 #define RADS_PER_RPM 0.1047197551f
 
@@ -44,6 +50,7 @@ static void step(float torque_scale)
     plant_position += step_deg;
     previous_plant_angle = angle;
     foc.rpm = rpm;
+    foc.iq = foc.iq_ref; /* Ideal inner loop in this outer-loop plant fixture. */
     if (foc.state == FOC_RUN) control_step(sample_us, plant_position);
     if (control_fault()) return;
     if (control_mode() != CONTROL_TORQUE && control_scheduled()) foc.iq_ref = control_iq_ref();
@@ -64,6 +71,7 @@ static void reset(void)
     foc.calibration.direction = 1;
     foc.zero_ready = true;
     foc.state = FOC_IDLE;
+    foc.voltage_scale = 1.0f; /* Fixture has full actuator voltage available. */
     foc.b_offset = foc.c_offset = 1.65f;
     angle = 30.0f;
     rpm = 0.0f;
@@ -95,6 +103,7 @@ static void hold(unsigned milliseconds, float torque_scale)
 
 int main(void)
 {
+    setvbuf(stdout, NULL, _IONBF, 0);
     /* Nothing scheduled: the current loop keeps its own reference. */
     reset();
     run(50u, 0.0f);
@@ -202,6 +211,8 @@ int main(void)
     float before_coast = control_position_deg();
     plant_position += 10000.0f;
     foc.rpm = 0.0f;
+    sample_us = (sample_us + 1000000u) & 0xffffffu;
+    control_step(sample_us, plant_position); /* Idle observation after a gap. */
     assert(control_speed(50.0f));
     foc.state = FOC_RUN;
     for (unsigned n = 0; n < 5; ++n) {

@@ -15,3 +15,7 @@
 图片中的 ZH3620-1 是 14 极（7 极对）、12 槽、500 KV、7.4–12.4 V，20 V 为最高电压，12 A 为堵转电流。默认已改为 **WARN 台架告警模式**：取消 ±0.30 A 命令拒绝、200 ms 超时关断及电流/转速/母线越限跳闸，单次电流目标保持至新命令或 `stop`。配置值继续用于告警，物理 PWM 边界和有效采样条件保留；详见[台架告警模式说明](STM32F405-FOC/docs/bench-warning-mode.md)。没有匹配的有效校准记录时先发送 `cal`；既有 v3 记录仍按组合身份复用。
 
 电机、编码器与接口的选择方法、通信命令见[统一固件指南](STM32F405-FOC/docs/unified-firmware.md)；在 VS Code 中操作请看[构建与烧录步骤](STM32F405-FOC/docs/vscode-build.md)；用 USB 和 VOFA+ 看数据请看[VOFA+ 快速上手](STM32F405-FOC/docs/vofa-quickstart.md)；实机开始前按[ZH3620-1 首测清单](STM32F405-FOC/docs/zh3620-1-first-test.md)检查。旧 M0 [上板记录](STM32F405-FOC/docs/m0-torque-bring-up.md)和[FOC 初学者教程](STM32F405-FOC/variants/m1-mt6835/docs/FOC-从零读懂这个工程.md)用于了解硬件与算法；新组合只通过构建及主机侧测试，尚未完成实机验收。
+
+## 当前调试基线（2026-09-27）
+
+默认 M0/TLE5012B/ZH3620-1、WARN、USB 1000000、5 kHz 遥测，电流环仍为 10 kHz。`send 5` 提供目标/实际 Iq、Id、输出电压和饱和比例；电流网格继续绑定 I2/I9。已完成小电流短测，详见[问题与修复报告](STM32F405-FOC/docs/current-debug-2026-09-27.md)和[逐步改良路线](STM32F405-FOC/docs/foc-improvement-roadmap.md)。

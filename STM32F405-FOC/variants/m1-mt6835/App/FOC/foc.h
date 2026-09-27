@@ -6,9 +6,9 @@
 #include "foc_profile.h"
 
 /* Nominal timing, pending scope validation of ADC/driver/analog delays. */
-#define FOC_APERTURE_TICKS 224u
+#define FOC_APERTURE_TICKS FOC_PORT_ADC_APERTURE_TICKS
 #define FOC_TRIGGER_ALLOWANCE 24u
-#define FOC_SETTLE_TICKS 588u /* 500 ns dead time + 3 us analog settling. */
+#define FOC_SETTLE_TICKS (FOC_DEADTIME_TICKS + 504u) /* Actual dead time + provisional 3 us settling. */
 #define FOC_HOLD_TICKS (FOC_TRIGGER_TICKS + FOC_APERTURE_TICKS + FOC_TRIGGER_ALLOWANCE)
 #define FOC_EDGE_LIMIT ((FOC_TRIGGER_TICKS < FOC_PWM_PERIOD_TICKS - FOC_HOLD_TICKS ? \
                         FOC_TRIGGER_TICKS : FOC_PWM_PERIOD_TICKS - FOC_HOLD_TICKS) - FOC_SETTLE_TICKS - 2u)
@@ -25,6 +25,7 @@ typedef struct {
     volatile uint32_t state, fault;
     bool calibrated, zero_ready;
     volatile uint32_t warnings, last_warning, warning_count;
+    float voltage_scale; /* Applied/requested voltage ratio; zero when stopped. */
 } foc_t;
 extern foc_t foc; /* ISR-owned; foreground changes require a short IRQ critical section. */
 
@@ -36,7 +37,7 @@ void foc_trip(uint32_t fault);
 void foc_warn(uint32_t warning); /* Sticky bit (1 << code), no state change. */
 void foc_clear_warnings(void);
 bool foc_check(uint32_t warning); /* true only when TRIP stopped the controller. */
-/* Exactly 20 kHz. delay is SPI CS time minus nominal ADC hold end, seconds.
+/* Exactly FOC_SAMPLE_HZ. delay is SPI CS time minus nominal ADC hold end, seconds.
    MT6835 internal measurement delay is not calibrated. */
 void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_voltage, float encoder_delay);
 void foc_outer_step(void); /* Run the 1 kHz outer loop after this cycle's PWM write. */

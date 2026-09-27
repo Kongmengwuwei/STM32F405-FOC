@@ -95,11 +95,7 @@ void bsp_motor_init(void)
     FOC_PWM_TIMER->CCMR2 = TIM_CCMR2_OC3PE | (6u << 4) | (4u << 12);
     FOC_PWM_TIMER->CCR1 = FOC_PWM_TIMER->CCR2 = FOC_PWM_TIMER->CCR3 = FOC_PWM_ARR / 2u;
     FOC_PWM_TIMER->CCR4 = FOC_TRIGGER_TICKS;
-#ifdef FOC_PORT_M0
-    FOC_PWM_TIMER->BDTR = 127u; /* Existing M0 0.76 us dead time. */
-#else
-    FOC_PWM_TIMER->BDTR = 84u;
-#endif
+    FOC_PWM_TIMER->BDTR = FOC_DEADTIME_TICKS; /* Shared with sampling-window budget. */
     FOC_PWM_TIMER->CNT = 0u; FOC_PWM_TIMER->EGR = TIM_EGR_UG;
     FOC_PWM_TIMER->CCMR2 = TIM_CCMR2_OC3PE | (6u << 4) | (3u << 12);
     FOC_PWM_TIMER->SR = 0u;

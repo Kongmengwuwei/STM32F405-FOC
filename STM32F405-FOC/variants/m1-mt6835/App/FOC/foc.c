@@ -82,6 +82,7 @@ bool foc_window(const float duty[3])
 void foc_stop(void)
 {
     foc.command = foc.iq_ref = foc.ud = foc.uq = 0.0f;
+    foc.voltage_scale = 0.0f;
     integral_d = integral_q = 0.0f;
     pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
     aligning = false;
@@ -308,8 +309,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         if (outer_fault) { foc_trip(outer_fault); return; }
         if (control_mode() != CONTROL_TORQUE && control_scheduled())
             foc.iq_ref = control_iq_ref();
-        /* PI and optional feedforward use the selected motor's parameters.
-           Back calculation uses its resistance estimate. */
+        /* PI/feedforward and back calculation have independent tuning units. */
         float ed = -foc.id, eq = foc.iq_ref - foc.iq;
         float ud = FOC_CURRENT_KP * ed + integral_d - omega * FOC_MOTOR_INDUCTANCE_H * foc.iq;
         float uq = FOC_CURRENT_KP * eq + integral_q + omega * (FOC_MOTOR_INDUCTANCE_H * foc.id + FOC_MOTOR_FLUX_WB);
@@ -320,6 +320,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             foc_trip(FOC_NUMERIC); return;
         }
         float scale = norm2 > limit * limit ? limit / sqrtf(norm2) : 1.0f;
+        foc.voltage_scale = scale;
         if (scale < 1.0f) foc_warn(FOC_VOLTAGE);
         foc.ud = ud * scale; foc.uq = uq * scale;
         /* Predict to the next PWM centre using the selected timer period. */
@@ -328,10 +329,11 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         sincos_fast(foc_wrap(advance), &sa, &ca);
         float so = s * ca + c * sa, co = c * ca - s * sa;
         scale = foc_modulate(foc.ud * co - foc.uq * so, foc.ud * so + foc.uq * co, bus_voltage, foc.duty);
+        foc.voltage_scale *= scale;
         if (scale < 1.0f) foc_warn(FOC_VOLTAGE);
         foc.ud *= scale; foc.uq *= scale;
-        integral_d += FOC_CURRENT_KI_STEP * ed + FOC_MOTOR_RESISTANCE_OHM * (foc.ud - ud);
-        integral_q += FOC_CURRENT_KI_STEP * eq + FOC_MOTOR_RESISTANCE_OHM * (foc.uq - uq);
+        integral_d += FOC_CURRENT_KI_STEP * ed + FOC_CURRENT_AW_STEP * (foc.ud - ud);
+        integral_q += FOC_CURRENT_KI_STEP * eq + FOC_CURRENT_AW_STEP * (foc.uq - uq);
     } else if (foc.state == FOC_CALIBRATE) {
         ++ticks;
         float theta = 0.0f, ud = FOC_ALIGNMENT_VOLTS;
@@ -391,5 +393,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
 
 void foc_outer_step(void)
 {
-    if (foc.state == FOC_RUN) control_step(motor_sample_us, position);
+    /* Track mechanical position while stopped too; only control_step's RUN
+       branch produces torque. Holding starts from the actual shaft position. */
+    if (foc.state != FOC_FAULT) control_step(motor_sample_us, position);
 }

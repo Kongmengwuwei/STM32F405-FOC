@@ -1,0 +1,311 @@
+{
+  "date": "2026-09-27",
+  "selected_mode": "SEQUENTIAL",
+  "selection_reason": "Raw current error unchanged; small averaged-current improvement is not consistent across repeated batches",
+  "conditions": {
+    "sample_hz": 10000,
+    "usb_divider": 1,
+    "trigger_ticks": 8200,
+    "adc_sample_cycles": 28,
+    "kp": 0.2,
+    "ki_per_s": 24,
+    "uart_telemetry": "on",
+    "exclude_after_edge_ms": 30
+  },
+  "runs": [
+    {
+      "label": "seq1",
+      "mode": "SEQUENTIAL",
+      "b_std_codes": 1.342233716730481,
+      "c_std_codes": 1.293161356686081,
+      "bc_corr": 0.7196545778788367,
+      "alpha_std_nominal_a": 0.09339509141160753,
+      "beta_std_nominal_a": 0.021794083815589116,
+      "initial_angle_deg": 100.52750582006152,
+      "bus_mean_v": 11.523267724860828,
+      "raw_rms_ma": 71.41655683517456,
+      "rms_1ms_ma": 17.926791915670037,
+      "mean_abs_bias_ma": 5.286666428825508,
+      "mean_abs_id_ma": 1.8270414981695164,
+      "segments": 12,
+      "timing": {
+        "motor_work_max": [
+          6333,
+          16816
+        ],
+        "motor_period_min": [
+          16784
+        ],
+        "motor_write_min": [
+          3567
+        ],
+        "motor_timing_fault": [
+          0
+        ],
+        "adc_errors": [
+          0
+        ],
+        "encoder_errors": [
+          0
+        ],
+        "adc_bus_count": [
+          124660,
+          124661,
+          0
+        ],
+        "adc_ccr": 65536
+      },
+      "gaps": 0,
+      "faults": 0,
+      "saturated_samples": 0
+    },
+    {
+      "label": "dual1",
+      "mode": "DUAL",
+      "b_std_codes": 1.4434131661665621,
+      "c_std_codes": 1.3758864631477898,
+      "bc_corr": 0.8258559685394624,
+      "alpha_std_nominal_a": 0.10295129430745462,
+      "beta_std_nominal_a": 0.018411218956126754,
+      "initial_angle_deg": 100.57083394114214,
+      "bus_mean_v": 11.511437274770302,
+      "raw_rms_ma": 74.182180998226,
+      "rms_1ms_ma": 18.786479408542316,
+      "mean_abs_bias_ma": 5.141528961151683,
+      "mean_abs_id_ma": 1.3711149863411265,
+      "segments": 12,
+      "timing": {
+        "motor_work_max": [
+          6402,
+          17044
+        ],
+        "motor_period_min": [
+          16556
+        ],
+        "motor_write_min": [
+          3905
+        ],
+        "motor_timing_fault": [
+          0
+        ],
+        "adc_errors": [
+          0
+        ],
+        "encoder_errors": [
+          0
+        ],
+        "adc_bus_count": [
+          117597,
+          117598,
+          0
+        ],
+        "adc_ccr": 65541
+      },
+      "gaps": 0,
+      "faults": 0,
+      "saturated_samples": 0
+    },
+    {
+      "label": "seq2",
+      "mode": "SEQUENTIAL",
+      "b_std_codes": 1.379001808252773,
+      "c_std_codes": 1.2960012900734246,
+      "bc_corr": 0.7196036731636807,
+      "alpha_std_nominal_a": 0.09480210825308785,
+      "beta_std_nominal_a": 0.022165299008925908,
+      "initial_angle_deg": 100.61557622334527,
+      "bus_mean_v": 11.52206349571526,
+      "raw_rms_ma": 72.88899489988883,
+      "rms_1ms_ma": 18.8458450914671,
+      "mean_abs_bias_ma": 5.470407874478648,
+      "mean_abs_id_ma": 1.7393721670183975,
+      "segments": 12,
+      "timing": {
+        "motor_work_max": [
+          6425,
+          16812
+        ],
+        "motor_period_min": [
+          16784
+        ],
+        "motor_write_min": [
+          3567
+        ],
+        "motor_timing_fault": [
+          0
+        ],
+        "adc_errors": [
+          0
+        ],
+        "encoder_errors": [
+          0
+        ],
+        "adc_bus_count": [
+          117619,
+          117620,
+          0
+        ],
+        "adc_ccr": 65536
+      },
+      "gaps": 0,
+      "faults": 0,
+      "saturated_samples": 0
+    },
+    {
+      "label": "dual2",
+      "mode": "DUAL",
+      "b_std_codes": 1.3933992013830998,
+      "c_std_codes": 1.336832352478776,
+      "bc_corr": 0.8146584607911882,
+      "alpha_std_nominal_a": 0.09939210505275117,
+      "beta_std_nominal_a": 0.018377287366991533,
+      "initial_angle_deg": 100.60182043353431,
+      "bus_mean_v": 11.509879571288915,
+      "raw_rms_ma": 72.13624690969785,
+      "rms_1ms_ma": 16.213653841987252,
+      "mean_abs_bias_ma": 4.617967856271814,
+      "mean_abs_id_ma": 1.906074071181744,
+      "segments": 12,
+      "timing": {
+        "motor_work_max": [
+          6402,
+          17020
+        ],
+        "motor_period_min": [
+          16584
+        ],
+        "motor_write_min": [
+          3835
+        ],
+        "motor_timing_fault": [
+          0
+        ],
+        "adc_errors": [
+          0
+        ],
+        "encoder_errors": [
+          0
+        ],
+        "adc_bus_count": [
+          117749,
+          117750,
+          0
+        ],
+        "adc_ccr": 65541
+      },
+      "gaps": 0,
+      "faults": 0,
+      "saturated_samples": 0
+    },
+    {
+      "label": "seq3",
+      "mode": "SEQUENTIAL",
+      "b_std_codes": 1.3907654527962368,
+      "c_std_codes": 1.3285882302626024,
+      "bc_corr": 0.7321180344679823,
+      "alpha_std_nominal_a": 0.0967202548702431,
+      "beta_std_nominal_a": 0.021996574153300873,
+      "initial_angle_deg": 100.58115357897437,
+      "bus_mean_v": 11.522371764092814,
+      "raw_rms_ma": 72.57240669180949,
+      "rms_1ms_ma": 17.52656325697899,
+      "mean_abs_bias_ma": 4.508536968690653,
+      "mean_abs_id_ma": 1.729316777831021,
+      "segments": 12,
+      "timing": {
+        "motor_work_max": [
+          6417,
+          16816
+        ],
+        "motor_period_min": [
+          16784
+        ],
+        "motor_write_min": [
+          3567
+        ],
+        "motor_timing_fault": [
+          0
+        ],
+        "adc_errors": [
+          0
+        ],
+        "encoder_errors": [
+          0
+        ],
+        "adc_bus_count": [
+          117619,
+          117620,
+          0
+        ],
+        "adc_ccr": 65536
+      },
+      "gaps": 0,
+      "faults": 0,
+      "saturated_samples": 0
+    },
+    {
+      "label": "dual3",
+      "mode": "DUAL",
+      "b_std_codes": 1.400320842787708,
+      "c_std_codes": 1.3260782378022717,
+      "bc_corr": 0.8065692593964396,
+      "alpha_std_nominal_a": 0.09903288078792329,
+      "beta_std_nominal_a": 0.0187730861550545,
+      "initial_angle_deg": 100.55610278772492,
+      "bus_mean_v": 11.510356693270694,
+      "raw_rms_ma": 71.87997394551833,
+      "rms_1ms_ma": 16.740869963541627,
+      "mean_abs_bias_ma": 4.549052355287131,
+      "mean_abs_id_ma": 1.7693907187397901,
+      "segments": 12,
+      "timing": {
+        "motor_work_max": [
+          6403,
+          16812
+        ],
+        "motor_period_min": [
+          16788
+        ],
+        "motor_write_min": [
+          3909
+        ],
+        "motor_timing_fault": [
+          0
+        ],
+        "adc_errors": [
+          0
+        ],
+        "encoder_errors": [
+          0
+        ],
+        "adc_bus_count": [
+          117331,
+          117332,
+          0
+        ],
+        "adc_ccr": 65541
+      },
+      "gaps": 0,
+      "faults": 0,
+      "saturated_samples": 0
+    }
+  ],
+  "means": {
+    "SEQUENTIAL": {
+      "b_std_codes": 1.3706669925931638,
+      "c_std_codes": 1.3059169590073694,
+      "bc_corr": 0.7237920951701665,
+      "raw_rms_ma": 72.29265280895761,
+      "rms_1ms_ma": 18.09973342137204,
+      "mean_abs_bias_ma": 5.0885370906649365
+    },
+    "DUAL": {
+      "b_std_codes": 1.4123777367791233,
+      "c_std_codes": 1.3462656844762793,
+      "bc_corr": 0.8156945629090301,
+      "raw_rms_ma": 72.73280061781406,
+      "rms_1ms_ma": 17.247001071357065,
+      "mean_abs_bias_ma": 4.769516390903543
+    }
+  }
+}

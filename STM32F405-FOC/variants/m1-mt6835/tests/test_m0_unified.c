@@ -11,6 +11,15 @@
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#ifdef _WIN32
+/* A failed console test must report to stderr instead of opening a CRT modal. */
+#undef assert
+#define assert(condition) do { if (!(condition)) { \
+    fprintf(stderr, "Assertion failed: %s:%d: %s\n", __FILE__, __LINE__, #condition); \
+    exit(EXIT_FAILURE); } } while (0)
+#endif
 
 volatile bsp_uart_stats_t g_uart_stats;
 volatile bsp_usb_stats_t g_usb_stats;
@@ -50,6 +59,11 @@ bool bsp_usb_write(const void *data, size_t size)
 {
     assert(size == sizeof last_frame);
     memcpy(last_frame, data, size);
+    uint32_t index;
+    memcpy(&index, &last_frame[1], sizeof index);
+    if ((index >> 24) == 4u) {
+        assert(last_frame[2] == foc.iq_ref && last_frame[9] == foc.iq);
+    }
     ++frames;
     return true;
 }
@@ -94,11 +108,32 @@ int main(void)
     }
     assert(foc.state == FOC_RUN);
     assert(fabsf(foc.iq_ref - (FOC_PROTECTION_TRIP ? 0.010f : 0.20f)) < 0.0002f);
-    assert(frames == samples && isinf(last_frame[12]));
+    assert(frames == samples / FOC_USB_DIVIDER && isinf(last_frame[12]));
+    usb("send 5\r");
+    for (unsigned n = 0; n < FOC_USB_DIVIDER; ++n) {
+        motor_sample_us += 100u;
+        app_sample();
+    }
+    uint32_t group_word;
+    memcpy(&group_word, &last_frame[1], sizeof group_word);
+    assert(group_word >> 24 == 5u && foc.voltage_scale == 1.0f);
+    float expected_iq = 0.0f, expected_id = 0.0f;
+    for (unsigned n = 0; n < FOC_USB_DIVIDER; ++n) {
+        adc_sample.b_voltage = foc.b_offset + (n & 1u ? 0.01f : -0.01f);
+        motor_sample_us += 100u; app_sample();
+        expected_iq += foc.iq; expected_id += foc.id;
+    }
+    assert(fabsf(last_frame[9] - expected_iq / FOC_USB_DIVIDER) < 1e-5f);
+    assert(fabsf(last_frame[4] - expected_id / FOC_USB_DIVIDER) < 1e-5f);
+    if (FOC_USB_DIVIDER == 2u) assert(fabsf(last_frame[9] - foc.iq) > 0.01f);
+    adc_sample.b_voltage = foc.b_offset;
     usb("rpm 10\r");
     assert(control_mode() == CONTROL_SPEED);
     usb("pos 90\r");
     assert(control_mode() == CONTROL_POSITION);
+    usb("hold\r");
+    assert(control_mode() == CONTROL_POSITION);
+    assert(control_position_target() == control_position_deg());
     usb("stop\r");
     assert(foc.state == FOC_IDLE && motor_mode == MOTOR_OFF);
 #if !FOC_PROTECTION_TRIP
@@ -122,12 +157,12 @@ int main(void)
     }
     assert(foc.state == FOC_RUN && foc.fault == FOC_OK && control_scheduled());
     assert(foc.iq_ref == 0.40f && foc.command == 0.40f);
-    assert(foc.warnings & (1u << FOC_UART));
+    assert(!(foc.warnings & (1u << FOC_UART))); /* Persistent target needs no keepalive. */
     assert(foc.warnings & (1u << FOC_CURRENT));
     assert(foc.warnings & (1u << FOC_SPEED));
     assert(foc.warnings & (1u << FOC_BUS));
     assert(foc.warnings & (1u << FOC_SENSOR));
-    assert(last_frame[2] == foc.iq_ref && last_frame[9] == foc.iq);
+    assert(last_frame[2] == foc.iq_ref); /* Iq may change on an unlogged cycle. */
     assert(last_frame[4] == (float)foc.warnings);
     assert(last_frame[6] == FOC_RUN && last_frame[10] == FOC_OK);
     assert(app_command("Iq -0.65"));

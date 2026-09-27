@@ -121,7 +121,7 @@ int main(void)
     const char *bad[] = {"Iq nan\r", "Iq inf\r", "Iq 5.01\r", "Iq -5.01\r",
         "Iq 0.123\r", "Iq 1e0\r", "Iq .5\r", "Iq 1.\r", "Iq 0.2junk\r",
         "Iq 0000000000000000000000000000000000001\r", "Iq 0.\00120\r",
-        "send 5\r", "send -1\r", "send\r", "send 0 extra\r", "send \r",
+        "send 6\r", "send -1\r", "send\r", "send 0 extra\r", "send \r",
         "rpm nan\r", "rpm 9400.01\r", "pos 1000001\r", "position 10\r", "zero 1\r"};
     for (unsigned i = 0; i < sizeof bad / sizeof bad[0]; ++i) {
         unsigned rejected = app_command_rejected;
@@ -148,6 +148,7 @@ int main(void)
         unsigned want = (2u + cycle) & 3u; /* Groups 2, 3, 0, 1, ... */
         motor_sample_us = (0xffff00u + n * 50u) & 0xffffffu;
         app_sample();
+        if ((n + 1u) % FOC_USB_DIVIDER) continue; /* No new USB frame this control cycle. */
         assert((word() & 0xffffffu) == motor_sample_us);
         assert(((word() >> 24) & 7u) == foc.state && ((word() >> 27) & 15u) == foc.fault);
         unsigned group = index_word() >> 24;
@@ -174,10 +175,10 @@ int main(void)
             assert(channel(9) == foc.iq && channel(11) == adc_sample.bus_voltage);
         }
     }
-    assert(frames == 20000u && foc.state == FOC_RUN);
+    assert(frames == 20000u / FOC_USB_DIVIDER && foc.state == FOC_RUN);
     /* The 2 kHz UART frame stayed 15 float + terminator while USB changed. */
     assert(s_uart_frames == 2000u);
-    /* Every commutated sample was logged: one USB frame per app_sample(). */
+    /* The current loop runs on every sample; only telemetry is decimated. */
 
     /* Reference chain: the 1 A/s ramp converges, then holds the target. */
     assert(fabsf(foc.iq_ref - 0.5f) < 1e-4f);
@@ -189,8 +190,10 @@ int main(void)
     assert(fabsf(foc.iq_ref - 0.2f) < 1e-4f && foc.command == 0.2f);
     /* Outer-loop output replaces the current reference, mode 3 reports it. */
     usb("send 3\r");
-    motor_sample_us = (motor_sample_us + 50u) & 0xffffffu;
-    app_sample(); /* The outer loop runs once per millisecond of samples. */
+    for (unsigned n = 0; n < FOC_USB_DIVIDER; ++n) {
+        motor_sample_us = (motor_sample_us + 50u) & 0xffffffu;
+        app_sample(); /* Current/outer loops continue between logged samples. */
+    }
     assert(index_word() >> 24 == 3u);
     assert(channel(2) == foc.iq_ref && channel(9) == foc.iq);
     assert(channel(11) == adc_sample.bus_voltage && channel(3) == foc.command);
@@ -217,6 +220,6 @@ int main(void)
     assert(strstr(s_banner, FOC_PORT_NAME) && strstr(s_banner, FOC_ENCODER_NAME) &&
            strstr(s_banner, FOC_MOTOR_NAME) && strstr(s_banner, "install=1"));
     puts("PASS: 4-group 12-float USB layout, status word, send/rpm/pos/zero parsing,"
-         " 20k frames, 1 A/s ramp, outer-loop reference selection");
+         " 20k control cycles, decimated frames, 1 A/s ramp, outer-loop reference selection");
     return 0;
 }

@@ -15,9 +15,10 @@
 | `test_motor_record.c` | 主机测试 | 当前 | v3 Flash 校准记录按接口/电机/编码器/安装编号隔离，拒绝身份不全的 v1/v2 记录 |
 | `test_profile_matrix.c` | 主机测试 | 当前 | 八种接口/编码器/电机参数组合的电压、电流、校准身份与不自动启动约束 |
 | `test_control_pid.c` | 主机测试 | 当前 | 真实 `control.c` + 一阶被控对象：速度跟踪（±）、反向安装的速度/位置方向、输出限幅与抗饱和、三种运行模式的 200 ms 主机看门狗、多圈位置收敛、`zero`、`stop` 复位 |
+| `test_control_observer.c` | 主机测试 | 当前 | WARN 的 10/20 kHz 观察器：停机跟踪、时间戳回绕、hold、预充电/PWM 校零目标更新、同模式重发、电压抗积分饱和、模式清理、采样间断恢复 |
 | `test_usb_queue.c` | 主机测试 | 当前 | 直接包含生产 `bsp_usb.c`：20,000 帧逐字节比对、BUSY 重试、缓冲所有权、环形/计数器回绕、溢出锁存、复位统计、RX 背压（用 `usb_stubs/` 替代 CDC 回调） |
 | `test_foc_recalibration.c` | 主机测试 | 当前 | 校准状态机回归：零偏采集 → `foc_calibrate()` → 对齐 → `FOC_SAVE`，方向判定与 600 转滑行 |
-| `capture_usb.py` | PC 脚本 | 当前 | 单组 20 kHz 流长跑校验：DTR 会话排空、帧尾对齐、`seq` 差 1 与 µs 差 50 的连续性、速率 19,800..20,200 帧/s |
+| `capture_usb.py` | PC 脚本 | 当前 | 单组分频流校验：DTR 会话排空、切组前旧帧排除、帧尾、序号/时间差与配置帧率；默认 M0 5 kHz、差 2/200 µs |
 | `foc_stub.c` | 夹具 | 当前 | 给 `test_control_pid.c` 用的最小 `foc.c` 状态机替身，不链接完整电流环 |
 | `usb_stubs/usbd_cdc_if.h` | 夹具 | 当前 | 只给 `test_usb_queue.c` 用的最小 CDC/USBD 声明 |
 | `legacy/test_foc.c` | 主机测试 | 历史 | 电压模式 FOC 数学、缓升、窗口与校准仿真，见下 |
@@ -62,6 +63,17 @@ gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFO
 丢帧检测、损坏拒绝、通道表、归档往返、工况限值）。
 
 2026-09-24 本机已编译八种配置参数组合，默认 M0 与参考 M1 的共用命令及 v3 校准身份测试通过。主机侧测试不等于实机时序和电气验收。它们不属于固件 CMake，不参与 Debug/Release 构建。
+
+## 观察器测试与实机结果
+
+观察器测试（在本变体目录，替换 M0/TLE 为 M1/MT 可验证 20 kHz）：
+
+```sh
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_control_observer.c tests/foc_stub.c App/Control/control.c -lm -o build/test_control_observer.exe
+./build/test_control_observer.exe
+```
+
+实机速度与位置结果见 [速度环与位置环调试记录](../../../docs/speed-position-debug-2026-09-27.md)。
 
 ## 历史资产（`tests/legacy/`）
 
@@ -114,3 +126,9 @@ CAN1：临时固件静默回环验证——20 帧入队后保留前 15 帧、丢
 - DWT / ISR 测量含函数序言、尾声和统计指令的开销；`motor_work_max` 是采样链路墙钟跨度（含 SPI 等待与被抢占时间），
   不是纯 CPU 占用，两者不可直接比较。
 - 未做示波器测量、未标定绝对电流/电压精度、未做带载长时间试验的结论，一律写为"未验证"。
+
+### 2026-09-27 新增回归
+
+M0 可选 `FOC_M0_ADC_MODE=SEQUENTIAL/DUAL`，默认顺序。`test_current_window.c` 分别以 `-DFOC_M0_DUAL_ADC=0/1` 检查保持窗口与量化边界。M0 同步配置的统一命令/遥测、M1 窗口回归通过；实机结果见[双 ADC 对照](../../../docs/dual-adc-experiment-2026-09-27.md)。
+
+`test_current_window.c` 覆盖 M0 第二相保持区间、M0/M1 不同死区预算、全电角度饱和调制仍保留窗口、独立回算系数和 stop。沿用上方真实 foc/control 编译方式分别选择 M0/ZH 和 M1/REFERENCE，默认 WARN。`test_m0_unified.c` 新增组 5 窗口平均与控制原值不受影响的检查，分别用 USB divider=1/2。实机短测工具为 `tools/bench/current_probe.py`，结果见[本轮报告](../../../docs/current-debug-2026-09-27.md)。

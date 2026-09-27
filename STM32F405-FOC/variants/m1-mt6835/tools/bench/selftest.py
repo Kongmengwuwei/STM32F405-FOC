@@ -6,6 +6,7 @@ import os
 import struct
 import sys
 import tempfile
+import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import benchlib as bench  # noqa: E402
@@ -77,6 +78,19 @@ def main():
     flags = bench.continuity(words, 3)
     assert flags["gaps"] == 1 and flags["missing"] == 1 and not flags["seq_ok"]
     assert flags["max_gap_us"] == 100
+
+    # Intentional decimation is not loss. Test M0/M1, divider 1/2 and a
+    # dropped logged frame; sequence still counts the underlying PI cycles.
+    for hz in (10000, 20000):
+        for divider in (1, 2):
+            period = 1000000 // hz
+            frames = [encode(n * divider * period, n * divider, 4, [0.0] * 10)
+                      for n in range(100)]
+            words = np.frombuffer(b''.join(frames), dtype='<u4').reshape(-1, 13)[:, :12]
+            flags = bench.continuity(words, 4, hz, divider)
+            assert flags['gaps'] == 0 and flags['missing'] == 0
+            flags = bench.continuity(np.delete(words, 50, axis=0), 4, hz, divider)
+            assert flags['gaps'] == 1 and flags['missing'] == 1
 
     # 6. A train of frames whose terminators are missing is refused, not parroted.
     with open(path, "wb") as handle:

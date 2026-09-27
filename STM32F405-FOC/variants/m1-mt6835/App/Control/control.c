@@ -8,16 +8,27 @@
    records the same thresholds and leaves the calculated reference intact.
    Tuning order: speed Kp first until it tracks without oscillating, then speed
    Ki to remove the steady-state error, then position Kp. */
-#define SPEED_KP FOC_SPEED_KP
-#define SPEED_KI FOC_SPEED_KI
-#define POSITION_KP FOC_POSITION_KP
+#ifndef FOC_OUTER_SPEED_KP
+#define FOC_OUTER_SPEED_KP FOC_SPEED_KP
+#endif
+#ifndef FOC_OUTER_SPEED_KI
+#define FOC_OUTER_SPEED_KI FOC_SPEED_KI
+#endif
+#ifndef FOC_OUTER_POSITION_KP
+#define FOC_OUTER_POSITION_KP FOC_POSITION_KP
+#endif
+#define SPEED_KP FOC_OUTER_SPEED_KP
+#define SPEED_KI FOC_OUTER_SPEED_KI
+#define POSITION_KP FOC_OUTER_POSITION_KP
 #define CONTROL_BANDWIDTH 0.1f  /* Integrator back-calculation gain. */
 #define CONTROL_PERIOD_US 1000u /* Outer-loop period; runs once per millisecond. */
 #define CONTROL_JUMP_US 4000u   /* Gap above this is a discontinuity, not a dt. */
-#define CONTROL_COMMAND_MS 200u /* Stop if the host stops sending mode targets. */
+#define CONTROL_COMMAND_MS 200u /* TRIP only: require refreshed host targets. */
 static uint32_t mode, fault;
 static float position, reference, speed, speed_target, position_target;
-static float integral_speed, last_deg;
+static float integral_speed, last_deg, speed_reference;
+static float velocity_position, last_velocity_position;
+static uint32_t observer_tick;
 static uint32_t previous_tick, command_ms;
 static bool tracking, commanded;
 
@@ -43,6 +54,7 @@ void control_stop(void)
     commanded = false;
     reference = speed_target = position_target = 0.0f;
     integral_speed = 0.0f;
+    speed_reference = 0.0f;
 }
 
 static void accept(void)
@@ -84,8 +96,13 @@ static bool start(uint32_t wanted, float target)
 {
     if (!arm(wanted, target)) return false;
     if (!foc.calibrated || !foc.zero_ready) return false;
-    if (foc.state != FOC_IDLE && foc.state != FOC_RUN && foc.state != FOC_PRECHARGE) return false;
-    if (!continuous(wanted)) integral_speed = 0.0f;
+    if (foc.state != FOC_IDLE && foc.state != FOC_RUN &&
+        foc.state != FOC_PRECHARGE && foc.state != FOC_PWM_ZERO) return false;
+    if (!continuous(wanted)) {
+        integral_speed = 0.0f;
+        reference = 0.0f; /* Never reuse an old mode's outer-loop output. */
+        speed_reference = speed;
+    }
     if (!go()) return false;
     mode = wanted;
     accept();
@@ -144,23 +161,28 @@ bool control_zero(void)
     return true;
 }
 
-/* Speed PI with the position P above it. foc.rpm is already encoder-filtered. */
+/* Position P -> speed trajectory -> speed PI using the outer velocity estimate. */
 static float outer_output(float dt)
 {
     if (mode == CONTROL_POSITION) {
         float omega = POSITION_KP * (position_target - position);
         float ceiling = FOC_POSITION_SPEED_MAX;
         if (fabsf(omega) > ceiling) foc_warn(FOC_SPEED);
-        if (FOC_PROTECTION_TRIP) {
-            if (omega > ceiling) omega = ceiling;
-            if (omega < -ceiling) omega = -ceiling;
-        }
+        /* Position approach speed is a trajectory parameter, not a fault or
+           target rejection. Always approach a distant target at this speed. */
+        if (omega > ceiling) omega = ceiling;
+        if (omega < -ceiling) omega = -ceiling;
         speed_target = omega;
     }
     /* Calibration.direction maps mechanical rotation to electrical rotation.
        Positive Iq follows the electrical direction, so invert both P and I
        for a motor whose calibrated mechanical direction is negative. */
-    float error = (float)foc.calibration.direction * (speed_target - speed);
+    float change = speed_target - speed_reference;
+    float slew = FOC_MOTOR_SPEED_SLEW_RPM_PER_S * dt;
+    if (change > slew) change = slew;
+    if (change < -slew) change = -slew;
+    speed_reference += change;
+    float error = (float)foc.calibration.direction * (speed_reference - speed);
     float wanted = SPEED_KP * error + integral_speed;
     float limited = wanted;
     if (fabsf(wanted) > FOC_CURRENT_MAX) foc_warn(FOC_CURRENT);
@@ -168,7 +190,11 @@ static float outer_output(float dt)
         if (limited > FOC_CURRENT_MAX) limited = FOC_CURRENT_MAX;
         if (limited < -FOC_CURRENT_MAX) limited = -FOC_CURRENT_MAX;
     }
-    integral_speed += SPEED_KI * error * dt;
+    /* Do not wind up against unavailable inverter voltage. Preserve WARN's
+       direct-current commands and do not add a current threshold lockout. */
+    bool pushing_voltage = foc.voltage_scale < 0.999f &&
+        error * (wanted - foc.iq) > 0.0f;
+    if (!pushing_voltage) integral_speed += SPEED_KI * error * dt;
     if (limited != wanted) integral_speed += CONTROL_BANDWIDTH * (limited - wanted);
     if (FOC_PROTECTION_TRIP) {
         if (integral_speed > FOC_CURRENT_MAX) integral_speed = FOC_CURRENT_MAX;
@@ -181,25 +207,52 @@ void control_step(uint32_t sample_us, float mechanical_deg)
 {
     if (foc.fault && !fault) fault = foc.fault; /* A trip latches this loop too. */
     if (!isfinite(mechanical_deg)) return;
+    if (!tracking) {
+        last_deg = velocity_position = last_velocity_position = mechanical_deg;
+        previous_tick = observer_tick = sample_us;
+        speed = 0.0f;
+        tracking = true;
+        return;
+    }
+    uint32_t observation_us = (sample_us - observer_tick) & 0xffffffu;
+    observer_tick = sample_us;
+    if (observation_us > CONTROL_JUMP_US) {
+        velocity_position = last_velocity_position = mechanical_deg;
+        speed = 0.0f;
+    } else {
+        /* 0.2 ms angle prefilter for velocity only: use all encoder samples
+           rather than noisy end points decimated to 1 kHz. No change to the
+           position feedback or the current loop's electrical angle. */
+        float observation_dt = (float)observation_us * 1e-6f;
+        velocity_position += observation_dt / (0.0002f + observation_dt) *
+            (mechanical_deg - velocity_position);
+    }
     uint32_t elapsed = (sample_us - previous_tick) & 0xffffffu;
     if (elapsed < CONTROL_PERIOD_US) return;
     /* At the 9400 RPM limit, one millisecond moves less than 57 degrees. */
-    if (!tracking) { last_deg = mechanical_deg; tracking = true; }
     float step_deg = mechanical_deg - last_deg; /* foc_step already unwraps. */
     last_deg = mechanical_deg;
     position += step_deg;
     if (elapsed > CONTROL_JUMP_US) {
         previous_tick = sample_us; /* Resynchronise without integrating the gap. */
+        last_velocity_position = velocity_position;
+        speed = 0.0f;
         return;
     }
     float dt = (float)elapsed * 1e-6f;
     previous_tick = sample_us;
-    speed = foc.rpm;
+    /* Estimate at the outer-loop cadence with a time-based 1 ms filter.
+       This avoids differentiating encoder quantisation at 10/20 kHz and
+       leaves the current loop's angle prediction unchanged. */
+    float measured = (velocity_position - last_velocity_position) / (6.0f * dt);
+    last_velocity_position = velocity_position;
+    speed += (dt / (0.001f + dt)) * (measured - speed);
+    if (foc.state != FOC_RUN) { reference = 0.0f; return; }
     if (!commanded) return;
-    /* TRIP needs a live host. WARN reports silence and retains all targets. */
-    if ((uint32_t)(bsp_uart_millis() - command_ms) >= CONTROL_COMMAND_MS) {
+    /* Persistent WARN targets need no keepalive, including a position hold. */
+    if (FOC_PROTECTION_TRIP && (uint32_t)(bsp_uart_millis() - command_ms) >= CONTROL_COMMAND_MS) {
         foc_warn(FOC_UART);
-        if (FOC_PROTECTION_TRIP) { fault = FOC_UART; return; }
+        fault = FOC_UART; return;
     }
     if (fault == FOC_UART) fault = 0u;
     if (mode == CONTROL_TORQUE) return; /* Its Iq ramp lives in foc_step(). */

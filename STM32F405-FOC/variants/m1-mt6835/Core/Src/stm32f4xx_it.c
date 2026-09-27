@@ -236,10 +236,9 @@ void ADC_IRQHandler(void)
   /* USER CODE BEGIN ADC_IRQn 0 */
 #ifdef FOC_PORT_M0
   uint32_t flags = ADC1->SR;
-  if (flags & ADC_SR_OVR) { app_fault(FOC_ADC); (void)bsp_adc_read(); return; }
+  if ((flags | ADC2->SR) & ADC_SR_OVR) { app_fault(FOC_ADC); (void)bsp_adc_read(); return; }
   if (flags & ADC_SR_JEOC) {
-    ADC1->SR &= ~ADC_SR_JEOC;
-    ADC2->CR2 |= ADC_CR2_SWSTART; /* Bus conversion overlaps encoder SPI. */
+    if (!bsp_adc_begin_bus()) { app_fault(FOC_ADC); return; }
     if (!bsp_motor_sample_begin()) app_fault(FOC_TIMING);
     bsp_encoder_begin();
 #ifdef FOC_ENCODER_TLE5012B

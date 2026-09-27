@@ -219,7 +219,7 @@ MODES = {"torque": torque_cases, "speed": speed_cases, "position": position_case
 
 # ------------------------------------------------------------------ execution
 
-def run_case(link, out_dir, experiment, group, limits, repetitions=1):
+def run_case(link, out_dir, experiment, group, limits, repetitions=1, sample_hz=20000, usb_divider=2):
     """Capture one (case, group) pair on a temporary file and zip it."""
     iq_limit, rpm_limit, pos_limit = limits
     problem = experiment.check(iq_limit, rpm_limit, pos_limit)
@@ -260,6 +260,8 @@ def run_case(link, out_dir, experiment, group, limits, repetitions=1):
             "duration_s": experiment.duration_s,
             "warmup_ms": WARMUP_MS,
             "keepalive_ms": KEEPALIVE_MS,
+            "sample_hz": sample_hz,
+            "usb_divider": usb_divider,
             "ramp_rate_a_per_s": RAMP_RATE,
             "plan": [[int(t), c] for t, c in experiment.plan],
             "command_jitter_ms": scheduler.jitter,
@@ -274,7 +276,7 @@ def run_case(link, out_dir, experiment, group, limits, repetitions=1):
         bench.archive(path, target, meta)
         # Continuity is measured from the archive so a torn capture is caught now.
         table, loaded = bench.load(target)
-        os.unlink(path)
+        # archive() already removes the temporary capture after verification.
         loaded["continuity"]["path"] = target
         results.append(loaded)
         flags = loaded["continuity"]
@@ -349,7 +351,8 @@ def command_run(args):
         for experiment in cases:
             print(f"{experiment.mode}/{experiment.case} ({experiment.note})")
             for group in groups:
-                run_case(link, out_dir, experiment, group, limits, args.repeat)
+                run_case(link, out_dir, experiment, group, limits, args.repeat,
+                         args.sample_hz, args.usb_divider)
             completed += 1
     except KeyboardInterrupt:
         print("\ninterrupted")
@@ -412,6 +415,7 @@ def command_chain(args):
     if len(files) < 2:
         raise SystemExit(f"need the same case on several groups, found {files}")
     blocks = []
+    frame_rates = set()
     columns = ["capture_s"]
     seen = set()
     for name in files:
@@ -419,13 +423,16 @@ def command_chain(args):
         words = np.frombuffer(table[:, :12].tobytes(), dtype="<u4").reshape(-1, 12)
         seq = (words[:, 1] & 0xFFFFFF).astype(np.int64)
         group = int(words[0, 1] >> 24)
+        frame_rates.add(meta.get("sample_hz", 20000) / meta.get("usb_divider", 1))
         if group in seen or meta["continuity"]["gaps"]:
             raise SystemExit(f"{name}: duplicate group or discontinuous capture")
         seen.add(group)
         blocks.append(np.column_stack((seq, table[:, 2:12])).astype(np.float64))
         columns += [f"g{group}_seq"] + [f"g{group}_{c}" for c in bench.GROUP_CHANNELS[group]]
     length = min(len(block) for block in blocks)
-    matrix = np.column_stack([np.arange(length) / bench.SAMPLE_HZ] + [block[:length] for block in blocks])
+    if len(frame_rates) != 1:
+        raise SystemExit("cannot align captures with different USB frame rates")
+    matrix = np.column_stack([np.arange(length) / frame_rates.pop()] + [block[:length] for block in blocks])
     stem = os.path.join(args.directory, f"{args.case}_merged")
     np.savetxt(stem + ".csv", matrix, delimiter=",", header=",".join(columns),
                comments="", fmt="%.6g")
@@ -459,6 +466,8 @@ def main():
     run = sub.add_parser("run", help="execute the case library")
     run.add_argument("--mode", default="all", choices=["all", *MODES])
     run.add_argument("--groups", default="0,1,2,3")
+    run.add_argument("--sample-hz", type=int, default=20000, choices=(10000, 20000))
+    run.add_argument("--usb-divider", type=int, default=2, choices=range(1, 1001))
     run.add_argument("--repeat", type=int, default=1)
     run.add_argument("--per-cel", type=float, default=3.0, dest="per_cel")
     run.add_argument("--amp-steps", type=int, default=5, dest="amp_steps")
@@ -482,6 +491,8 @@ def main():
     chain.set_defaults(func=command_chain)
 
     args = parser.parse_args()
+    if args.command == "run" and args.sample_hz % args.usb_divider:
+        parser.error("USB divider must divide the control sample rate")
     return args.func(args)
 
 

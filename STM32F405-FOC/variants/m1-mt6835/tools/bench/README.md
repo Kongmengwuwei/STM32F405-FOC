@@ -46,20 +46,19 @@ table, meta = benchlib.load(r"...\step_pos_360_g3_r0.zip")
 print(meta["continuity"])
 ```
 
-## 高速帧格式（USB 20 kHz）
+## 当前帧格式（控制频率与 USB 帧率独立）
 
-`send X` 之后每个 20 kHz 采样发一帧：**12 个小端 float32 + 帧尾 `00 00 80 7F` = 52 字节，即 1,040,000 B/s**。
+`send X` 选择遥测组。USB 默认 1000000/8N1/DTR，divider=2；M0 电流环 10 kHz、USB 5 kHz/260 kB/s，M1 电流环 20 kHz、USB 10 kHz/520 kB/s。每帧 **12 个小端 float32 + 帧尾 `00 00 80 7F` = 52 字节**。控制频率不因遥测分频改变。
 
 | 下标 | 内容 |
 |---|---|
 | 0 | 低 24 位 = `t_u24`（TIM5 微秒，16.78 s 回绕）；高 8 位 = 状态字：bit0..2 状态、bit3..6 故障、bit7 为 PWM 已开启 |
-| 1 | 低 24 位 = `seq`（20 kHz 单调计数，13.98 min 回绕）；高 8 位 = 日志组号 |
+| 1 | 低 24 位 = `seq`（按电流环频率计数）；高 8 位 = 日志组号 |
 | 2..11 | 该组的 10 个数据通道（见下表） |
 
 **时间与丢帧**：`t_u24` 与 `seq` 是权威采样身份，与组号无关；组号切换不重置它们。
-相邻帧应满足 `seq` 差 1，ISR 时间戳一般差 50 µs，允许 45..55 µs 入口抖动。若某帧丢失，`seq` 差 2、`t_u24`
-约差 100 µs；按 `seq` 可重建严格 20 kHz 网格。`benchlib.continuity()` 给出
-`gaps`（序号不连续或时间差超出 45..55 µs 的间隔数）、`timestamp_jitter`、`max_gap_us`、`missing`（序号推算丢失帧数）与 `seq_ok`。
+相邻帧应满足 `seq` 差 divider，时间差为 `1e6*divider/sample_hz` µs，入口抖动容许 ±5 µs。默认 M0 为差 2 / 200 µs，M1 为差 2 / 100 µs。`seq` 仍计数全部控制周期，回绕时间 M0 27.96 min、M1 13.98 min。
+新归档写入 `sample_hz`、`usb_divider`，`benchlib.load()` 据此检验丢帧；缺少这些字段的历史包按 M1 20 kHz/divider=1 读取。`run` 工况仍针对参考电机，默认 sample_hz=20000/divider=2，不要直接对 ZH3620-1 执行。 `discover` 的速率是按帧头推算值，均匀丢帧仍可能误导推算；严格校验需给出构建参数。
 
 状态字：状态 `0..7` = IDLE/PRECHARGE/CALIBRATE/SAVE/RUN/FAULT/OFFSET/PWM_ZERO；
 故障 `0..14` = OK/SENSOR/ADC/TIMING/WINDOW/ALIGNMENT/FLASH/UART/BUS/ZERO/CURRENT/SPEED/POSITION/NUMERIC/VOLTAGE；
@@ -115,27 +114,43 @@ bit7=1 表示 PWM 已开启；OFF/PRECHARGE 由状态区分。
 | `stop` | 立即关断 |
 | `clear` | 清已消失的故障，不自动启动 |
 | `cal` | 停机重校准 |
-| `send X` | 切换日志组，X = 0..4；M0 10 kHz、M1 20 kHz（不改变电机状态） |
+| `send X` | 切换日志组，X = 0..5；默认 M0 5 kHz、M1 10 kHz（不改变电机状态） |
 | `hello` | **仅 UART** 回 `#FOC 1.1 <状态字>`；不发到 USB 二进制流，避免破坏分帧 |
 
 三条模式命令**命令即切模式**，不需要额外的 mode 命令。速度环/位置环是 1 kHz
 外环，最终输出 Iq 参考，底层仍是现有 20 kHz Id/Iq 电流环。
 
-**看门狗**：Speed/Position 模式下若主机超过 200 ms 不再发目标，固件置
-`FOC_UART` 停机——因为外环正握着计算出的参考值，PC 挂死必须能自停。
-Torque 模式保持历史语义，没有该看门狗。所以主机必须周期性重发目标；
-`benchlib.Scheduler` 默认 100 ms 重发一次，既保活又保证输入一致。
+默认 WARN 单次目标保持，超时只记告警，Iq 无斜坡；TRIP 才保留看门狗、限制和斜坡。历史工况脚本仍用 100 ms 重发及参考电机幅值，只适合已验证的对应台架。当前 ZH3620-1 使用下面的小电流工具。
 
-**参考斜坡**：Iq 参考按 1 A/s 从上一个值爬到新目标（20 kHz 定步长，实测
-`iq - iq_prev == 5e-5 A`，即 1 A/s）。`stop` 清零并取消未完成的斜坡。
-PC 只发一条 setpoint，斜坡由固件完成，因此同一工况的命令值在时间上可复现；
-`meta.json.command_jitter_ms` 记录实际发送偏差供分析核对。
+### 电流环短测
+
+```sh
+python tools/bench/current_probe.py COM8 --out build/bench_debug/current --label trial --steps --kp 0.20 --ki 24
+```
+
+`--steps` 明确启用运动；省略时仅记录待机。工具预先 stop、检查待机母线与数据，依次发送 ±0.05/0.10/0.20 A 的短阶跃，每轮最后 stop，异常退出也尝试 stop；不发 cal/rpm/pos，不改固件限制。`--kp/--ki` 仅记载已烧录参数，不在线修改。默认 USB divider=2；全速对照固件对应 `--usb-divider 1`。`--repeat 1` 可减少重复。
+
+`.f32` 保存精确原帧，JSON 保存命令时间、状态、连续性和统计。计时使用帧头，不用主机到达间隔；稳态窗口剔除阶跃后 30 ms。组 5 的原始记录在 divider=2 下已是两点窗口平均，不能称为未滤波 10 kHz 电流。
+
+### 第 5 组电流窗口
+
+| 通道 | 内容 |
+|---|---|
+| I2 / I3 | 最新 Iq 目标 / 命令 |
+| I4 | 窗口平均 Id |
+| I5 / I6 | 窗口平均 Ud / Uq |
+| I7 | 窗口平均转速 |
+| I8 | 窗口最小实际/请求电压比例，1=未饱和；停机为 0 |
+| I9 | 窗口平均 Iq，沿用电流图绑定 |
+| I10 / I11 | 累计告警 / 窗口平均母线 |
+
+窗口在目标或状态边沿清空，最多包含 divider 次连续采样；时间戳取末端，命令取最新值。divider=1 是单样本原值。组 0–4 仍取末端单样本；组 5 的平均仅用于记录，电流 PI 没有加反馈滤波。平均不能证明物理纹波变小，也不是完整抗混叠滤波器。
 
 ## 安全性
 
 - 主机侧默认 `--iq-limit 0.4 A`、`--rpm-limit 1000`、`--pos-limit 1200°`，
   超限的工况在**发命令之前**就会被拒绝并打印 `SKIP`。
-- 每个 (工况, 组) 采集结束后立刻检查归档：出现故障帧或 20 kHz 连续性丢失即
+- 每个 (工况, 组) 采集结束后立刻检查归档：出现故障帧或配置帧率下连续性丢失即
   终止整轮，不静默重试。
 - 每次切换工况前执行固定前置序列（`stop` → 静置 → 位置模式 `zero`），
   保证同一工况跨组、跨重复的输入一致。

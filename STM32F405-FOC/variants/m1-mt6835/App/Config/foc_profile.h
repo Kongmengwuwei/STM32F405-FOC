@@ -18,6 +18,9 @@
 #include "foc_motor.h"
 #include "foc_encoder_profile.h"
 #include "foc_policy.h"
+#include "foc_telemetry.h"
+#define FOC_USB_FRAME_HZ (FOC_SAMPLE_HZ / FOC_USB_DIVIDER)
+_Static_assert(FOC_SAMPLE_HZ % FOC_USB_DIVIDER == 0u, "USB divider must divide the control sample rate");
 
 #ifndef FOC_INSTALLATION_ID
 #error FOC_INSTALLATION_ID must be set for the physical motor/encoder mounting
@@ -39,6 +42,7 @@
 #define FOC_ALIGNMENT_SWEEP_TICKS_20KHZ FOC_MOTOR_ALIGNMENT_SWEEP_TICKS_20KHZ
 #define FOC_CURRENT_KP FOC_MOTOR_CURRENT_KP
 #define FOC_CURRENT_KI_STEP (FOC_MOTOR_CURRENT_KI_PER_S / (float)FOC_SAMPLE_HZ)
+#define FOC_CURRENT_AW_STEP (FOC_MOTOR_CURRENT_AW_PER_S / (float)FOC_SAMPLE_HZ)
 #define FOC_SPEED_KP FOC_MOTOR_SPEED_KP
 #define FOC_SPEED_KI FOC_MOTOR_SPEED_KI
 #define FOC_POSITION_KP FOC_MOTOR_POSITION_KP
