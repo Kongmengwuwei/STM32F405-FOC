@@ -17,6 +17,7 @@
 #include "foc_port.h"
 #include "foc_motor.h"
 #include "foc_encoder_profile.h"
+#include "foc_policy.h"
 
 #ifndef FOC_INSTALLATION_ID
 #error FOC_INSTALLATION_ID must be set for the physical motor/encoder mounting
@@ -25,8 +26,8 @@
 #error FOC_INSTALLATION_ID must be in 1..15
 #endif
 
-/* Both the motor and the output stage must allow a command. A data-sheet
- * maximum or stall current is never treated as a first-run command limit. */
+/* Intersection of motor/port thresholds. WARN uses diagnostics only; TRIP
+ * enforces them. Data-sheet stall current is not a continuous current rating. */
 #define FOC_BUS_MIN ((FOC_PORT_BUS_MIN > FOC_MOTOR_BUS_MIN) ? FOC_PORT_BUS_MIN : FOC_MOTOR_BUS_MIN)
 #define FOC_BUS_MAX ((FOC_PORT_BUS_MAX < FOC_MOTOR_BUS_MAX) ? FOC_PORT_BUS_MAX : FOC_MOTOR_BUS_MAX)
 #define FOC_CURRENT_MAX ((FOC_PORT_CURRENT_MAX < FOC_MOTOR_CURRENT_MAX) ? FOC_PORT_CURRENT_MAX : FOC_MOTOR_CURRENT_MAX)

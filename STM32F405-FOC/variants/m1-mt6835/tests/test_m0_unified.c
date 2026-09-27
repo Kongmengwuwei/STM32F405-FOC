@@ -92,7 +92,8 @@ int main(void)
         motor_sample_us += 100u;
         app_sample();
     }
-    assert(foc.state == FOC_RUN && fabsf(foc.iq_ref - 0.010f) < 0.0002f);
+    assert(foc.state == FOC_RUN);
+    assert(fabsf(foc.iq_ref - (FOC_PROTECTION_TRIP ? 0.010f : 0.20f)) < 0.0002f);
     assert(frames == samples && isinf(last_frame[12]));
     usb("rpm 10\r");
     assert(control_mode() == CONTROL_SPEED);
@@ -100,6 +101,86 @@ int main(void)
     assert(control_mode() == CONTROL_POSITION);
     usb("stop\r");
     assert(foc.state == FOC_IDLE && motor_mode == MOTOR_OFF);
+#if !FOC_PROTECTION_TRIP
+    /* The real parser must accept a formerly rejected target, and one send
+       must survive timeout, bus/speed/phase-current diagnostic thresholds. */
+    unsigned rejected = app_command_rejected;
+    usb("send 4\rIq 0.40\r");
+    assert(app_command_rejected == rejected && foc.command == 0.40f);
+    for (unsigned n = 0; n < FOC_PRECHARGE_SAMPLES +
+         FOC_PWM_ZERO_SETTLE_SAMPLES + FOC_PWM_ZERO_SAMPLES + 1u; ++n) {
+        motor_sample_us += 100u;
+        app_sample();
+    }
+    assert(foc.state == FOC_RUN && foc.iq_ref == 0.40f);
+    adc_sample.bus_voltage = 20.0f;
+    adc_sample.b_voltage += 0.04f; /* 2 A on the nominal B-phase conversion. */
+    for (unsigned n = 0; n < 2600u; ++n) {
+        encoder_angle_deg = fmodf(encoder_angle_deg + 2.0f, 360.0f);
+        motor_sample_us += 100u;
+        app_sample();
+    }
+    assert(foc.state == FOC_RUN && foc.fault == FOC_OK && control_scheduled());
+    assert(foc.iq_ref == 0.40f && foc.command == 0.40f);
+    assert(foc.warnings & (1u << FOC_UART));
+    assert(foc.warnings & (1u << FOC_CURRENT));
+    assert(foc.warnings & (1u << FOC_SPEED));
+    assert(foc.warnings & (1u << FOC_BUS));
+    assert(foc.warnings & (1u << FOC_SENSOR));
+    assert(last_frame[2] == foc.iq_ref && last_frame[9] == foc.iq);
+    assert(last_frame[4] == (float)foc.warnings);
+    assert(last_frame[6] == FOC_RUN && last_frame[10] == FOC_OK);
+    assert(app_command("Iq -0.65"));
+    motor_sample_us += 100u; app_sample();
+    assert(foc.iq_ref == -0.65f && foc.fault == FOC_OK);
+    assert(app_command("clear") && foc.warnings == 0u && foc.state == FOC_RUN);
+    assert(foc.command == -0.65f); /* clear changes diagnostics, not torque. */
+    assert(app_command("stop") && motor_mode == MOTOR_OFF && foc.state == FOC_IDLE);
+
+    /* Missing measurements cannot commutate. Recovery requires a new target,
+       but never the old profile's latched clear interlock. */
+    encoder_angle_deg = NAN;
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_FAULT && foc.fault == FOC_SENSOR && motor_mode == MOTOR_OFF);
+    encoder_angle_deg = 20.0f;
+    adc_sample.bus_voltage = 12.0f;
+    adc_sample.b_voltage = foc.b_offset;
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_IDLE && foc.fault == FOC_OK && foc.command == 0.0f);
+    assert(app_command("Iq 0.50") && foc.state == FOC_PRECHARGE);
+    assert(app_command("stop"));
+    foc.state = FOC_RUN;
+    assert(app_command("Iq 50"));
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_RUN && foc_window(foc.duty));
+    assert(hypotf(foc.ud, foc.uq) > adc_sample.bus_voltage * 0.10f);
+    assert(foc.warnings & (1u << FOC_VOLTAGE));
+    adc_sample.bus_voltage = 0.0f;
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_FAULT && foc.fault == FOC_BUS && motor_mode == MOTOR_OFF);
+    adc_sample.bus_voltage = 12.0f;
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_IDLE && foc.fault == FOC_OK);
+    adc_sample.b_voltage = NAN;
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_FAULT && foc.fault == FOC_ADC && motor_mode == MOTOR_OFF);
+    adc_sample.b_voltage = foc.b_offset;
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_IDLE && foc.fault == FOC_OK);
+    foc.state = FOC_RUN;
+    assert(app_command("Iq 10000000000000000000000000"));
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_FAULT && foc.fault == FOC_NUMERIC && motor_mode == MOTOR_OFF);
+    motor_sample_us += 100u; app_sample();
+    assert(foc.state == FOC_IDLE && foc.fault == FOC_OK);
+    uint32_t warnings = foc.warnings;
+    app_fault(FOC_UART); app_fault(FOC_TIMING);
+    assert(foc.state == FOC_IDLE && foc.fault == FOC_OK && foc.warnings != warnings);
+    rejected = app_command_rejected;
+    usb("Iq nan\rIq 0.123\r");
+    assert(app_command_rejected == rejected + 2u && foc.command == 0.0f);
+    puts("PASS: WARN over-limit targets, held single commands, no threshold latch, diagnostics, invalid-sensor recovery");
+#endif
     puts("PASS: M0 profile, USB parser/telemetry, explicit calibration, torque/speed/position");
     return 0;
 }

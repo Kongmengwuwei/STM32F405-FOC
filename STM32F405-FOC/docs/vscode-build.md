@@ -2,6 +2,8 @@
 
 这里的默认固件是 **M0 功率接口 + TLE5012B + ZH3620-1 + 安装编号 1**。工作区目录是 `D:\STM32F405-FOC`，固件的 CMake 工程在其下的 `STM32F405-FOC/`。本机已配置 `Debug-local` 预设及 STM32CubeIDE 的 ARM 工具链。
 
+默认策略已改为 `FOC_PROTECTION=WARN`。检查配置输出中的 `protection=WARN`；单次 `Iq` 会保持，越限只告警，需主动发送 `stop`。本次告警策略尚未实机测试，具体行为见[台架告警模式](bench-warning-mode.md)。
+
 ## 操作步骤
 
 1. 用 VS Code “文件 → 打开文件夹”打开 `D:\STM32F405-FOC`。不要只打开历史名称的 `variants/m1-mt6835/` 子目录。把 ST-Link 的 SWDIO、SWCLK、GND 与目标电压参考接到控制板，给控制板提供合适的逻辑电源；首次烧录时先让电机轴空载，不要直接启动功率输出。

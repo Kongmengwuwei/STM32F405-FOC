@@ -243,7 +243,7 @@ void ADC_IRQHandler(void)
     if (!bsp_motor_sample_begin()) app_fault(FOC_TIMING);
     bsp_encoder_begin();
 #ifdef FOC_ENCODER_TLE5012B
-    if (!bsp_adc_read()) app_fault(FOC_ADC);
+    if (!bsp_adc_read()) { app_fault(FOC_ADC); return; }
     app_sample();
 #endif
   }
@@ -332,7 +332,7 @@ void DMA2_Stream0_IRQHandler(void)
     bsp_encoder_begin();
 #ifdef FOC_ENCODER_TLE5012B
     /* The three SPI words outlast ADC rank two. Reject a late ADC sample. */
-    if (!bsp_adc_read()) app_fault(FOC_ADC);
+    if (!bsp_adc_read()) { app_fault(FOC_ADC); return; }
     app_sample();
 #endif
 }
@@ -342,7 +342,7 @@ void DMA2_Stream0_IRQHandler(void)
 void DMA1_Stream0_IRQHandler(void)
 {
     bsp_encoder_finish();
-    if (!bsp_adc_read()) app_fault(FOC_ADC); /* Both ranks must now be complete. */
+    if (!bsp_adc_read()) { app_fault(FOC_ADC); return; } /* Never reuse incomplete ranks. */
     app_sample();
 }
 #endif

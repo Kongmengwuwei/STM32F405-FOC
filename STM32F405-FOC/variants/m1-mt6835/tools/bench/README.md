@@ -1,5 +1,7 @@
 # tools：电机测试数据系统
 
+**当前策略（2026-09-27）：** 固件默认 WARN，各型号均取消目标范围拒绝、通信超时关断和阈值跳闸，`send 4` 为数值诊断组。下文旧限幅与看门狗描述对应 TRIP/历史版本；详见[台架告警模式](../../../../docs/bench-warning-mode.md)。主机 `bench.py run` 的参考电机工况库和自有 `--iq-limit/--rpm-limit/--pos-limit` 检查独立于固件，不用于默认 ZH3620-1 的 VOFA 手动电流测试。
+
 本目录保存**主机端工具**。固件接口与命令见 [App/README.md](../../App/README.md)，
 主机回归测试见 [tests/README.md](../../tests/README.md)，硬件接线见
 [硬件PCB拓扑.md](../../硬件PCB拓扑.md)。
@@ -59,11 +61,11 @@ print(meta["continuity"])
 约差 100 µs；按 `seq` 可重建严格 20 kHz 网格。`benchlib.continuity()` 给出
 `gaps`（序号不连续或时间差超出 45..55 µs 的间隔数）、`timestamp_jitter`、`max_gap_us`、`missing`（序号推算丢失帧数）与 `seq_ok`。
 
-状态字：状态 `0..6` = IDLE/PRECHARGE/CALIBRATE/SAVE/RUN/FAULT/OFFSET；
-故障 `0..12` = OK/SENSOR/ADC/TIMING/WINDOW/ALIGNMENT/FLASH/UART/BUS/ZERO/CURRENT/SPEED/POSITION；
+状态字：状态 `0..7` = IDLE/PRECHARGE/CALIBRATE/SAVE/RUN/FAULT/OFFSET/PWM_ZERO；
+故障 `0..14` = OK/SENSOR/ADC/TIMING/WINDOW/ALIGNMENT/FLASH/UART/BUS/ZERO/CURRENT/SPEED/POSITION/NUMERIC/VOLTAGE；
 bit7=1 表示 PWM 已开启；OFF/PRECHARGE 由状态区分。
 
-### 四组通道（先发无法离线反算的量）
+### 原四组通道（第 4 组诊断另见下表）
 
 | 下标 | 组 0 raw | 组 1 current | 组 2 voltage | 组 3 control |
 |---|---|---|---|---|
@@ -77,6 +79,14 @@ bit7=1 表示 PWM 已开启；OFF/PRECHARGE 由状态区分。
 | 9 | `sample_us` | `uq` V | `duty_c` | `iq` A |
 | 10 | `bus_v_nominal` V | `b_offset` V | `edge_limit_v` V | `mode` |
 | 11 | `b_offset` V | `c_offset` V | `vec_limit_v` V | `bus_v` V |
+
+| 下标 | 组 4 diagnostics |
+|---|---|
+| 2 / 3 | `iq_ref` / `iq_ref_cmd` A |
+| 4 / 5 | 告警位掩码 / 最近新增告警编号 |
+| 6 / 7 | 普通数值状态 / `rpm_encoder` |
+| 8 / 9 | 拒绝命令累计数 / 实际 `iq` A |
+| 10 / 11 | 当前停止原因（0=无） / 母线 V |
 
 - **组 0**：ADC 原始码值与编码器**未修正**角度（二阶谐波补偿前的真值）。
   原始码值不是为了标定增益（软件无法自标定），而是把标定自由度留到将来：
@@ -105,7 +115,7 @@ bit7=1 表示 PWM 已开启；OFF/PRECHARGE 由状态区分。
 | `stop` | 立即关断 |
 | `clear` | 清已消失的故障，不自动启动 |
 | `cal` | 停机重校准 |
-| `send X` | 切换 20 kHz 日志组，X = 0..3（纯日志开关，与电机状态无关） |
+| `send X` | 切换日志组，X = 0..4；M0 10 kHz、M1 20 kHz（不改变电机状态） |
 | `hello` | **仅 UART** 回 `#FOC 1.1 <状态字>`；不发到 USB 二进制流，避免破坏分帧 |
 
 三条模式命令**命令即切模式**，不需要额外的 mode 命令。速度环/位置环是 1 kHz

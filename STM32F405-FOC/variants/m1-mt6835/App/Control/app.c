@@ -8,6 +8,7 @@
 #include "justfloat.h"
 #include "bsp_encoder.h"
 #include <math.h>
+#include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,6 +52,15 @@ bool app_init(void)
 
 void app_fault(uint32_t fault)
 {
+    if (!FOC_PROTECTION_TRIP && (fault == FOC_TIMING || fault == FOC_UART)) {
+        foc_warn(fault);
+        return; /* A missed deadline holds the last coherent PWM period. */
+    }
+    app_abort(fault);
+}
+
+void app_abort(uint32_t fault)
+{
     bsp_motor_off();
     foc_trip(fault);
 #ifdef FOC_CAPTURE
@@ -67,7 +77,8 @@ static uint32_t status_word(void)
 
 /* One frame per selected-port sample: one group, 12 float32 plus the JustFloat
    terminator. Group 0 carries raw sensor truth, group 1 current-loop internals,
-   group 2 the applied voltage, group 3 the reference and mechanical response.
+   group 2 the applied voltage, group 3 the reference and mechanical response,
+   group 4 numeric diagnostics with compatible I2/I9 current plot channels.
    Channels that a host can reconstruct offline are deliberately absent. */
 static void telemetry_usb(void)
 {
@@ -129,6 +140,18 @@ static void telemetry_usb(void)
         payload[10] = (float)control_mode();
         payload[11] = adc_sample.bus_voltage;
         break;
+    case 4: /* Human-readable diagnostics, same I2/I9 current-plot bindings. */
+        payload[2] = foc.iq_ref;
+        payload[3] = foc.command;
+        payload[4] = (float)foc.warnings;
+        payload[5] = (float)foc.last_warning;
+        payload[6] = (float)foc.state;
+        payload[7] = foc.rpm;
+        payload[8] = (float)app_command_rejected;
+        payload[9] = foc.iq;
+        payload[10] = (float)foc.fault;
+        payload[11] = adc_sample.bus_voltage;
+        break;
     }
     s_usb_frame[FOC_FRAME_CHANNELS] = INFINITY;
     (void)bsp_usb_write(&s_usb_frame, sizeof s_usb_frame);
@@ -139,7 +162,7 @@ void app_sample(void)
     unsigned sampled_mode = motor_mode, previous_state = foc.state;
     float duty[3] = {motor_duty[0], motor_duty[1], motor_duty[2]};
     bool valid = sampled_mode != MOTOR_PWM || foc_window(duty);
-    if (!valid) app_fault(FOC_WINDOW); /* Validate measured period BEFORE PI integration. */
+    if (!valid) app_fault(FOC_WINDOW); /* Invalid sample geometry cannot feed PI. */
     foc_step(encoder_angle_deg, adc_sample.bus_voltage, adc_sample.b_voltage,
              adc_sample.c_voltage, encoder_sample_delay);
     uint32_t key = bsp_motor_lock();
@@ -244,10 +267,10 @@ bool app_command(const char *line)
     else if (!strcmp(line, "clear")) command = CLEAR;
     else if (!strcmp(line, "zero")) command = ZERO;
     else if (!strcmp(line, "hello")) command = HELLO;
-    else if (!strncmp(line, "Iq ", 3u)) { command = TORQUE; if (!parse_decimal(line + 3, &value, FOC_CURRENT_MAX)) return false; }
-    else if (!strncmp(line, "rpm ", 4u)) { command = SPEED; if (!parse_decimal(line + 4, &value, FOC_SPEED_MAX)) return false; }
-    else if (!strncmp(line, "pos ", 4u)) { command = POS; if (!parse_decimal(line + 4, &value, 1e6f)) return false; }
-    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '3' && !line[6]) {
+    else if (!strncmp(line, "Iq ", 3u)) { command = TORQUE; if (!parse_decimal(line + 3, &value, FLT_MAX)) return false; }
+    else if (!strncmp(line, "rpm ", 4u)) { command = SPEED; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
+    else if (!strncmp(line, "pos ", 4u)) { command = POS; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
+    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '4' && !line[6]) {
         telemetry_group = (uint8_t)(line[5] - '0');
         return true;
     } else return false;
@@ -267,15 +290,21 @@ bool app_command(const char *line)
     case CAL: ok = foc_calibrate(); break;
     case HELLO: break; /* No state change; the caller prints the banner. */
     case CLEAR:
+        if (!FOC_PROTECTION_TRIP && foc.state != FOC_FAULT) {
+            foc_clear_warnings();
+            break; /* Clearing diagnostics does not change a live command. */
+        }
         ok = foc.state == FOC_FAULT && bsp_uart_millis() - last_frame < 2u && isfinite(encoder_angle_deg) &&
              isfinite(adc_sample.b_voltage) && isfinite(adc_sample.c_voltage) &&
-             isfinite(adc_sample.bus_voltage) && adc_sample.bus_voltage >= FOC_BUS_MIN && adc_sample.bus_voltage <= FOC_BUS_MAX &&
+             isfinite(adc_sample.bus_voltage) && adc_sample.bus_voltage > 0.0f &&
+             (!FOC_PROTECTION_TRIP || (adc_sample.bus_voltage >= FOC_BUS_MIN && adc_sample.bus_voltage <= FOC_BUS_MAX &&
              fabsf(foc.rpm) < FOC_SPEED_MAX &&
              (!foc.zero_ready || (fabsf(adc_sample.b_voltage - foc.b_offset) < 0.04f &&
               fabsf(adc_sample.c_voltage - foc.c_offset) < 0.04f &&
-              fabsf(adc_sample.b_voltage + adc_sample.c_voltage - foc.b_offset - foc.c_offset) < 0.04f));
+              fabsf(adc_sample.b_voltage + adc_sample.c_voltage - foc.b_offset - foc.c_offset) < 0.04f))));
         if (ok) {
             foc.fault = FOC_OK;
+            foc_clear_warnings();
             if (foc.zero_ready) foc.state = FOC_IDLE;
             else {
                 foc_calibration_t calibration = foc.calibration;
@@ -292,9 +321,9 @@ bool app_command(const char *line)
         /* Text goes to UART only: the USB link is a binary frame stream. */
         char banner[128];
         unsigned length = (unsigned)snprintf(banner, sizeof banner,
-            "#FOC 1.1 port=%s encoder=%s motor=%s install=%u state=%lu\r\n",
+            "#FOC 1.2 port=%s encoder=%s motor=%s install=%u policy=%s state=%lu\r\n",
             FOC_PORT_NAME, FOC_ENCODER_NAME, FOC_MOTOR_NAME,
-            (unsigned)FOC_INSTALLATION_ID, (unsigned long)status_word());
+            (unsigned)FOC_INSTALLATION_ID, FOC_POLICY_NAME, (unsigned long)status_word());
         (void)bsp_uart_write(banner, length);
         bsp_uart_tick();
     }
@@ -374,7 +403,12 @@ void app_poll(void)
         bsp_motor_unlock(key);
         bool ok = bsp_motor_save(&foc.calibration);
         if (ok) { foc.calibrated = true; foc.state = FOC_IDLE; }
-        else app_fault(FOC_FLASH);
+        else if (FOC_PROTECTION_TRIP) app_fault(FOC_FLASH);
+        else {
+            foc_warn(FOC_FLASH);
+            foc.calibrated = true; /* Valid RAM calibration survives until reset. */
+            foc.state = FOC_IDLE;
+        }
         divider = 0u;
         bsp_adc_start();
     }

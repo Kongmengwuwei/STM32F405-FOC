@@ -5,6 +5,8 @@
 
 foc_t foc;
 
+void foc_warn(uint32_t warning) { foc.warnings |= 1u << warning; }
+
 void foc_trip(uint32_t fault)
 {
     if (foc.state != FOC_FAULT) foc.fault = fault;

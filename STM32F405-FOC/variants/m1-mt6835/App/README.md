@@ -2,7 +2,7 @@
 
 > 本页是原参考项目 **M1 接口 / MT6835 / 型号未确认电机** 的历史台架记录。当前固件已把接口、编码器、电机型号拆开选择，并要求所有组合显式 `cal`；旧 Flash 校准记录不会自动复用。当前参数、命令与首次测试步骤见[统一固件指南](../../../docs/unified-firmware.md)及[ZH3620-1 首测清单](../../../docs/zh3620-1-first-test.md)。下文的旧 M1 实测不能当作新固件或 ZH3620-1 的验收结果。
 
-当前功能：M1 20 kHz 有感 FOC，Id_ref=0，Iq 命令范围 ±5 A、1 A/s 参考斜坡；MT6835 角度换相，实测母线补偿，居中 SVPWM。当前 PI 标称带宽 600 Hz。在电流环之上新增 **1 kHz 速度环与位置环（基础 P+I）**，输出仍是 Iq 参考；USB 20 kHz 改为 **`send 0..3` 四组分组日志**。每次启动先关断校零；已有 Flash 电角度记录时保持待机。首次/显式 cal 的对齐电压仍 0.6 V。本次实现与实测详见本地 [电流内环报告](../build/foc_analysis/REPORT.md)，旧 [tests/FOC_TEST.md](../tests/FOC_TEST.md) 属于历史电压模式。
+当前为共用有感 FOC：M0 10 kHz、M1 20 kHz，编码器和电机独立选择，Id_ref=0，电流 PI、实测母线补偿、SVPWM，以及 1 kHz 速度/位置外环。默认策略 `WARN` 取消电流目标限幅、1 A/s 斜坡、通信超时关断和阈值跳闸，`send 4` 提供告警及目标/实际电流；详见[台架告警模式](../../../docs/bench-warning-mode.md)。下文参考电机数值和限幅说明对应可选 `TRIP` 策略，默认组合参数以[统一固件指南](../../../docs/unified-firmware.md)和 `App/Config` 为准。每次启动先关断校零；已有匹配 Flash 电角度记录时保持待机。旧 [tests/FOC_TEST.md](../tests/FOC_TEST.md) 属于历史电压模式。
 
 ## 模块
 

@@ -109,7 +109,7 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
   if (!app_init()) {
-    app_fault(foc.fault ? foc.fault : FOC_TIMING);
+    app_abort(foc.fault ? foc.fault : FOC_TIMING);
     /* Keep USB enumerable, but never start acquisition or accept motor commands. */
     while (1) { bsp_usb_poll(); __WFI(); }
   }
@@ -186,7 +186,7 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
-  app_fault(FOC_TIMING);
+  app_abort(FOC_TIMING);
   while (1)
   {
   }

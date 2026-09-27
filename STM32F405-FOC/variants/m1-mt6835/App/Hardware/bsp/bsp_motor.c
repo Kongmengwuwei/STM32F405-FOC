@@ -137,7 +137,9 @@ bool bsp_motor_update(void)
     if ((FOC_PWM_TIMER->CR1 & TIM_CR1_DIR) || FOC_PWM_TIMER->CNT > 600u ||
         (!ready && motor_mode != MOTOR_OFF)) {
         motor_timing_fault = 2u | (FOC_PWM_TIMER->CNT << 8);
-        bsp_motor_off(); return false;
+        ready = false;
+        if (FOC_PROTECTION_TRIP) bsp_motor_off();
+        return false; /* WARN holds a coherent previous period, no gate latch. */
     }
     /* A priority-0 fault may interrupt the priority-1 FOC write. Never let
        its resumed/stale preload re-enable gates after an emergency stop. */

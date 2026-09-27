@@ -8,6 +8,7 @@ bool app_init(void);
 void app_sample(void);
 void app_poll(void);
 void app_fault(uint32_t fault);
+void app_abort(uint32_t fault); /* Unconditional stop for unavailable computation. */
 bool app_command(const char *line);
 
 #endif

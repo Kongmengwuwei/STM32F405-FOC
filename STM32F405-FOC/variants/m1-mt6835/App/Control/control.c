@@ -3,9 +3,9 @@
 #include "foc.h"
 #include <math.h>
 
-/* Basic cascade: position P -> speed PI -> Iq_ref, on top of the unchanged
-   20 kHz current loop. Output limits match the current-loop command range, so
-   the outer loop can never ask for more than a manual `Iq` command could.
+/* Basic cascade: position P -> speed PI -> Iq_ref, above the selected port's
+   current loop. TRIP limits match the manual current command range; WARN
+   records the same thresholds and leaves the calculated reference intact.
    Tuning order: speed Kp first until it tracks without oscillating, then speed
    Ki to remove the steady-state error, then position Kp. */
 #define SPEED_KP FOC_SPEED_KP
@@ -29,10 +29,11 @@ float control_speed_target(void) { return speed_target; }
 float control_position_deg(void) { return position; }
 float control_position_target(void) { return position_target; }
 
-/* A held output demands a live host; used only while commanded. */
+/* WARN holds a target until the next command or explicit stop. */
 bool control_scheduled(void)
 {
-    return commanded && (uint32_t)(bsp_uart_millis() - command_ms) < CONTROL_COMMAND_MS;
+    return commanded && (!FOC_PROTECTION_TRIP ||
+        (uint32_t)(bsp_uart_millis() - command_ms) < CONTROL_COMMAND_MS);
 }
 
 void control_stop(void)
@@ -71,12 +72,12 @@ static bool go(void)
     return true;
 }
 
-/* A host that keeps a run alive resends its target about ten times a second, so
-   a resend must not disturb the loops. A first command, a mode change, or a
-   command after a long silence drops the integrators instead. */
+/* A resend must not disturb the loops. WARN also treats a new target after
+   silence as a continuous run; only a new run or mode drops integrators. */
 static bool continuous(uint32_t wanted)
 {
-    return mode == wanted && (uint32_t)(bsp_uart_millis() - command_ms) < CONTROL_COMMAND_MS;
+    return commanded && mode == wanted && (!FOC_PROTECTION_TRIP ||
+        (uint32_t)(bsp_uart_millis() - command_ms) < CONTROL_COMMAND_MS);
 }
 
 static bool start(uint32_t wanted, float target)
@@ -93,15 +94,24 @@ static bool start(uint32_t wanted, float target)
 
 bool control_torque(float amps)
 {
-    if (!isfinite(amps) || fabsf(amps) > FOC_CURRENT_MAX) return false;
-    foc.command = amps; /* The ramp owns iq_ref in torque mode. */
+    if (!isfinite(amps)) return false;
+    if (fabsf(amps) > FOC_CURRENT_MAX) {
+        foc_warn(FOC_CURRENT);
+        if (FOC_PROTECTION_TRIP) return false;
+    }
     if (!start(CONTROL_TORQUE, amps)) return false;
+    foc.command = amps; /* Rejected commands must not change the live target. */
     speed_target = 0.0f;
     return true;
 }
 
 bool control_speed(float rpm)
 {
+    if (!isfinite(rpm)) return false;
+    if (fabsf(rpm) > FOC_SPEED_MAX) {
+        foc_warn(FOC_SPEED);
+        if (FOC_PROTECTION_TRIP) return false;
+    }
     if (!start(CONTROL_SPEED, rpm)) return false;
     speed_target = rpm;
     return true;
@@ -109,6 +119,11 @@ bool control_speed(float rpm)
 
 bool control_position(float deg)
 {
+    if (!isfinite(deg)) return false;
+    if (fabsf(deg) > 1e6f) {
+        foc_warn(FOC_POSITION);
+        if (FOC_PROTECTION_TRIP) return false;
+    }
     if (!start(CONTROL_POSITION, deg)) return false;
     position_target = deg;
     return true;
@@ -123,7 +138,7 @@ bool control_hold_position(void)
 
 bool control_zero(void)
 {
-    if (foc.state != FOC_IDLE || fabsf(foc.rpm) >= 5.0f) return false;
+    if (foc.state != FOC_IDLE || (FOC_PROTECTION_TRIP && fabsf(foc.rpm) >= 5.0f)) return false;
     position = 0.0f;
     tracking = false;
     return true;
@@ -135,8 +150,11 @@ static float outer_output(float dt)
     if (mode == CONTROL_POSITION) {
         float omega = POSITION_KP * (position_target - position);
         float ceiling = FOC_POSITION_SPEED_MAX;
-        if (omega > ceiling) omega = ceiling;
-        if (omega < -ceiling) omega = -ceiling;
+        if (fabsf(omega) > ceiling) foc_warn(FOC_SPEED);
+        if (FOC_PROTECTION_TRIP) {
+            if (omega > ceiling) omega = ceiling;
+            if (omega < -ceiling) omega = -ceiling;
+        }
         speed_target = omega;
     }
     /* Calibration.direction maps mechanical rotation to electrical rotation.
@@ -145,19 +163,24 @@ static float outer_output(float dt)
     float error = (float)foc.calibration.direction * (speed_target - speed);
     float wanted = SPEED_KP * error + integral_speed;
     float limited = wanted;
-    if (limited > FOC_CURRENT_MAX) limited = FOC_CURRENT_MAX;
-    if (limited < -FOC_CURRENT_MAX) limited = -FOC_CURRENT_MAX;
+    if (fabsf(wanted) > FOC_CURRENT_MAX) foc_warn(FOC_CURRENT);
+    if (FOC_PROTECTION_TRIP) {
+        if (limited > FOC_CURRENT_MAX) limited = FOC_CURRENT_MAX;
+        if (limited < -FOC_CURRENT_MAX) limited = -FOC_CURRENT_MAX;
+    }
     integral_speed += SPEED_KI * error * dt;
     if (limited != wanted) integral_speed += CONTROL_BANDWIDTH * (limited - wanted);
-    if (integral_speed > FOC_CURRENT_MAX) integral_speed = FOC_CURRENT_MAX;
-    if (integral_speed < -FOC_CURRENT_MAX) integral_speed = -FOC_CURRENT_MAX;
+    if (FOC_PROTECTION_TRIP) {
+        if (integral_speed > FOC_CURRENT_MAX) integral_speed = FOC_CURRENT_MAX;
+        if (integral_speed < -FOC_CURRENT_MAX) integral_speed = -FOC_CURRENT_MAX;
+    }
     return limited;
 }
 
 void control_step(uint32_t sample_us, float mechanical_deg)
 {
     if (foc.fault && !fault) fault = foc.fault; /* A trip latches this loop too. */
-    if (isnan(mechanical_deg)) return;
+    if (!isfinite(mechanical_deg)) return;
     uint32_t elapsed = (sample_us - previous_tick) & 0xffffffu;
     if (elapsed < CONTROL_PERIOD_US) return;
     /* At the 9400 RPM limit, one millisecond moves less than 57 degrees. */
@@ -173,9 +196,11 @@ void control_step(uint32_t sample_us, float mechanical_deg)
     previous_tick = sample_us;
     speed = foc.rpm;
     if (!commanded) return;
-    /* Every energizing mode needs a live host. A lost USB cable or crashed
-       controller must not leave a torque command latched indefinitely. */
-    if (!control_scheduled()) { fault = FOC_UART; return; }
+    /* TRIP needs a live host. WARN reports silence and retains all targets. */
+    if ((uint32_t)(bsp_uart_millis() - command_ms) >= CONTROL_COMMAND_MS) {
+        foc_warn(FOC_UART);
+        if (FOC_PROTECTION_TRIP) { fault = FOC_UART; return; }
+    }
     if (fault == FOC_UART) fault = 0u;
     if (mode == CONTROL_TORQUE) return; /* Its Iq ramp lives in foc_step(). */
     reference = outer_output(dt);

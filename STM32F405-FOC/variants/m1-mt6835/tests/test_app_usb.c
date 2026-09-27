@@ -121,7 +121,7 @@ int main(void)
     const char *bad[] = {"Iq nan\r", "Iq inf\r", "Iq 5.01\r", "Iq -5.01\r",
         "Iq 0.123\r", "Iq 1e0\r", "Iq .5\r", "Iq 1.\r", "Iq 0.2junk\r",
         "Iq 0000000000000000000000000000000000001\r", "Iq 0.\00120\r",
-        "send 4\r", "send -1\r", "send\r", "send 0 extra\r", "send \r",
+        "send 5\r", "send -1\r", "send\r", "send 0 extra\r", "send \r",
         "rpm nan\r", "rpm 9400.01\r", "pos 1000001\r", "position 10\r", "zero 1\r"};
     for (unsigned i = 0; i < sizeof bad / sizeof bad[0]; ++i) {
         unsigned rejected = app_command_rejected;

@@ -93,14 +93,43 @@ void foc_stop(void)
 
 void foc_trip(uint32_t fault)
 {
+    foc_warn(fault);
     if (foc.state != FOC_FAULT) foc.fault = fault;
     foc.state = FOC_FAULT;
     foc_stop();
 }
 
+void foc_warn(uint32_t warning)
+{
+    if (!warning || warning > FOC_VOLTAGE) return;
+    uint32_t bit = 1u << warning;
+    if (!(__atomic_fetch_or(&foc.warnings, bit, __ATOMIC_RELAXED) & bit)) {
+        /* IRQ0 can interrupt IRQ1 or the foreground parser. */
+        __atomic_add_fetch(&foc.warning_count, 1u, __ATOMIC_RELAXED);
+        __atomic_store_n(&foc.last_warning, warning, __ATOMIC_RELAXED);
+    }
+}
+
+void foc_clear_warnings(void)
+{
+    foc.warnings = foc.last_warning = foc.warning_count = 0u;
+}
+
+bool foc_check(uint32_t warning)
+{
+    foc_warn(warning);
+    if (!FOC_PROTECTION_TRIP) return false;
+    foc_trip(warning);
+    return true;
+}
+
 bool foc_calibrate(void)
 {
-    if (foc.state != FOC_IDLE || !foc.zero_ready || fabsf(foc.rpm) >= 5.0f) return false;
+    if (foc.state != FOC_IDLE || !foc.zero_ready) return false;
+    if (fabsf(foc.rpm) >= 5.0f) {
+        foc_warn(FOC_SPEED);
+        if (FOC_PROTECTION_TRIP) return false;
+    }
     aligning = true;
     integral_d = integral_q = 0.0f;
     position = previous; /* Keep alignment deltas precise after many revolutions. */
@@ -123,7 +152,11 @@ void foc_init(const foc_calibration_t *calibration)
 
 bool foc_current(float amps)
 {
-    if (!isfinite(amps) || fabsf(amps) > FOC_CURRENT_MAX) return false;
+    if (!isfinite(amps)) return false;
+    if (fabsf(amps) > FOC_CURRENT_MAX) {
+        foc_warn(FOC_CURRENT);
+        if (FOC_PROTECTION_TRIP) return false;
+    }
     if (!foc.calibrated || !foc.zero_ready || (foc.state != FOC_IDLE && foc.state != FOC_RUN)) return false;
     foc.command = amps;
     if (foc.state == FOC_IDLE && amps != 0.0f) {
@@ -139,15 +172,31 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
 {
     if (!isfinite(mechanical_deg)) { foc_trip(FOC_SENSOR); return; }
     if (!isfinite(b_voltage) || !isfinite(c_voltage)) { foc_trip(FOC_ADC); return; }
-    if (!isfinite(encoder_delay) || encoder_delay < 0.0f || encoder_delay > 50e-6f) {
-        foc_trip(FOC_TIMING); return;
+    if (!isfinite(encoder_delay)) { foc_trip(FOC_TIMING); return; }
+    if (encoder_delay < 0.0f || encoder_delay > 50e-6f) {
+        if (foc_check(FOC_TIMING)) return;
+        encoder_delay = 0.0f; /* Ignore unusable timestamp compensation. */
     }
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
-        if (!isfinite(bus_voltage) || bus_voltage < FOC_BUS_MIN || bus_voltage > FOC_BUS_MAX) {
-            foc_trip(FOC_BUS); return;
-        }
+        if (!isfinite(bus_voltage) || bus_voltage <= 0.0f) { foc_trip(FOC_BUS); return; }
+        if ((bus_voltage < FOC_BUS_MIN || bus_voltage > FOC_BUS_MAX) && foc_check(FOC_BUS)) return;
+    }
+    /* Noncomputable inputs stop output, but WARN never locks out a later
+       valid command. Resume to idle, never silently restore old torque. */
+    if (!FOC_PROTECTION_TRIP && foc.state == FOC_FAULT) {
+        if (!isfinite(bus_voltage) || bus_voltage <= 0.0f) return;
+        foc.fault = FOC_OK;
+        foc.state = foc.zero_ready ? FOC_IDLE : FOC_OFFSET;
+        tracking = false;
+        ticks = 0u;
+        foc.rpm = 0.0f;
+        if (!foc.zero_ready) foc.b_offset = foc.c_offset = variance_b = variance_c = 0.0f;
     }
     float s, c;
+    if (mechanical_deg < 0.0f || mechanical_deg >= 360.0f) {
+        mechanical_deg = fmodf(mechanical_deg, 360.0f);
+        if (mechanical_deg < 0.0f) mechanical_deg += 360.0f;
+    }
     /* Optional correction measured for one encoder/magnet installation. */
     sincos_fast(mechanical_deg * (PI / 90.0f), &s, &c);
     mechanical_deg += FOC_ENCODER_HARMONIC_DEG * c;
@@ -155,15 +204,18 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     if (delta > 180.0f) delta -= 360.0f;
     if (delta < -180.0f) delta += 360.0f;
     if (!tracking) { delta = 0.0f; position = mechanical_deg; tracking = true; }
-    else if (fabsf(delta) > FOC_MAX_STEP_DEG) { foc_trip(FOC_SENSOR); return; }
+    else if (fabsf(delta) > FOC_MAX_STEP_DEG && foc_check(FOC_SENSOR)) return;
     previous = mechanical_deg;
     position += delta;
     foc.rpm += FOC_RPM_FILTER_ALPHA * (delta * ((float)FOC_SAMPLE_HZ / 6.0f) - foc.rpm);
     if (foc.state == FOC_OFFSET) {
         if (fabsf(foc.rpm) >= 5.0f || fabsf(delta) >= FOC_STATIONARY_STEP_DEG) {
-            ticks = 0u;
-            foc.b_offset = foc.c_offset = variance_b = variance_c = 0.0f;
-            return;
+            foc_warn(FOC_ZERO);
+            if (FOC_PROTECTION_TRIP) {
+                ticks = 0u;
+                foc.b_offset = foc.c_offset = variance_b = variance_c = 0.0f;
+                return;
+            }
         }
         if (++ticks <= FOC_OFFSET_WAIT_SAMPLES) return; /* 200 ms stationary. */
         float n = (float)(ticks - FOC_OFFSET_WAIT_SAMPLES);
@@ -174,7 +226,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         if (ticks == FOC_OFFSET_WAIT_SAMPLES + 2048u) {
             if (foc.b_offset < 1.4f || foc.b_offset > 1.9f || foc.c_offset < 1.4f || foc.c_offset > 1.9f ||
                 variance_b > 2048.0f * 4e-6f || variance_c > 2048.0f * 4e-6f) {
-                foc_trip(FOC_ZERO); return;
+                if (foc_check(FOC_ZERO)) return;
             }
             foc.zero_ready = true;
             foc.state = FOC_IDLE;
@@ -186,17 +238,21 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     float omega = (float)foc.calibration.direction * (float)FOC_POLE_PAIRS * foc.rpm * (TURN / 60.0f);
     float theta = foc_wrap((float)foc.calibration.direction * (float)FOC_POLE_PAIRS * mechanical_deg * (PI / 180.0f) -
                           foc.calibration.zero - omega * encoder_delay);
+    if (!isfinite(omega) || !isfinite(theta)) { foc_trip(FOC_NUMERIC); return; }
     foc.electrical_deg = theta * (180.0f / PI);
     sincos_fast(theta, &s, &c);
     float ib = (b_voltage - foc.b_offset) * FOC_CURRENT_A_PER_V, ic = (c_voltage - foc.c_offset) * FOC_CURRENT_A_PER_V;
     float ia = -ib - ic, beta = (ib - ic) * 0.5773502692f;
+    if (!isfinite(ia) || !isfinite(beta)) {
+        foc_trip(FOC_NUMERIC); return;
+    }
     foc.id = ia * c + beta * s;
     foc.iq = -ia * s + beta * c;
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         float trip = FOC_PHASE_TRIP;
-        if (fabsf(ia) >= trip || fabsf(ib) >= trip || fabsf(ic) >= trip) { foc_trip(FOC_CURRENT); return; }
+        if ((fabsf(ia) >= trip || fabsf(ib) >= trip || fabsf(ic) >= trip) && foc_check(FOC_CURRENT)) return;
         float speed_trip = control_mode() == CONTROL_TORQUE ? FOC_TORQUE_SPEED_TRIP_RPM : FOC_SPEED_MAX;
-        if (!aligning && fabsf(foc.rpm) >= speed_trip) { foc_trip(FOC_SPEED); return; }
+        if (!aligning && fabsf(foc.rpm) >= speed_trip && foc_check(FOC_SPEED)) return;
     }
     if (foc.state == FOC_PRECHARGE) {
         if (++ticks < FOC_PRECHARGE_SAMPLES) return; /* 2 ms, low sides on. */
@@ -214,7 +270,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     if (foc.state == FOC_PWM_ZERO) {
         /* Equal PWM duty creates zero line-to-line voltage. Measure the ADC
            zero with the power stage switching, after its first millisecond. */
-        if (fabsf(foc.rpm) >= 5.0f) { foc_trip(FOC_SPEED); return; }
+        if (fabsf(foc.rpm) >= 5.0f && foc_check(FOC_SPEED)) return;
         ++ticks;
         foc.duty[0] = foc.duty[1] = foc.duty[2] = 0.5f;
         if (ticks > FOC_PWM_ZERO_SETTLE_SAMPLES) {
@@ -225,7 +281,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             float next_b = pwm_offset_sum_b / (float)FOC_PWM_ZERO_SAMPLES;
             float next_c = pwm_offset_sum_c / (float)FOC_PWM_ZERO_SAMPLES;
             if (fabsf(next_b - foc.b_offset) > 0.01f || fabsf(next_c - foc.c_offset) > 0.01f) {
-                foc_trip(FOC_ZERO); return;
+                if (foc_check(FOC_ZERO)) return;
             }
             foc.b_offset = next_b; foc.c_offset = next_c;
             integral_d = integral_q = 0.0f;
@@ -236,11 +292,13 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     }
 #endif
     if (foc.state == FOC_RUN) {
-        /* 1 A/s command ramp at the selected-port sample rate. */
+        /* Optional command shaping; WARN defaults to direct current steps. */
         float step = foc.command - previous_command;
-        const float ramp_step = 1.0f / (float)FOC_SAMPLE_HZ;
-        if (step > ramp_step) step = ramp_step;
-        else if (step < -ramp_step) step = -ramp_step;
+        const float ramp_step = FOC_CURRENT_SLEW_A_PER_S / (float)FOC_SAMPLE_HZ;
+        if (ramp_step > 0.0f) {
+            if (step > ramp_step) step = ramp_step;
+            else if (step < -ramp_step) step = -ramp_step;
+        }
         previous_command += step;
         foc.iq_ref = previous_command;
         /* The 1 kHz outer loop, when scheduled, replaces the reference. It only
@@ -256,16 +314,21 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         float ud = FOC_CURRENT_KP * ed + integral_d - omega * FOC_MOTOR_INDUCTANCE_H * foc.iq;
         float uq = FOC_CURRENT_KP * eq + integral_q + omega * (FOC_MOTOR_INDUCTANCE_H * foc.id + FOC_MOTOR_FLUX_WB);
         /* Linear SVPWM ceiling; modulation also accounts for the ADC window. */
-        float limit = bus_voltage * FOC_VOLTAGE_FRACTION;
+        float limit = bus_voltage * (FOC_PROTECTION_TRIP ? FOC_VOLTAGE_FRACTION : 0.5773502692f);
         float norm2 = ud * ud + uq * uq;
+        if (!isfinite(norm2) || !isfinite(integral_d) || !isfinite(integral_q)) {
+            foc_trip(FOC_NUMERIC); return;
+        }
         float scale = norm2 > limit * limit ? limit / sqrtf(norm2) : 1.0f;
+        if (scale < 1.0f) foc_warn(FOC_VOLTAGE);
         foc.ud = ud * scale; foc.uq = uq * scale;
         /* Predict to the next PWM centre using the selected timer period. */
         float advance = omega * (((float)(3u * FOC_PWM_ARR - FOC_HOLD_TICKS)) / 168e6f);
-        float a2 = advance * advance;
-        float sa = advance * (1.0f - a2 / 6.0f), ca = 1.0f - a2 * (0.5f - a2 / 24.0f);
+        float sa, ca;
+        sincos_fast(foc_wrap(advance), &sa, &ca);
         float so = s * ca + c * sa, co = c * ca - s * sa;
         scale = foc_modulate(foc.ud * co - foc.uq * so, foc.ud * so + foc.uq * co, bus_voltage, foc.duty);
+        if (scale < 1.0f) foc_warn(FOC_VOLTAGE);
         foc.ud *= scale; foc.uq *= scale;
         integral_d += FOC_CURRENT_KI_STEP * ed + FOC_MOTOR_RESISTANCE_OHM * (foc.ud - ud);
         integral_q += FOC_CURRENT_KI_STEP * eq + FOC_MOTOR_RESISTANCE_OHM * (foc.uq - uq);
@@ -281,7 +344,9 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             forward = position - origin;
             if (fabsf(forward) < (360.0f / (float)FOC_POLE_PAIRS) * 0.8f ||
                 fabsf(forward) > (360.0f / (float)FOC_POLE_PAIRS) * 1.2f) {
-                foc_trip(FOC_ALIGNMENT); return;
+                /* A failed experiment is not a usable calibration record. */
+                if (!foc_check(FOC_ALIGNMENT)) foc_stop();
+                return;
             }
         }
         if (ticks > ALIGN_FORWARD_END && ticks <= ALIGN_REVERSE_END)
@@ -295,7 +360,8 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         }
         if (ticks == ALIGN_SAMPLE_END) {
             if (fabsf(position - origin) > 1.0f || high - low > 1.0f) {
-                foc_trip(FOC_ALIGNMENT); return;
+                if (!foc_check(FOC_ALIGNMENT)) foc_stop();
+                return;
             }
             foc.calibration.direction = forward > 0.0f ? 1 : -1;
             foc.calibration.zero = foc_wrap((float)foc.calibration.direction * (float)FOC_POLE_PAIRS * atan2f(sum_sin, sum_cos));
@@ -314,6 +380,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             float error = target - measured;
             integral_d += FOC_CURRENT_KI_STEP * error;
             float requested = FOC_CURRENT_KP * error + integral_d;
+            if (!isfinite(requested)) { foc_trip(FOC_NUMERIC); return; }
             ud = fminf(fmaxf(requested, 0.0f), FOC_ALIGNMENT_VOLTS);
             integral_d += 0.1f * (ud - requested);
         }

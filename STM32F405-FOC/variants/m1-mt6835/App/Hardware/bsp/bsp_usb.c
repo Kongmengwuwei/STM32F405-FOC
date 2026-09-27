@@ -1,4 +1,5 @@
 #include "bsp_usb.h"
+#include "foc_policy.h"
 #include "usbd_cdc_if.h"
 #include <string.h>
 
@@ -17,7 +18,7 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 
 bool bsp_usb_ready(void)
 {
-    return s_open && !g_usb_stats.overflow &&
+    return s_open && (!FOC_PROTECTION_TRIP || !g_usb_stats.overflow) &&
            hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED;
 }
 

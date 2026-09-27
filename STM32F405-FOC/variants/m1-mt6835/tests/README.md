@@ -29,14 +29,16 @@
 
 ## 可重复的主机测试
 
-在仓库根目录执行（主机 GCC，需要 `-lm`）：
+在 `variants/m1-mt6835/` 目录执行（先创建本目录 `build/`；主机 GCC，需要 `-lm`）：
+
+默认头文件使用 WARN。`test_m0_unified.c` 覆盖 WARN 越限只告警、目标保持、send 4 和无效角度恢复；另加 `-DFOC_PROTECTION_TRIP=1` 可运行 TRIP 分支。历史限幅、斜坡和看门狗断言使用显式 TRIP。`test_usb_queue.c` 应分别以策略 0/1 运行，检查溢出恢复/锁存。
 
 ```sh
 gcc -std=c11 -Wall -Wextra -Werror -O2 -I App/Hardware/mt6835 tests/test_mt6835_crc.c App/Hardware/mt6835/mt6835.c -lm -o build/test_mt6835_crc.exe
 ./build/test_mt6835_crc.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -I App/Protocols/JustFloat -I App/Hardware/bsp tests/test_justfloat.c -o build/test_justfloat.exe
 ./build/test_justfloat.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_app_usb.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_app_usb.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PROTECTION_TRIP=1 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_app_usb.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_app_usb.exe
 ./build/test_app_usb.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_m0_unified.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_m0_unified.exe
 ./build/test_m0_unified.exe
@@ -46,9 +48,9 @@ gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_
 ./build/test_motor_record_m1.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_motor_record.c -o build/test_motor_record_m0.exe
 ./build/test_motor_record_m0.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_control_pid.c tests/foc_stub.c App/Control/control.c -lm -o build/test_control_pid.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PROTECTION_TRIP=1 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Hardware/bsp -I App/Config tests/test_control_pid.c tests/foc_stub.c App/Control/control.c -lm -o build/test_control_pid.exe
 ./build/test_control_pid.exe
-gcc -std=c11 -Wall -Wextra -Werror -O2 -I tests/usb_stubs -I App/Hardware/bsp tests/test_usb_queue.c -o build/test_usb_queue.exe
+gcc -std=c11 -Wall -Wextra -Werror -O2 -I tests/usb_stubs -I App/Hardware/bsp -I App/Config tests/test_usb_queue.c -o build/test_usb_queue.exe
 ./build/test_usb_queue.exe
 gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M1 -DFOC_ENCODER_MT6835 -DFOC_MOTOR_REFERENCE_24V -DFOC_INSTALLATION_ID=1 -I App/FOC -I App/Control -I App/Hardware/bsp -I App/Config tests/test_foc_recalibration.c App/FOC/foc.c App/Control/control.c -lm -o build/test_foc_recalibration.exe
 ./build/test_foc_recalibration.exe

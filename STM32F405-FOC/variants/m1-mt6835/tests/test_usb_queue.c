@@ -66,9 +66,14 @@ int main(void)
     uint8_t frame[36] = {0};
     assert(!bsp_usb_write(frame, sizeof frame));
     assert(g_usb_stats.overflow && g_usb_stats.tx_rejected == 1u);
-    assert(!bsp_usb_ready());
+    assert(bsp_usb_ready() == !FOC_PROTECTION_TRIP);
     while (consumed < produced) { tick += 2; bsp_usb_poll(); complete(); }
-    assert(!bsp_usb_write(frame, sizeof frame)); /* Fault remains latched after drain. */
+    assert(bsp_usb_ready() == !FOC_PROTECTION_TRIP);
+    if (FOC_PROTECTION_TRIP) assert(!bsp_usb_write(frame, sizeof frame));
+    else {
+        enqueue(123); /* Whole-frame resume, no reset and no stream overwrite. */
+        while (consumed < produced) { tick += 2; bsp_usb_poll(); complete(); }
+    }
     bsp_usb_reset(); bsp_usb_control(true);
     assert(bsp_usb_ready());
 
@@ -82,9 +87,10 @@ int main(void)
     bsp_usb_poll(); assert(rearms == 1);
     bsp_usb_received(rx, 0); bsp_usb_poll(); assert(rearms == 2);
 
-    bsp_usb_suspend(); assert(!bsp_usb_ready() && g_usb_stats.interruptions == 1);
+    bsp_usb_suspend();
+    assert(bsp_usb_ready() == !FOC_PROTECTION_TRIP && g_usb_stats.interruptions == 1);
     bsp_usb_reset(); bsp_usb_control(true);
     enqueue(0); bsp_usb_reset();
     assert(g_usb_stats.tx_discarded == 36u && !bsp_usb_ready());
-    puts("PASS: 20k frames, BUSY retry, ownership, ring/counter wrap, overflow latch, reset, RX backpressure");
+    puts("PASS: 20k frames, BUSY retry, ownership, ring/counter wrap, overflow policy, reset, RX backpressure");
 }

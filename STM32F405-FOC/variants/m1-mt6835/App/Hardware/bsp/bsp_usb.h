@@ -13,7 +13,8 @@ typedef struct {
 extern volatile bsp_usb_stats_t g_usb_stats;
 
 /* One producer only: app_sample ISR. Copies an entire frame, never waits.
-   Overflow latches until USB reset/re-enumeration; inspect g_usb_stats. */
+   WARN drops a whole new frame when full, then resumes after drain. The
+   overflow flag is diagnostic; TRIP requires a USB reset to resume logging. */
 bool bsp_usb_ready(void);
 bool bsp_usb_write(const void *data, size_t size);
 /* Foreground only; USB IRQ is excluded briefly, acquisition IRQs stay enabled. */

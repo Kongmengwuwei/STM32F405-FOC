@@ -39,6 +39,8 @@ GROUP_CHANNELS = {
         "edge_limit_v", "vec_limit_v"],
     3: ["iq_ref", "iq_ref_cmd", "pos_deg", "pos_tgt", "rpm", "rpm_encoder",
         "rpm_tgt", "iq", "mode", "bus_v"],
+    4: ["iq_ref", "iq_ref_cmd", "warning_mask", "last_warning", "state_numeric",
+        "rpm_encoder", "command_rejected", "iq", "fault_numeric", "bus_v"],
 }
 CHANNEL_COUNT = 2 + 26  # union of the channels any group can carry
 
@@ -51,12 +53,12 @@ def _columns(group):
 
 COLUMNS = {group: _columns(group) for group in GROUP_CHANNELS}
 
-GROUP_NAMES = {0: "raw", 1: "current", 2: "voltage", 3: "control"}
+GROUP_NAMES = {0: "raw", 1: "current", 2: "voltage", 3: "control", 4: "diagnostics"}
 
 # FOC state machine and fault codes, App/FOC/foc.h.
-STATE_NAMES = ["IDLE", "PRECHARGE", "CALIBRATE", "SAVE", "RUN", "FAULT", "OFFSET"]
+STATE_NAMES = ["IDLE", "PRECHARGE", "CALIBRATE", "SAVE", "RUN", "FAULT", "OFFSET", "PWM_ZERO"]
 FAULT_NAMES = ["OK", "SENSOR", "ADC", "TIMING", "WINDOW", "ALIGNMENT", "FLASH",
-               "UART", "BUS", "ZERO", "CURRENT", "SPEED", "POSITION"]
+               "UART", "BUS", "ZERO", "CURRENT", "SPEED", "POSITION", "NUMERIC", "VOLTAGE"]
 MOTOR_NAMES = ["NOT_PWM", "PWM"]
 
 # Raw ADC scaling, App/Hardware/bsp/bsp_adc.c. Nominal only: the current gain
