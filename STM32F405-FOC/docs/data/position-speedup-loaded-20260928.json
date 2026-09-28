@@ -1,0 +1,1514 @@
+{
+  "date": "2026-09-28",
+  "hardware": "M0 / TLE5012B / ZH3620-1 / plastic arm / approximately 12 V",
+  "method": "Position dwell 0.4 s, repeat 2, 15/-15/30/0 mechanical degrees; arrival +/-0.5 degree for 100 ms",
+  "profiles": {
+    "baseline": {
+      "accel_rpm_per_s": 2000,
+      "brake_rpm_per_s": 1600,
+      "position_kp_rpm_per_deg": 12,
+      "max_rpm": 90
+    },
+    "P1": {
+      "accel_rpm_per_s": 3000,
+      "brake_rpm_per_s": 2400,
+      "position_kp_rpm_per_deg": 12,
+      "max_rpm": 120
+    },
+    "P2": {
+      "accel_rpm_per_s": 4000,
+      "brake_rpm_per_s": 3200,
+      "position_kp_rpm_per_deg": 12,
+      "max_rpm": 150
+    },
+    "P3_aborted": {
+      "accel_rpm_per_s": 6000,
+      "brake_rpm_per_s": 4800,
+      "position_kp_rpm_per_deg": 12,
+      "max_rpm": 180
+    }
+  },
+  "reports": {
+    "baseline": [
+      {
+        "frames": 10531,
+        "continuity": {
+          "frames": 10531,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.20673360000364482,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.6000000000000001,
+            "sent_s": 0.6082947999966564,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 1.0,
+            "sent_s": 1.0021538000000874,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 1.4000000000000001,
+            "sent_s": 1.404288899997482,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.8,
+            "sent_s": 1.8003214999916963,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 92.78422546386719,
+        "max_abs_iq_ref": 1.9636101722717285,
+        "segments": [],
+        "kind": "position",
+        "repeat": 0,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.12599999999999995,
+            "band": 0.5,
+            "observed_start_s": 0.2254,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.11200000000000004,
+            "rise_10_90_s": 0.04300000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.07539081573486328,
+            "final_mean": 15.0177640914917,
+            "final_error": 0.01776409149169922,
+            "iq_peak": 1.5382053852081299
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.10640000000000005,
+            "band": 0.5,
+            "observed_start_s": 0.627,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.08240000000000003,
+            "rise_10_90_s": 0.05900000000000005,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": -14.968539237976074,
+            "final_error": 0.03146076202392578,
+            "iq_peak": 1.603844404220581
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.13660000000000005,
+            "band": 0.5,
+            "observed_start_s": 1.0208,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.10460000000000003,
+            "rise_10_90_s": 0.07600000000000007,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 29.927013397216797,
+            "final_error": -0.07298660278320312,
+            "iq_peak": 1.9294281005859375
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.10640000000000005,
+            "band": 0.5,
+            "observed_start_s": 1.423,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.08240000000000003,
+            "rise_10_90_s": 0.05900000000000016,
+            "residence_s": 0.1,
+            "overshoot": 0.064453125,
+            "final_mean": 0.019069602712988853,
+            "final_error": 0.019069602712988853,
+            "iq_peak": 1.24132239818573
+          }
+        ]
+      },
+      {
+        "frames": 11054,
+        "continuity": {
+          "frames": 11054,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.20421450000139885,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.6000000000000001,
+            "sent_s": 0.6022841999947559,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 1.0,
+            "sent_s": 1.0024332000029972,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 1.4000000000000001,
+            "sent_s": 1.409173699998064,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.8,
+            "sent_s": 1.809196799993515,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 93.25018310546875,
+        "max_abs_iq_ref": 1.927609920501709,
+        "segments": [],
+        "kind": "position",
+        "repeat": 1,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.12679999999999997,
+            "band": 0.5,
+            "observed_start_s": 0.3226,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.11180000000000001,
+            "rise_10_90_s": 0.04300000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.078125,
+            "final_mean": 15.017333030700684,
+            "final_error": 0.017333030700683594,
+            "iq_peak": 1.50530207157135
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.1057999999999999,
+            "band": 0.5,
+            "observed_start_s": 0.7206,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.0818000000000001,
+            "rise_10_90_s": 0.05900000000000005,
+            "residence_s": 0.1,
+            "overshoot": 0.017578125,
+            "final_mean": -14.973916053771973,
+            "final_error": 0.026083946228027344,
+            "iq_peak": 1.6346931457519531
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.13659999999999983,
+            "band": 0.5,
+            "observed_start_s": 1.1208,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.10460000000000003,
+            "rise_10_90_s": 0.07600000000000007,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 29.930908203125,
+            "final_error": -0.069091796875,
+            "iq_peak": 1.9093097448349
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.1068,
+            "band": 0.5,
+            "observed_start_s": 1.5276,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.08279999999999976,
+            "rise_10_90_s": 0.05899999999999994,
+            "residence_s": 0.1,
+            "overshoot": 0.09648437798023224,
+            "final_mean": 0.012839844450354576,
+            "final_error": 0.012839844450354576,
+            "iq_peak": 1.5254405736923218
+          }
+        ]
+      }
+    ],
+    "P1": [
+      {
+        "frames": 10547,
+        "continuity": {
+          "frames": 10547,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.20369819999905303,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.6000000000000001,
+            "sent_s": 0.6037161999993259,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 1.0,
+            "sent_s": 1.00175899999158,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 1.4000000000000001,
+            "sent_s": 1.407358699987526,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.8,
+            "sent_s": 1.8077976999920793,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 123.6207504272461,
+        "max_abs_iq_ref": 3.2548491954803467,
+        "segments": [],
+        "kind": "position",
+        "repeat": 0,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.11839999999999998,
+            "band": 0.5,
+            "observed_start_s": 0.218,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.10240000000000002,
+            "rise_10_90_s": 0.038000000000000034,
+            "residence_s": 0.1,
+            "overshoot": 0.079833984375,
+            "final_mean": 15.00960922241211,
+            "final_error": 0.009609222412109375,
+            "iq_peak": 2.341326951980591
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.09239999999999993,
+            "band": 0.5,
+            "observed_start_s": 0.618,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.06740000000000002,
+            "rise_10_90_s": 0.04800000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": -14.969393730163574,
+            "final_error": 0.03060626983642578,
+            "iq_peak": 3.077287197113037
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.11739999999999995,
+            "band": 0.5,
+            "observed_start_s": 1.016,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.08339999999999992,
+            "rise_10_90_s": 0.06000000000000005,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 29.932979583740234,
+            "final_error": -0.06702041625976562,
+            "iq_peak": 2.444349527359009
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.08979999999999988,
+            "band": 0.5,
+            "observed_start_s": 1.4216,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.06780000000000008,
+            "rise_10_90_s": 0.04800000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.072509765625,
+            "final_mean": 0.017644042149186134,
+            "final_error": 0.017644042149186134,
+            "iq_peak": 2.06673264503479
+          }
+        ]
+      },
+      {
+        "frames": 11054,
+        "continuity": {
+          "frames": 11054,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.2058857999945758,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.6000000000000001,
+            "sent_s": 0.6058233999938238,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 1.0,
+            "sent_s": 1.0017077999946196,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 1.4000000000000001,
+            "sent_s": 1.4014526999962982,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.8,
+            "sent_s": 1.8066413999913493,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 124.0733413696289,
+        "max_abs_iq_ref": 2.956916570663452,
+        "segments": [],
+        "kind": "position",
+        "repeat": 1,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.12080000000000002,
+            "band": 0.5,
+            "observed_start_s": 0.3216,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.1048,
+            "rise_10_90_s": 0.03799999999999998,
+            "residence_s": 0.1,
+            "overshoot": 0.06005859375,
+            "final_mean": 15.006291389465332,
+            "final_error": 0.006291389465332031,
+            "iq_peak": 2.3328261375427246
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.0928,
+            "band": 0.5,
+            "observed_start_s": 0.7216,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.06679999999999997,
+            "rise_10_90_s": 0.04799999999999993,
+            "residence_s": 0.1,
+            "overshoot": 0.0029296875,
+            "final_mean": -14.977347373962402,
+            "final_error": 0.022652626037597656,
+            "iq_peak": 2.8740084171295166
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.1180000000000001,
+            "band": 0.5,
+            "observed_start_s": 1.1174,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.08299999999999996,
+            "rise_10_90_s": 0.05999999999999983,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 29.933326721191406,
+            "final_error": -0.06667327880859375,
+            "iq_peak": 2.5263280868530273
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.09019999999999961,
+            "band": 0.5,
+            "observed_start_s": 1.5172,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.06719999999999993,
+            "rise_10_90_s": 0.049000000000000155,
+            "residence_s": 0.1,
+            "overshoot": 0.054931640625,
+            "final_mean": 0.019253268837928772,
+            "final_error": 0.019253268837928772,
+            "iq_peak": 2.079699993133545
+          }
+        ]
+      }
+    ],
+    "P2": [
+      {
+        "frames": 10551,
+        "continuity": {
+          "frames": 10551,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.2001799999998184,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.6000000000000001,
+            "sent_s": 0.6036068000103114,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 1.0,
+            "sent_s": 1.0014813000016147,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 1.4000000000000001,
+            "sent_s": 1.4084677000064403,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.8,
+            "sent_s": 1.8084674999990966,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 153.3306427001953,
+        "max_abs_iq_ref": 4.410801410675049,
+        "segments": [],
+        "kind": "position",
+        "repeat": 0,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.11380000000000001,
+            "band": 0.5,
+            "observed_start_s": 0.2146,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.0978,
+            "rise_10_90_s": 0.03500000000000003,
+            "residence_s": 0.1,
+            "overshoot": 0.062255859375,
+            "final_mean": 15.005851745605469,
+            "final_error": 0.00585174560546875,
+            "iq_peak": 2.902458906173706
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.08540000000000003,
+            "band": 0.5,
+            "observed_start_s": 0.618,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.05840000000000001,
+            "rise_10_90_s": 0.041999999999999926,
+            "residence_s": 0.1,
+            "overshoot": 0.01611328125,
+            "final_mean": -14.982110977172852,
+            "final_error": 0.017889022827148438,
+            "iq_peak": 4.1925177574157715
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.10559999999999992,
+            "band": 0.5,
+            "observed_start_s": 1.0158,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.0706,
+            "rise_10_90_s": 0.051000000000000156,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 29.940311431884766,
+            "final_error": -0.059688568115234375,
+            "iq_peak": 2.6219210624694824
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.08439999999999981,
+            "band": 0.5,
+            "observed_start_s": 1.423,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.05840000000000001,
+            "rise_10_90_s": 0.041999999999999815,
+            "residence_s": 0.1,
+            "overshoot": 0.06591796875,
+            "final_mean": 0.019270019605755806,
+            "final_error": 0.019270019605755806,
+            "iq_peak": 2.443784713745117
+          }
+        ]
+      },
+      {
+        "frames": 11049,
+        "continuity": {
+          "frames": 11049,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.205176899995422,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.6000000000000001,
+            "sent_s": 0.6053660999896238,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 1.0,
+            "sent_s": 1.0013796999992337,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 1.4000000000000001,
+            "sent_s": 1.4010732999886386,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.8,
+            "sent_s": 1.806789900001604,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 153.2566680908203,
+        "max_abs_iq_ref": 4.348106861114502,
+        "segments": [],
+        "kind": "position",
+        "repeat": 1,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.11599999999999999,
+            "band": 0.5,
+            "observed_start_s": 0.3204,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.09999999999999998,
+            "rise_10_90_s": 0.03500000000000003,
+            "residence_s": 0.1,
+            "overshoot": 0.064453125,
+            "final_mean": 15.000051498413086,
+            "final_error": 5.14984130859375e-05,
+            "iq_peak": 2.852616548538208
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.08579999999999999,
+            "band": 0.5,
+            "observed_start_s": 0.7206,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.059799999999999964,
+            "rise_10_90_s": 0.04300000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.01171875,
+            "final_mean": -14.979025840759277,
+            "final_error": 0.020974159240722656,
+            "iq_peak": 4.307056903839111
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.1057999999999999,
+            "band": 0.5,
+            "observed_start_s": 1.1166,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.07079999999999997,
+            "rise_10_90_s": 0.051000000000000156,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 29.936058044433594,
+            "final_error": -0.06394195556640625,
+            "iq_peak": 2.461036205291748
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.0851999999999995,
+            "band": 0.5,
+            "observed_start_s": 1.5162,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.05919999999999992,
+            "rise_10_90_s": 0.04200000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.054931640625,
+            "final_mean": 0.01566367596387863,
+            "final_error": 0.01566367596387863,
+            "iq_peak": 2.5717904567718506
+          }
+        ]
+      }
+    ],
+    "P2_rapid": [
+      {
+        "frames": 7544,
+        "continuity": {
+          "frames": 7544,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.2020553999900585,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.45,
+            "sent_s": 0.4591177999973297,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 0.7,
+            "sent_s": 0.7069504999963101,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 0.95,
+            "sent_s": 0.9567890000034822,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.2,
+            "sent_s": 1.2049348000000464,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 149.60150146484375,
+        "max_abs_iq_ref": 3.4482200145721436,
+        "segments": [],
+        "kind": "position",
+        "repeat": 0,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.11579999999999999,
+            "band": 0.5,
+            "observed_start_s": 0.2186,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.09780000000000003,
+            "rise_10_90_s": 0.03300000000000003,
+            "residence_s": 0.1,
+            "overshoot": 0.097412109375,
+            "final_mean": 15.048042297363281,
+            "final_error": 0.04804229736328125,
+            "iq_peak": 3.3604092597961426
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.08660000000000001,
+            "band": 0.5,
+            "observed_start_s": 0.4758,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.058599999999999985,
+            "rise_10_90_s": 0.04200000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.013916015625,
+            "final_mean": -14.955759048461914,
+            "final_error": 0.04424095153808594,
+            "iq_peak": 1.9958570003509521
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.10379999999999989,
+            "band": 0.5,
+            "observed_start_s": 0.7236,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.07179999999999997,
+            "rise_10_90_s": 0.051999999999999935,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 29.954330444335938,
+            "final_error": -0.0456695556640625,
+            "iq_peak": 2.4326157569885254
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.08199999999999985,
+            "band": 0.5,
+            "observed_start_s": 0.9734,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.05800000000000005,
+            "rise_10_90_s": 0.04200000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 0.02243337407708168,
+            "final_error": 0.02243337407708168,
+            "iq_peak": 2.4598515033721924
+          }
+        ]
+      },
+      {
+        "frames": 8059,
+        "continuity": {
+          "frames": 8059,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.20046589999401476,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.45,
+            "sent_s": 0.45046259999799076,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 0.7,
+            "sent_s": 0.700192899996182,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 0.95,
+            "sent_s": 0.9564079999981914,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.2,
+            "sent_s": 1.2065381999855163,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 149.51242065429688,
+        "max_abs_iq_ref": 3.318905830383301,
+        "segments": [],
+        "kind": "position",
+        "repeat": 1,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.11280000000000001,
+            "band": 0.5,
+            "observed_start_s": 0.3186,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.09780000000000005,
+            "rise_10_90_s": 0.033000000000000085,
+            "residence_s": 0.1,
+            "overshoot": 0.10400390625,
+            "final_mean": 15.047796249389648,
+            "final_error": 0.04779624938964844,
+            "iq_peak": 3.314011335372925
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.08679999999999999,
+            "band": 0.5,
+            "observed_start_s": 0.5686,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.05879999999999996,
+            "rise_10_90_s": 0.04299999999999993,
+            "residence_s": 0.1,
+            "overshoot": 0.00732421875,
+            "final_mean": -14.951931953430176,
+            "final_error": 0.04806804656982422,
+            "iq_peak": 2.0151381492614746
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.10399999999999998,
+            "band": 0.5,
+            "observed_start_s": 0.8184,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.07199999999999995,
+            "rise_10_90_s": 0.051999999999999935,
+            "residence_s": 0.1,
+            "overshoot": 0.025634765625,
+            "final_mean": 29.96187973022461,
+            "final_error": -0.038120269775390625,
+            "iq_peak": 2.3796093463897705
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.08279999999999998,
+            "band": 0.5,
+            "observed_start_s": 1.0746,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.05779999999999985,
+            "rise_10_90_s": 0.040999999999999925,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 0.01789708249270916,
+            "final_error": 0.01789708249270916,
+            "iq_peak": 2.498102903366089
+          }
+        ]
+      }
+    ],
+    "P2_large": [
+      {
+        "frames": 14513,
+        "continuity": {
+          "frames": 14513,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.20582499999727588,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 0.8,
+            "sent_s": 0.8027449999935925,
+            "command": "pos -30.00"
+          },
+          {
+            "requested_s": 1.4,
+            "sent_s": 1.4072011999960523,
+            "command": "pos 60.00"
+          },
+          {
+            "requested_s": 1.9999999999999998,
+            "sent_s": 2.0050876999885077,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 2.6,
+            "sent_s": 2.6035686999966856,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 154.85667419433594,
+        "max_abs_iq_ref": 3.7378735542297363,
+        "segments": [
+          {
+            "command": "pos 30.00",
+            "start_s": 0.20582499999727588,
+            "end_s": 0.8027449999935925,
+            "speed_mean": 0.016445264220237732,
+            "speed_std": 2.351236343383789,
+            "speed_rmse": 2.660412549972534,
+            "position_mean": 30.003381729125977,
+            "position_error": 0.003382985247299075,
+            "position_std": 0.0378255769610405,
+            "position_pp": 0.1318359375,
+            "iq_mean": -0.002921120962128043,
+            "iq_peak": 0.8883731961250305
+          },
+          {
+            "command": "pos -30.00",
+            "start_s": 0.8027449999935925,
+            "end_s": 1.4072011999960523,
+            "speed_mean": -0.026307791471481323,
+            "speed_std": 3.264765501022339,
+            "speed_rmse": 3.708038091659546,
+            "position_mean": -29.96884536743164,
+            "position_error": 0.031154777854681015,
+            "position_std": 0.04997019097208977,
+            "position_pp": 0.17578125,
+            "iq_mean": 0.1670941263437271,
+            "iq_peak": 1.3186005353927612
+          },
+          {
+            "command": "pos 60.00",
+            "start_s": 1.4072011999960523,
+            "end_s": 2.0050876999885077,
+            "speed_mean": 0.001878989627584815,
+            "speed_std": 0.42487597465515137,
+            "speed_rmse": 0.5342879295349121,
+            "position_mean": 60.01547622680664,
+            "position_error": 0.015477873384952545,
+            "position_std": 0.00876327883452177,
+            "position_pp": 0.032958984375,
+            "iq_mean": 0.14834719896316528,
+            "iq_peak": 0.38420602679252625
+          },
+          {
+            "command": "pos 0",
+            "start_s": 2.0050876999885077,
+            "end_s": 2.6035686999966856,
+            "speed_mean": 0.0004902145592495799,
+            "speed_std": 0.43429097533226013,
+            "speed_rmse": 0.5038577914237976,
+            "position_mean": 0.0030677549075335264,
+            "position_error": 0.0030677549075335264,
+            "position_std": 0.0084414416924119,
+            "position_pp": 0.054931640625,
+            "iq_mean": 0.11927718669176102,
+            "iq_peak": 0.35657358169555664
+          }
+        ],
+        "kind": "position",
+        "repeat": 0,
+        "response": [
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.13699999999999998,
+            "band": 0.5,
+            "observed_start_s": 0.2204,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.11000000000000001,
+            "rise_10_90_s": 0.04300000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.069580078125,
+            "final_mean": 30.003690719604492,
+            "final_error": 0.0036907196044921875,
+            "iq_peak": 2.7961084842681885
+          },
+          {
+            "command": "pos -30.00",
+            "arrival_s": 0.121,
+            "band": 0.5,
+            "observed_start_s": 0.8174,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.08399999999999996,
+            "rise_10_90_s": 0.06099999999999994,
+            "residence_s": 0.1,
+            "overshoot": 0.056396484375,
+            "final_mean": -29.972902297973633,
+            "final_error": 0.027097702026367188,
+            "iq_peak": 3.0117077827453613
+          },
+          {
+            "command": "pos 60.00",
+            "arrival_s": 0.15260000000000007,
+            "band": 0.5,
+            "observed_start_s": 1.4218,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.11159999999999992,
+            "rise_10_90_s": 0.08399999999999985,
+            "residence_s": 0.1,
+            "overshoot": 0.040283203125,
+            "final_mean": 60.0143928527832,
+            "final_error": 0.014392852783203125,
+            "iq_peak": 3.7378735542297363
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.11659999999999959,
+            "band": 0.5,
+            "observed_start_s": 2.0198,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.08360000000000012,
+            "rise_10_90_s": 0.06100000000000039,
+            "residence_s": 0.1,
+            "overshoot": 0.015380859375,
+            "final_mean": 0.0028608692809939384,
+            "final_error": 0.0028608692809939384,
+            "iq_peak": 2.4616682529449463
+          }
+        ]
+      }
+    ],
+    "P2_hold": [
+      {
+        "frames": 62553,
+        "continuity": {
+          "frames": 62553,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.2055599000013899,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 3.2,
+            "sent_s": 3.200964899995597,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 6.2,
+            "sent_s": 6.202160999993794,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 9.2,
+            "sent_s": 9.203321599998162,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 12.2,
+            "sent_s": 12.208725399992545,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 149.31900024414062,
+        "max_abs_iq_ref": 3.4489455223083496,
+        "segments": [
+          {
+            "command": "pos 15.00",
+            "start_s": 0.2055599000013899,
+            "end_s": 3.200964899995597,
+            "speed_mean": 0.0005855237250216305,
+            "speed_std": 0.3720749318599701,
+            "speed_rmse": 0.4355792999267578,
+            "position_mean": 14.99954891204834,
+            "position_error": -0.0004509626014623791,
+            "position_std": 0.007575200870633125,
+            "position_pp": 0.0439453125,
+            "iq_mean": 0.1456918865442276,
+            "iq_peak": 0.4294370412826538
+          },
+          {
+            "command": "pos -15.00",
+            "start_s": 3.200964899995597,
+            "end_s": 6.202160999993794,
+            "speed_mean": -0.0013833015691488981,
+            "speed_std": 0.974034309387207,
+            "speed_rmse": 1.1054414510726929,
+            "position_mean": -15.000751495361328,
+            "position_error": -0.0007512556039728224,
+            "position_std": 0.01580023393034935,
+            "position_pp": 0.076904296875,
+            "iq_mean": 0.1928376406431198,
+            "iq_peak": 0.7043322920799255
+          },
+          {
+            "command": "pos 30.00",
+            "start_s": 6.202160999993794,
+            "end_s": 9.203321599998162,
+            "speed_mean": 0.02393857017159462,
+            "speed_std": 2.5892529487609863,
+            "speed_rmse": 2.9298973083496094,
+            "position_mean": 30.000083923339844,
+            "position_error": 8.370535942958668e-05,
+            "position_std": 0.04113588109612465,
+            "position_pp": 0.1318359375,
+            "iq_mean": -0.03328919783234596,
+            "iq_peak": 1.0308630466461182
+          },
+          {
+            "command": "pos 0",
+            "start_s": 9.203321599998162,
+            "end_s": 12.208725399992545,
+            "speed_mean": -0.0019527631811797619,
+            "speed_std": 0.3041912317276001,
+            "speed_rmse": 0.35777148604393005,
+            "position_mean": -0.0004520089423749596,
+            "position_error": -0.0004520089423749596,
+            "position_std": 0.00639010826125741,
+            "position_pp": 0.0439453125,
+            "iq_mean": 0.05799461901187897,
+            "iq_peak": 0.2646915018558502
+          }
+        ],
+        "kind": "position",
+        "repeat": 0,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.11239999999999997,
+            "band": 0.5,
+            "observed_start_s": 0.224,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.09740000000000001,
+            "rise_10_90_s": 0.03300000000000003,
+            "residence_s": 0.1,
+            "overshoot": 0.101806640625,
+            "final_mean": 14.99950885772705,
+            "final_error": -0.0004911422729492188,
+            "iq_peak": 3.3967766761779785
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.08499999999999996,
+            "band": 0.5,
+            "observed_start_s": 3.2194,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.058000000000000274,
+            "rise_10_90_s": 0.04200000000000026,
+            "residence_s": 0.1,
+            "overshoot": 0.046875,
+            "final_mean": -15.000513076782227,
+            "final_error": -0.0005130767822265625,
+            "iq_peak": 2.1429057121276855
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.1048,
+            "band": 0.5,
+            "observed_start_s": 6.2206,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.07179999999999964,
+            "rise_10_90_s": 0.051000000000001044,
+            "residence_s": 0.1,
+            "overshoot": 0.07177734375,
+            "final_mean": 29.999805450439453,
+            "final_error": -0.000194549560546875,
+            "iq_peak": 2.389158010482788
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.08440000000000047,
+            "band": 0.5,
+            "observed_start_s": 9.222,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.058400000000000674,
+            "rise_10_90_s": 0.04200000000000159,
+            "residence_s": 0.1,
+            "overshoot": 0.02197265625,
+            "final_mean": -0.0019042969215661287,
+            "final_error": -0.0019042969215661287,
+            "iq_peak": 2.836277961730957
+          }
+        ]
+      }
+    ],
+    "P2_speed_check": [
+      {
+        "frames": 18572,
+        "continuity": {
+          "frames": 18572,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.20385510000051,
+            "command": "rpm 10"
+          },
+          {
+            "requested_s": 1.0,
+            "sent_s": 1.0002258000022266,
+            "command": "rpm 60.00"
+          },
+          {
+            "requested_s": 1.8,
+            "sent_s": 1.8068120999960229,
+            "command": "rpm -60.00"
+          },
+          {
+            "requested_s": 2.6000000000000005,
+            "sent_s": 2.6027971000003163,
+            "command": "rpm 0"
+          },
+          {
+            "requested_s": 3.4000000000000004,
+            "sent_s": 3.408068100005039,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 63.888587951660156,
+        "max_abs_iq_ref": 2.7080461978912354,
+        "segments": [
+          {
+            "command": "rpm 10",
+            "start_s": 0.20385510000051,
+            "end_s": 1.0002258000022266,
+            "speed_mean": 9.735612869262695,
+            "speed_std": 0.8402238488197327,
+            "speed_rmse": 0.8808387517929077,
+            "position_mean": 30.46548080444336,
+            "position_error": 30.46548080444336,
+            "position_std": 6.630910873413086,
+            "position_pp": 23.126220703125,
+            "iq_mean": -0.14415276050567627,
+            "iq_peak": 0.4798550605773926
+          },
+          {
+            "command": "rpm 60.00",
+            "start_s": 1.0002258000022266,
+            "end_s": 1.8068120999960229,
+            "speed_mean": 60.03818893432617,
+            "speed_std": 1.8746973276138306,
+            "speed_rmse": 1.8750863075256348,
+            "position_mean": 252.56443786621094,
+            "position_error": 252.56443786621094,
+            "position_std": 42.28309631347656,
+            "position_pp": 146.217041015625,
+            "iq_mean": -0.11188111454248428,
+            "iq_peak": 1.032416582107544
+          },
+          {
+            "command": "rpm -60.00",
+            "start_s": 1.8068120999960229,
+            "end_s": 2.6027971000003163,
+            "speed_mean": -59.86791229248047,
+            "speed_std": 1.889286994934082,
+            "speed_rmse": 1.8938987255096436,
+            "position_mean": 134.17889404296875,
+            "position_error": 134.17889404296875,
+            "position_std": 41.02679443359375,
+            "position_pp": 142.239990234375,
+            "iq_mean": 0.0971808135509491,
+            "iq_peak": 0.9004591107368469
+          },
+          {
+            "command": "rpm 0",
+            "start_s": 2.6027971000003163,
+            "end_s": 3.408068100005039,
+            "speed_mean": -0.0918695479631424,
+            "speed_std": 0.32631778717041016,
+            "speed_rmse": 0.33900341391563416,
+            "position_mean": 53.303035736083984,
+            "position_error": 53.303035736083984,
+            "position_std": 0.06615374982357025,
+            "position_pp": 0.252685546875,
+            "iq_mean": -0.04890020191669464,
+            "iq_peak": 0.2150476574897766
+          }
+        ],
+        "kind": "speed",
+        "repeat": 0,
+        "response": [
+          {
+            "command": "rpm 10",
+            "arrival_s": 0.07019999999999998,
+            "band": 3.0,
+            "observed_start_s": 0.2222,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.07519999999999999,
+            "rise_10_90_s": 0.017000000000000015,
+            "residence_s": 0.1,
+            "overshoot": 1.2955459117889419,
+            "final_mean": 10.079178946701127,
+            "final_error": 0.07917894670112702,
+            "iq_peak": 1.3019261360168457
+          },
+          {
+            "command": "rpm 60.00",
+            "arrival_s": 0.026800000000000157,
+            "band": 3.0,
+            "observed_start_s": 1.0186,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.025800000000000045,
+            "rise_10_90_s": 0.017000000000000126,
+            "residence_s": 0.1,
+            "overshoot": 1.439938926696783,
+            "final_mean": 60.10107962290446,
+            "final_error": 0.10107962290445727,
+            "iq_peak": 2.444362163543701
+          },
+          {
+            "command": "rpm -60.00",
+            "arrival_s": 0.04320000000000013,
+            "band": 3.0,
+            "observed_start_s": 1.8252,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.037200000000000344,
+            "rise_10_90_s": 0.026000000000000245,
+            "residence_s": 0.1,
+            "overshoot": 1.3748760223388672,
+            "final_mean": -59.93216454012311,
+            "final_error": 0.0678354598768891,
+            "iq_peak": 2.2708168029785156
+          },
+          {
+            "command": "rpm 0",
+            "arrival_s": 0.029199999999999893,
+            "band": 3.0,
+            "observed_start_s": 2.6212,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.027200000000000113,
+            "rise_10_90_s": 0.018000000000000682,
+            "residence_s": 0.1,
+            "overshoot": 0.01915975672891363,
+            "final_mean": -0.07154029319734678,
+            "final_error": -0.07154029319734678,
+            "iq_peak": 2.689265012741089
+          }
+        ]
+      }
+    ],
+    "P2_final_envelope": [
+      {
+        "frames": 10547,
+        "continuity": {
+          "frames": 10547,
+          "group_mismatch": 0,
+          "faults": 0,
+          "max_state": 7,
+          "gaps": 0,
+          "timestamp_jitter": 0,
+          "max_gap_us": 200,
+          "missing": 0,
+          "seq_ok": true,
+          "dt_ok": true
+        },
+        "events": [
+          {
+            "requested_s": 0.2,
+            "sent_s": 0.20579569999244995,
+            "command": "pos 15.00"
+          },
+          {
+            "requested_s": 0.6000000000000001,
+            "sent_s": 0.603003299998818,
+            "command": "pos -15.00"
+          },
+          {
+            "requested_s": 1.0,
+            "sent_s": 1.0016994000034174,
+            "command": "pos 30.00"
+          },
+          {
+            "requested_s": 1.4000000000000001,
+            "sent_s": 1.4077646999940043,
+            "command": "pos 0"
+          },
+          {
+            "requested_s": 1.8,
+            "sent_s": 1.807783099997323,
+            "command": "stop"
+          }
+        ],
+        "max_abs_rpm": 147.00775146484375,
+        "max_abs_iq_ref": 3.3423376083374023,
+        "segments": [],
+        "kind": "position",
+        "repeat": 0,
+        "response": [
+          {
+            "command": "pos 15.00",
+            "arrival_s": 0.11020000000000002,
+            "band": 0.5,
+            "observed_start_s": 0.2202,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.0952,
+            "rise_10_90_s": 0.03300000000000003,
+            "residence_s": 0.1,
+            "overshoot": 0.029296875,
+            "final_mean": 14.995294570922852,
+            "final_error": -0.0047054290771484375,
+            "iq_peak": 2.4810471534729004
+          },
+          {
+            "command": "pos -15.00",
+            "arrival_s": 0.08499999999999996,
+            "band": 0.5,
+            "observed_start_s": 0.6174,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.05900000000000005,
+            "rise_10_90_s": 0.04300000000000004,
+            "residence_s": 0.1,
+            "overshoot": 0.035888671875,
+            "final_mean": -14.991499900817871,
+            "final_error": 0.008500099182128906,
+            "iq_peak": 2.5561070442199707
+          },
+          {
+            "command": "pos 30.00",
+            "arrival_s": 0.10640000000000005,
+            "band": 0.5,
+            "observed_start_s": 1.016,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.07040000000000002,
+            "rise_10_90_s": 0.050000000000000044,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 29.923776626586914,
+            "final_error": -0.07622337341308594,
+            "iq_peak": 2.866788387298584
+          },
+          {
+            "command": "pos 0",
+            "arrival_s": 0.08720000000000017,
+            "band": 0.5,
+            "observed_start_s": 1.4222,
+            "timestamp_source": "firmware_target",
+            "t90_s": 0.05920000000000014,
+            "rise_10_90_s": 0.04299999999999993,
+            "residence_s": 0.1,
+            "overshoot": 0.0,
+            "final_mean": 0.04952636733651161,
+            "final_error": 0.04952636733651161,
+            "iq_peak": 3.3247008323669434
+          }
+        ]
+      }
+    ]
+  },
+  "P3_aborted": {
+    "error": "Outside comparison region: rpm=101.22114562988281, Iq=5.693103790283203, position=8.50341796875, bus=12.009554862976074",
+    "events": [
+      {
+        "requested_s": 0.2,
+        "sent_s": 0.20488099999784026,
+        "command": "pos 15.00"
+      }
+    ]
+  },
+  "selected": "P2",
+  "final_warn_diagnostics": {
+    "target_iq_a": 5.0,
+    "phase_a": 6.0,
+    "speed_rpm": 200.0,
+    "note": "WARN diagnostics only; not continuous ratings or output clamps"
+  },
+  "selected_firmware_sha256": "e0a74f0d141d1d95ec67e2d9ee495076cdcea5b64649e3688776973f2a52a306",
+  "final_idle": {
+    "frames": 1237,
+    "bus_v": 11.995241165161133,
+    "iq_target_a": 0.0,
+    "iq_actual_a": 0.01907186023890972,
+    "speed_target_rpm": 0.0,
+    "speed_actual_rpm": -0.0890631228685379,
+    "position_target_deg": 0.0,
+    "position_actual_deg": 0.120849609375,
+    "mode": 0,
+    "state": 0,
+    "fault": 0,
+    "warnings": 0,
+    "rejected": 0
+  },
+  "archive_columns": "uint32 bit view of 13 USB float32 channels; every fifth 5 kHz frame, approximately 1 kHz"
+}

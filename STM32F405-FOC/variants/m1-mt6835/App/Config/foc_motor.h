@@ -19,9 +19,9 @@
 #define FOC_MOTOR_AMBIENT_MAX_C 40.0f
 #define FOC_MOTOR_BUS_MIN 7.4f
 #define FOC_MOTOR_BUS_MAX 12.4f /* 20 V absolute maximum is not a test voltage. */
-#define FOC_MOTOR_CURRENT_MAX 3.00f /* Diagnostic threshold; short loaded tests reached 2.5 A target. */
-#define FOC_MOTOR_PHASE_TRIP 4.00f /* Diagnostic threshold in the default WARN policy. */
-#define FOC_MOTOR_SPEED_MAX 100.0f /* Diagnostic threshold; loaded tests covered +/-60 rpm. */
+#define FOC_MOTOR_CURRENT_MAX 5.00f /* Short P2 moves reached 4.41 A target; WARN diagnostic, not a continuous rating. */
+#define FOC_MOTOR_PHASE_TRIP 6.00f /* WARN diagnostic, not a measured continuous phase-current rating. */
+#define FOC_MOTOR_SPEED_MAX 200.0f /* P2 position trajectory reaches about 164 rpm; keep a diagnostic margin. */
 #define FOC_MOTOR_TORQUE_SPEED_TRIP_RPM 1000.0f /* Allow short current-loop tests below the 12 V no-load speed. */
 #define FOC_MOTOR_ALIGNMENT_VOLTS 0.20f /* Ceiling for current-regulated alignment. */
 #define FOC_MOTOR_ALIGNMENT_CURRENT_A 0.45f
@@ -37,9 +37,10 @@
 #define FOC_MOTOR_SPEED_KP 0.18f
 #define FOC_MOTOR_SPEED_KI 0.48f
 #define FOC_MOTOR_SPEED_SLEW_RPM_PER_S 4500.0f
-#define FOC_MOTOR_POSITION_ACCEL_RPM_PER_S 2000.0f
-#define FOC_MOTOR_POSITION_BRAKE_RPM_PER_S 1600.0f
+#define FOC_MOTOR_POSITION_ACCEL_RPM_PER_S 4000.0f
+#define FOC_MOTOR_POSITION_BRAKE_RPM_PER_S 3200.0f
 #define FOC_MOTOR_POSITION_KP 12.0f
+#define FOC_MOTOR_POSITION_SPEED_MAX 150.0f
 #else /* Explicit FREE_SHAFT selection. */
 #define FOC_LOAD_NAME "FREE_SHAFT"
 #define FOC_MOTOR_SPEED_KP 0.04f
@@ -49,8 +50,8 @@
 #define FOC_MOTOR_POSITION_ACCEL_RPM_PER_S 1200.0f
 #define FOC_MOTOR_POSITION_BRAKE_RPM_PER_S 960.0f
 #define FOC_MOTOR_POSITION_KP 6.0f
-#endif
 #define FOC_MOTOR_POSITION_SPEED_MAX 90.0f
+#endif
 #else
 /* Original reference firmware motor: exact model name has not been supplied.
  * Keep its historical tuning separate; do not identify it as ZH3620-1. */

@@ -37,8 +37,8 @@
 #endif
 #define FOC_PORT_BUS_MIN 8.0f
 #define FOC_PORT_BUS_MAX 14.0f
-#define FOC_PORT_CURRENT_MAX 3.00f /* M0 diagnostic threshold; default policy is WARN. */
-#define FOC_PORT_PHASE_TRIP 4.00f /* M0 diagnostic threshold; default policy is WARN. */
+#define FOC_PORT_CURRENT_MAX 5.00f /* M0 short-bench diagnostic threshold; default policy is WARN. */
+#define FOC_PORT_PHASE_TRIP 6.00f /* M0 short-bench diagnostic threshold; default policy is WARN. */
 #define FOC_CURRENT_A_PER_V 50.0f
 #define FOC_ADC_VDDA 3.13f
 #define FOC_VOLTAGE_FRACTION 0.10f

@@ -83,7 +83,8 @@ static uint32_t status_word(void)
     return foc.state | (foc.fault << 3) | ((uint32_t)(motor_mode == MOTOR_PWM) << 7);
 }
 
-/* One frame every FOC_USB_DIVIDER current samples: 12 float32 plus JustFloat.
+/* Compatibility groups 0..5: one 12-float frame every FOC_USB_DIVIDER samples.
+   The default overview group 6 uses 24 floats and another 2x decimation.
    Header sequence counts current samples, so its normal step is the divider.
    Group 0 carries raw sensor truth, group 1 current-loop internals,
    group 2 the applied voltage, group 3 the reference and mechanical response,

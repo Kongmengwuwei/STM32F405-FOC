@@ -96,7 +96,7 @@ static void usb(const char *command)
 int main(void)
 {
     assert(FOC_SAMPLE_HZ == 10000u && FOC_PWM_ARR == 8400u);
-    assert(FOC_CURRENT_MAX == 3.00f && FOC_PHASE_TRIP == 4.00f && FOC_AUTOCALIBRATE == 0);
+    assert(FOC_CURRENT_MAX == 5.00f && FOC_PHASE_TRIP == 6.00f && FOC_AUTOCALIBRATE == 0);
     assert(app_init() && foc.state == FOC_OFFSET && !foc.calibrated);
     for (unsigned n = 0; n < FOC_OFFSET_WAIT_SAMPLES + 2048u; ++n) {
         foc_step(20.0f, 12.0f, 1.565f, 1.565f, 0.0f);
@@ -168,14 +168,14 @@ int main(void)
     /* The real parser must accept a formerly rejected target, and one send
        must survive timeout, bus/speed/phase-current diagnostic thresholds. */
     unsigned rejected = app_command_rejected;
-    usb("send 4\rIq 3.20\r");
-    assert(app_command_rejected == rejected && foc.command == 3.20f);
+    usb("send 4\rIq 5.20\r");
+    assert(app_command_rejected == rejected && foc.command == 5.20f);
     for (unsigned n = 0; n < FOC_PRECHARGE_SAMPLES +
          FOC_PWM_ZERO_SETTLE_SAMPLES + FOC_PWM_ZERO_SAMPLES + 1u; ++n) {
         motor_sample_us += 100u;
         app_sample();
     }
-    assert(foc.state == FOC_RUN && foc.iq_ref == 3.20f);
+    assert(foc.state == FOC_RUN && foc.iq_ref == 5.20f);
     adc_sample.bus_voltage = 20.0f;
     adc_sample.b_voltage += 0.04f; /* 2 A on the nominal B-phase conversion. */
     for (unsigned n = 0; n < 2600u; ++n) {
@@ -184,7 +184,7 @@ int main(void)
         app_sample();
     }
     assert(foc.state == FOC_RUN && foc.fault == FOC_OK && control_scheduled());
-    assert(foc.iq_ref == 3.20f && foc.command == 3.20f);
+    assert(foc.iq_ref == 5.20f && foc.command == 5.20f);
     assert(!(foc.warnings & (1u << FOC_UART))); /* Persistent target needs no keepalive. */
     assert(foc.warnings & (1u << FOC_CURRENT));
     assert(foc.warnings & (1u << FOC_SPEED));

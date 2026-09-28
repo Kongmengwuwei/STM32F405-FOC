@@ -1,14 +1,16 @@
 # tools：电机测试数据系统
 
-电流环的最新带载比较见[电流环改进记录](../../../../docs/current-loop-loaded-debug-2026-09-27.md)，当前 ZH3620-1 Kp=0.20、Ki=192/s。`current_probe.py` 的参数只是记录已烧录的增益；切组时会先排空旧帧，再检查序号连续性。
+本工具集的 `bench.py` 与 `frames.f32` 使用兼容遥测组 `send 0`～`send 5`，每帧 52 字节。**固件上电默认 `send 6` 是 24 通道、100 字节/帧，M0 为 2.5 kHz**；需要看全部目标/实际值时使用[VOFA 总览](../../../../docs/vofa-quickstart.md)，不要用下文 52 字节解析器直接解析总览。工具会按所需组号向固件发送 `send X`。
 
-新增 `overview_probe.py --port COM8 --out build/overview`：先断开 VOFA 串口，在约 12 V 空载条件下验证组 6 的转速、位置、电流目标与实际值；退出会发送 `stop` 并排空接收。该工具有自己的实验边界检查，不修改固件保护策略。[本轮验收](../../../../docs/vofa-overview-acceptance-2026-09-27.md)记录了显示修正、实测数据和仍存在的问题。
+电流环的最新带载比较见[电流采样与调参](../../../../docs/current-sampling-noise.md)，当前 ZH3620-1 Kp=0.20、Ki=192/s。`current_probe.py` 的参数只是记录已烧录的增益；切组时会先排空旧帧，再检查序号连续性。
+
+新增 `overview_probe.py --port COM8 --out build/overview`：先断开 VOFA 串口，在约 12 V 空载条件下验证组 6 的转速、位置、电流目标与实际值；退出会发送 `stop` 并排空接收。该工具有自己的实验边界检查，不修改固件保护策略。[VOFA 总览说明](../../../../docs/vofa-quickstart.md)记录了显示修正、实测数据和仍存在的问题。
 
 **当前策略（2026-09-27）：** 固件默认 WARN，各型号均取消目标范围拒绝、通信超时关断和阈值跳闸，`send 4` 为数值诊断组。下文旧限幅与看门狗描述对应 TRIP/历史版本；详见[台架告警模式](../../../../docs/bench-warning-mode.md)。主机 `bench.py run` 的参考电机工况库和自有 `--iq-limit/--rpm-limit/--pos-limit` 检查独立于固件，不用于默认 ZH3620-1 的 VOFA 手动电流测试。
 
 本目录保存**主机端工具**。固件接口与命令见 [App/README.md](../../App/README.md)，
 主机回归测试见 [tests/README.md](../../tests/README.md)，硬件接线见
-[硬件PCB拓扑.md](../../硬件PCB拓扑.md)。
+[硬件映射](../../../../docs/hardware-map.md)。
 
 ## bench/：一键电机台架
 
