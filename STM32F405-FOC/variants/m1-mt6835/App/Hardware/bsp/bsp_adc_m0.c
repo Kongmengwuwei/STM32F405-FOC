@@ -9,6 +9,11 @@ volatile uint32_t adc_errors;
 volatile uint32_t adc_pair_count, adc_bus_count;
 static uint16_t pending_b, pending_c;
 static bool pair_pending;
+#if FOC_M0_CURRENT_SAMPLE_CYCLES == 56u
+#define M0_CURRENT_SAMPLE_SETTING ADC_SAMPLETIME_56CYCLES
+#else
+#define M0_CURRENT_SAMPLE_SETTING ADC_SAMPLETIME_28CYCLES
+#endif
 #ifdef FOC_CAPTURE
 volatile uint16_t adc_debug[4];
 #endif
@@ -37,12 +42,12 @@ void bsp_adc_start(void)
 #if FOC_M0_DUAL_ADC
     ADC1->JSQR = 10u << 15; /* Length 1: injected rank 1 is in JSQ4. */
     ADC2->JSQR = 11u << 15;
-    ADC2->SMPR1 = ADC_SAMPLETIME_28CYCLES << 3;
+    ADC2->SMPR1 = M0_CURRENT_SAMPLE_SETTING << 3;
 #else
     ADC1->JSQR = ADC_JSQR_JL_0 | (10u << 10) | (11u << 15);
 #endif
-    ADC1->SMPR1 = (ADC_SAMPLETIME_28CYCLES << 0) |
-                  (ADC_SAMPLETIME_28CYCLES << 3);
+    ADC1->SMPR1 = (M0_CURRENT_SAMPLE_SETTING << 0) |
+                  (M0_CURRENT_SAMPLE_SETTING << 3);
     ADC1->SR = 0u;
     ADC2->CR1 = ADC_CR1_OVRIE;
     ADC2->SQR1 = 0u;

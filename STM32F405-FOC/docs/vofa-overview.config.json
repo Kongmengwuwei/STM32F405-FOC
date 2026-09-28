@@ -1,0 +1,720 @@
+{
+  "type": "config",
+  "vnumber": 100,
+  "ctx": {
+    ".": {
+      "samples": 2,
+      "ctx": {
+        ".": {
+          "ontop": false,
+          "real_x": 0,
+          "real_y": 0,
+          "real_width": 3840,
+          "real_height": 2064
+        },
+        "resize_border": {
+          "ctx": {
+            ".": {
+              "status": {
+                "mouse": {
+                  "mouseX": 1627.5,
+                  "mouseY": 1038
+                },
+                "target": {
+                  "offset": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "x": -1296,
+                  "y": 195,
+                  "width": 3255,
+                  "height": 2076
+                },
+                "types": [
+                  0
+                ]
+              },
+              "full_status": {
+                "mouse": {
+                  "mouseX": 1627.5,
+                  "mouseY": 1038
+                },
+                "target": {
+                  "offset": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "x": -1296,
+                  "y": 195,
+                  "width": 3255,
+                  "height": 2076
+                },
+                "types": [
+                  0
+                ]
+              },
+              "full_screen": true,
+              "full_height": false,
+              "full_width": false
+            }
+          }
+        }
+      },
+      "hide_menu": false
+    },
+    "text_buffer": {
+      "encoder": "UTF-8",
+      "list_size": 20
+    },
+    "activation_panel": {
+      "pop_on_start": false
+    },
+    "datahub_global": {
+      "fps": 30,
+      "use_instance": false,
+      "timeout_ms": 0,
+      "global_decimal": 2
+    },
+    "defaultAppTheme": {
+      "ctx": {
+        ".": {
+          "textAnsiTime": "38;2;0;125;255",
+          "textAnsiRx": "32",
+          "textAnsiTx": "38;2;0;0;255",
+          "textAnsiErr": "91"
+        },
+        "lColors": [
+          "#ea8c28",
+          "#007fc4",
+          "#ea8c28",
+          "#007fc4",
+          "#ea8c28",
+          "#007fc4",
+          "#aa55aa",
+          "#00805f",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#00805f",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a",
+          "#53657a"
+        ]
+      }
+    },
+    "theme_funcs": {
+      "ctx": {
+        ".": {
+          "theme_name": ""
+        }
+      }
+    },
+    "g_settings": {
+      "ctx": {
+        ".": {
+          "fontRenderType": 0,
+          "fontFamily": "Microsoft YaHei UI",
+          "fontFamilyNumber": "Cascadia Mono",
+          "fontFamilyAxis": "Cascadia Mono",
+          "fontFamilyTerm": "Cascadia Mono",
+          "globalScale": 2,
+          "fontScaleTerm": 1
+        }
+      }
+    },
+    "wave_view": {
+      "ctx": {
+        ".": {
+          "locked": false
+        },
+        "main_split_view": {
+          "ctx": {
+            "width": 3840,
+            "height": 2004,
+            "size_list": [
+              451,
+              2847,
+              518
+            ],
+            "index_list": [
+              0,
+              1,
+              2
+            ],
+            "alone_list": [
+              false,
+              false,
+              false
+            ],
+            "alone_window_list": [
+              [],
+              [],
+              []
+            ]
+          }
+        },
+        "center_split_view": {
+          "ctx": {
+            "width": 2847,
+            "height": 2004,
+            "size_list": [
+              1550,
+              218,
+              232
+            ],
+            "index_list": [
+              0,
+              1,
+              2
+            ],
+            "alone_list": [
+              false,
+              false,
+              false
+            ],
+            "alone_window_list": [
+              [],
+              [],
+              []
+            ]
+          }
+        },
+        "tx_rx_zone": {
+          "ctx": {
+            ".": {
+              "loop_on": false,
+              "loop_ms": 100,
+              "loop_count": -1,
+              "hex_on": true,
+              "send_file": false,
+              "send_hex_on": false,
+              "cmd_hex": "73 65 6E 64 20 36",
+              "send_file_path": "",
+              "enter_to_send": false,
+              "send_record_max_count": 30
+            },
+            "send_record_model": {
+              "ctx": [
+                {
+                  "hex_on": false,
+                  "cmd": "clear\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 20\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 15\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 100\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 250\\n\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 350\\n\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 50\\n\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 0\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 200\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm -200\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 150\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 350\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 1000\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 500\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 1000\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "send 3\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "Iq 0.50\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 300\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "zero\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 90\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 180\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "pos 0\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm -100\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 100\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm -300\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "stop\\n\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 100\\n\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "rpm 500\\n\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "stop\\n"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "hold\\n\\n"
+                }
+              ]
+            },
+            "encoder_menu": {
+              "ctx": [
+                {
+                  "name": "UTF-8",
+                  "editable": false
+                },
+                {
+                  "name": "GBK",
+                  "editable": false
+                }
+              ]
+            },
+            "split_view": {
+              "ctx": {
+                "width": 2815,
+                "height": 203,
+                "size_list": [
+                  120,
+                  81
+                ],
+                "index_list": [
+                  0,
+                  1
+                ],
+                "alone_list": [
+                  false,
+                  false
+                ],
+                "alone_window_list": [
+                  [],
+                  []
+                ]
+              }
+            },
+            "tx_show_echo": {
+              "checked": true
+            },
+            "rx_show_echo": {
+              "checked": false
+            },
+            "rx_show_plot_data": {
+              "checked": true
+            },
+            "rx_show_image_data": {
+              "checked": false
+            },
+            "t_string_on_check": {
+              "checked": false
+            },
+            "tx_rect": {
+              "show_more": true
+            },
+            "append_combo": {
+              "currentIndex": 1
+            }
+          }
+        },
+        "left_panel": {
+          "ctx": {
+            ".": {
+              "ctx_width": 451
+            },
+            "command_panel": {
+              "ctx": {}
+            },
+            "pal": {
+              "ctx": {
+                "demo": {
+                  "protocal": "FireWater",
+                  "timeout": 15,
+                  "send_picture": false,
+                  "picture_dir": "",
+                  "picture_timeout": 15,
+                  "send_csv_list": false,
+                  "csv_dir": "",
+                  "csv_timeout": 15
+                },
+                "serial": {
+                  "port": "COM8",
+                  "baud": "1000000",
+                  "flow_control": "None",
+                  "parity": "None",
+                  "databits": "8",
+                  "stopbits": "1",
+                  "break_enabled": false,
+                  "dtr": true,
+                  "rts": false
+                },
+                "udp": {
+                  "remote_ip": "",
+                  "remote_port": "",
+                  "local_port": ""
+                },
+                "tcp_client": {
+                  "server_ip": "",
+                  "server_port": "",
+                  "banner": ""
+                },
+                "tcp_server": {
+                  "listen_port": ""
+                },
+                "protocol_combo": "JustFloat",
+                "link_type_combo": 0
+              }
+            },
+            "lpf": {
+              "ctx": {
+                ".": {
+                  "lastIndex": 2,
+                  "__currentIndex": 0
+                }
+              }
+            }
+          }
+        },
+        "settingsPanel": {
+          "ctx": {
+            ".": {
+              "settings_ctx": [
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 2,
+                  "value": 0,
+                  "name": "目标转速 rpm"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 2,
+                  "value": -0.3520245850086212,
+                  "name": "实际转速 rpm"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0,
+                  "name": "目标位置 °"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": -0.076904296875,
+                  "name": "实际位置 °"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0,
+                  "name": "目标 Iq A"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": -0.005726252682507038,
+                  "name": "实际 Iq A"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0,
+                  "name": "目标 Id A"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0.008812620304524899,
+                  "name": "实际 Id A"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 2,
+                  "value": 11.980926513671875,
+                  "name": "母线电压 V"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0,
+                  "name": "Ud 电压 V"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0,
+                  "name": "Uq 电压 V"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 1,
+                  "value": 0,
+                  "name": "控制模式"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 1,
+                  "value": 0,
+                  "name": "运行状态"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 1,
+                  "value": 0,
+                  "name": "故障编号"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 1,
+                  "value": 0,
+                  "name": "告警位掩码"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 1,
+                  "value": 0,
+                  "name": "最近告警"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 1,
+                  "value": 0,
+                  "name": "命令拒绝次数"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0,
+                  "name": "电压可用比例"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 2,
+                  "value": 0,
+                  "name": "斜坡转速 rpm"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 2,
+                  "value": 0.3520245850086212,
+                  "name": "速度环误差 rpm"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0.076904296875,
+                  "name": "位置误差 °"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 3,
+                  "value": 0.005726252682507038,
+                  "name": "Iq 误差 A"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 1,
+                  "value": 371691,
+                  "name": "采样时间 us24"
+                },
+                {
+                  "is_draw": false,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": 1,
+                  "value": 10573344,
+                  "name": "采样序号24"
+                }
+              ],
+              "selected_line": -1,
+              "down_line": -1
+            },
+            "data_settings_arrow": {
+              "down": false
+            }
+          }
+        },
+        "color_bar": {
+          "ctx": {
+            ".": {
+              "delta_t": 0.4,
+              "buffer_max_size_input.text": "25000",
+              "x_auto_align": 100,
+              "left_index": 20000,
+              "right_index": 24999,
+              "size": 25000,
+              "no_alert": false
+            },
+            "buffer_max_size_input": {
+              "text": "25000"
+            },
+            "auto_bt": {
+              "lock_mode": 0,
+              "locked": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

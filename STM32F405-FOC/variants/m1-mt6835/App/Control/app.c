@@ -5,6 +5,7 @@
 #include "bsp_uart.h"
 #include "bsp_usb.h"
 #include "control.h"
+#include "telemetry.h"
 #include "justfloat.h"
 #include "bsp_encoder.h"
 #include <math.h>
@@ -18,9 +19,9 @@
 #define UART_SAMPLE_DIVIDER (FOC_SAMPLE_HZ / 2000u)
 
 /* High-speed USB logging group, selected by `send X`; telemetry only. */
-static volatile uint8_t telemetry_group;
+static volatile uint8_t telemetry_group = TELEMETRY_OVERVIEW_GROUP;
 /* One USB frame: two header words then the group payload, all float32. */
-static float s_usb_frame[FOC_FRAME_CHANNELS + 1u];
+static float s_usb_frame[TELEMETRY_OVERVIEW_CHANNELS + 1u];
 
 static volatile uint32_t last_frame;
 static volatile uint8_t divider;
@@ -90,6 +91,37 @@ static uint32_t status_word(void)
    Channels that a host can reconstruct offline are deliberately absent. */
 static void telemetry_usb(void)
 {
+    if (telemetry_group == TELEMETRY_OVERVIEW_GROUP) {
+        /* One coherent acquisition snapshot. Plain finite numbers, including
+         * exact 24-bit timestamp/sequence, are directly usable by VOFA. */
+        float *p = s_usb_frame;
+        p[TELEMETRY_SPEED_TARGET] = control_speed_target();
+        p[TELEMETRY_SPEED_ACTUAL] = control_speed_rpm();
+        p[TELEMETRY_POSITION_TARGET] = control_position_target();
+        p[TELEMETRY_POSITION_ACTUAL] = control_position_deg();
+        p[TELEMETRY_IQ_TARGET] = foc.iq_ref;
+        p[TELEMETRY_IQ_ACTUAL] = foc.iq;
+        p[TELEMETRY_ID_TARGET] = 0.0f;
+        p[TELEMETRY_ID_ACTUAL] = foc.id;
+        p[TELEMETRY_BUS] = adc_sample.bus_voltage;
+        p[TELEMETRY_UD] = foc.ud; p[TELEMETRY_UQ] = foc.uq;
+        p[TELEMETRY_MODE] = (float)control_mode();
+        p[TELEMETRY_STATE] = (float)foc.state;
+        p[TELEMETRY_FAULT] = (float)foc.fault;
+        p[TELEMETRY_WARNINGS] = (float)foc.warnings;
+        p[TELEMETRY_LAST_WARNING] = (float)foc.last_warning;
+        p[TELEMETRY_REJECTED] = (float)app_command_rejected;
+        p[TELEMETRY_VOLTAGE_SCALE] = foc.voltage_scale;
+        p[TELEMETRY_SPEED_REFERENCE] = control_speed_reference();
+        p[TELEMETRY_SPEED_ERROR] = control_speed_reference() - control_speed_rpm();
+        p[TELEMETRY_POSITION_ERROR] = control_position_target() - control_position_deg();
+        p[TELEMETRY_IQ_ERROR] = foc.iq_ref - foc.iq;
+        p[TELEMETRY_TIME_US24] = (float)(motor_sample_us & 0xffffffu);
+        p[TELEMETRY_SEQUENCE24] = (float)(sequence & 0xffffffu);
+        p[TELEMETRY_OVERVIEW_CHANNELS] = INFINITY;
+        (void)bsp_usb_write(p, sizeof s_usb_frame);
+        return;
+    }
     union { float f; uint32_t u; } time, index;
     time.u = (motor_sample_us & 0xffffffu) | (status_word() << 24);
     index.u = ((sequence & 0xffffffu) | ((uint32_t)telemetry_group << 24));
@@ -176,7 +208,7 @@ static void telemetry_usb(void)
     }
     }
     s_usb_frame[FOC_FRAME_CHANNELS] = INFINITY;
-    (void)bsp_usb_write(&s_usb_frame, sizeof s_usb_frame);
+    (void)bsp_usb_write(s_usb_frame, (FOC_FRAME_CHANNELS + 1u) * sizeof(float));
 }
 
 void app_sample(void)
@@ -214,7 +246,9 @@ void app_sample(void)
         if (foc.voltage_scale < current_log.scale) current_log.scale = foc.voltage_scale;
         ++current_log.count;
     } else current_log.count = 0u;
-    if (++usb_divider == FOC_USB_DIVIDER) {
+    unsigned log_divider = FOC_USB_DIVIDER *
+        (telemetry_group == TELEMETRY_OVERVIEW_GROUP ? TELEMETRY_OVERVIEW_DECIMATION : 1u);
+    if (++usb_divider >= log_divider) {
         usb_divider = 0u;
         if (bsp_usb_ready()) telemetry_usb(); /* Decimate logging, never PI/ADC/PWM. */
         current_log.count = 0u;
@@ -310,7 +344,7 @@ bool app_command(const char *line)
     else if (!strncmp(line, "Iq ", 3u)) { command = TORQUE; if (!parse_decimal(line + 3, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "rpm ", 4u)) { command = SPEED; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "pos ", 4u)) { command = POS; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
-    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '5' && !line[6]) {
+    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '6' && !line[6]) {
         telemetry_group = (uint8_t)(line[5] - '0');
         return true;
     } else return false;
@@ -362,8 +396,8 @@ bool app_command(const char *line)
         /* Text goes to UART only: the USB link is a binary frame stream. */
         char banner[128];
         unsigned length = (unsigned)snprintf(banner, sizeof banner,
-            "#FOC 1.2 port=%s encoder=%s motor=%s install=%u policy=%s state=%lu\r\n",
-            FOC_PORT_NAME, FOC_ENCODER_NAME, FOC_MOTOR_NAME,
+            "#FOC 1.2 port=%s encoder=%s motor=%s load=%s install=%u policy=%s state=%lu\r\n",
+            FOC_PORT_NAME, FOC_ENCODER_NAME, FOC_MOTOR_NAME, FOC_LOAD_NAME,
             (unsigned)FOC_INSTALLATION_ID, FOC_POLICY_NAME, (unsigned long)status_word());
         (void)bsp_uart_write(banner, length);
         bsp_uart_tick();

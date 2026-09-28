@@ -22,17 +22,23 @@
 #endif
 #define FOC_TRIGGER_TICKS FOC_M0_TRIGGER_TICKS
 #define FOC_DEADTIME_TICKS 127u /* TIM1 BDTR: 127 / 168 MHz. */
+#ifndef FOC_M0_CURRENT_SAMPLE_CYCLES
+#define FOC_M0_CURRENT_SAMPLE_CYCLES 28u
+#endif
+#if FOC_M0_CURRENT_SAMPLE_CYCLES != 28u && FOC_M0_CURRENT_SAMPLE_CYCLES != 56u
+#error M0 current sample length must be 28 or 56 ADC cycles
+#endif
 #if FOC_M0_DUAL_ADC
-#define FOC_PORT_ADC_APERTURE_TICKS 224u /* ADC1 B + ADC2 C, simultaneous 28-cycle hold. */
+#define FOC_PORT_ADC_APERTURE_TICKS (FOC_M0_CURRENT_SAMPLE_CYCLES * 8u)
 #else
-/* ADC1 sequential B then C: (28 sample + 12 convert + 28 sample)*8.
+/* ADC1 sequential B then C: (sample + 12 convert + sample)*8.
  * Cover through C's hold end, not just B's first 28-cycle aperture. */
-#define FOC_PORT_ADC_APERTURE_TICKS 544u
+#define FOC_PORT_ADC_APERTURE_TICKS ((2u * FOC_M0_CURRENT_SAMPLE_CYCLES + 12u) * 8u)
 #endif
 #define FOC_PORT_BUS_MIN 8.0f
 #define FOC_PORT_BUS_MAX 14.0f
-#define FOC_PORT_CURRENT_MAX 0.30f
-#define FOC_PORT_PHASE_TRIP 1.20f /* Measured calibration transients reached 1.10 A. */
+#define FOC_PORT_CURRENT_MAX 3.00f /* M0 diagnostic threshold; default policy is WARN. */
+#define FOC_PORT_PHASE_TRIP 4.00f /* M0 diagnostic threshold; default policy is WARN. */
 #define FOC_CURRENT_A_PER_V 50.0f
 #define FOC_ADC_VDDA 3.13f
 #define FOC_VOLTAGE_FRACTION 0.10f

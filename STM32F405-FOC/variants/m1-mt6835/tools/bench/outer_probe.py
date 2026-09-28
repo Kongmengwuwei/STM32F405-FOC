@@ -1,4 +1,4 @@
-"""Bounded unloaded speed/position comparison. Always sends stop on exit.
+"""Bounded speed/position comparison. Always sends stop on exit.
 
 Bounds belong to this experiment, not firmware faults. Currents are internal
 ADC-scaled values, not independently calibrated amperes.
@@ -15,7 +15,7 @@ from benchlib import FrameReader, continuity
 from current_probe import collect, summary
 
 
-def record(link, seconds, events):
+def record(link, seconds, events, max_iq_ref=1.2, max_position=1000.0):
     link.write(b"send 3\n")
     reader = FrameReader()
     frames, sent = [], []
@@ -43,7 +43,7 @@ def record(link, seconds, events):
             frames.append(frame.body + struct.pack("<f", float("inf")))
             if frame.fault or not np.all(np.isfinite(v[2:])):
                 raise RuntimeError(f"Invalid telemetry: fault {frame.fault}")
-            if not 8 <= v[11] <= 12.5 or abs(v[7]) > 200 or abs(v[2]) > 1.2 or abs(v[4]) > 1000:
+            if not 8 <= v[11] <= 12.5 or abs(v[7]) > 200 or abs(v[2]) > max_iq_ref or abs(v[4]) > max_position:
                 error = RuntimeError(f"Outside comparison region: rpm={v[7]}, Iq={v[2]}, position={v[4]}, bus={v[11]}")
                 error.raw, error.events = b''.join(frames), sent
                 raise error

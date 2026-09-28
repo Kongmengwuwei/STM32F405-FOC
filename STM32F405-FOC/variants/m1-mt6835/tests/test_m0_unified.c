@@ -6,6 +6,7 @@
 #include "bsp_uart.h"
 #include "bsp_usb.h"
 #include "control.h"
+#include "telemetry.h"
 #include "foc.h"
 #include <assert.h>
 #include <math.h>
@@ -32,7 +33,8 @@ volatile unsigned motor_mode;
 volatile uint32_t motor_sample_us;
 static const char *input;
 static unsigned frames;
-static float last_frame[13];
+static float last_frame[TELEMETRY_OVERVIEW_CHANNELS + 1u];
+static size_t last_frame_size;
 extern volatile uint32_t app_command_rejected;
 
 uint32_t bsp_motor_lock(void) { return 0u; }
@@ -57,8 +59,19 @@ bool bsp_usb_ready(void) { return true; }
 void bsp_usb_poll(void) {}
 bool bsp_usb_write(const void *data, size_t size)
 {
-    assert(size == sizeof last_frame);
+    assert(size == sizeof last_frame || size == 13u * sizeof(float));
+    last_frame_size = size;
     memcpy(last_frame, data, size);
+    if (size == sizeof last_frame) {
+        assert(isinf(last_frame[TELEMETRY_OVERVIEW_CHANNELS]));
+        assert(last_frame[TELEMETRY_IQ_TARGET] == foc.iq_ref);
+        assert(last_frame[TELEMETRY_IQ_ACTUAL] == foc.iq);
+        assert(last_frame[TELEMETRY_SPEED_ACTUAL] == control_speed_rpm());
+        assert(last_frame[TELEMETRY_POSITION_ACTUAL] == control_position_deg());
+        assert(last_frame[TELEMETRY_STATE] == foc.state);
+        ++frames;
+        return true;
+    }
     uint32_t index;
     memcpy(&index, &last_frame[1], sizeof index);
     if ((index >> 24) == 4u) {
@@ -83,7 +96,7 @@ static void usb(const char *command)
 int main(void)
 {
     assert(FOC_SAMPLE_HZ == 10000u && FOC_PWM_ARR == 8400u);
-    assert(FOC_CURRENT_MAX == 0.30f && FOC_AUTOCALIBRATE == 0);
+    assert(FOC_CURRENT_MAX == 3.00f && FOC_PHASE_TRIP == 4.00f && FOC_AUTOCALIBRATE == 0);
     assert(app_init() && foc.state == FOC_OFFSET && !foc.calibrated);
     for (unsigned n = 0; n < FOC_OFFSET_WAIT_SAMPLES + 2048u; ++n) {
         foc_step(20.0f, 12.0f, 1.565f, 1.565f, 0.0f);
@@ -96,6 +109,21 @@ int main(void)
     assert(foc.state == FOC_PRECHARGE);
     usb("stop\r");
     assert(foc.state == FOC_IDLE);
+    unsigned before = frames;
+    for (unsigned n = 0; n < FOC_USB_DIVIDER * TELEMETRY_OVERVIEW_DECIMATION; ++n) {
+        motor_sample_us += 100u; app_sample();
+    }
+    assert(frames == before + 1u && last_frame_size == sizeof last_frame);
+    assert(last_frame[TELEMETRY_ID_TARGET] == 0.0f);
+    assert(last_frame[TELEMETRY_POSITION_ERROR] == control_position_target() - control_position_deg());
+    assert(app_command("send 0"));
+    for (unsigned n = 0; n < FOC_USB_DIVIDER; ++n) { motor_sample_us += 100u; app_sample(); }
+    assert(last_frame_size == 13u * sizeof(float));
+    assert(app_command("send 6"));
+    for (unsigned n = 0; n < FOC_USB_DIVIDER * 2u; ++n) { motor_sample_us += 100u; app_sample(); }
+    assert(last_frame_size == sizeof last_frame);
+    assert(!app_command("send 7"));
+    frames = 0u;
     foc.calibrated = true; /* Stand in for a completed, profile-matched record. */
     foc.calibration.direction = 1;
     foc.calibration.zero = 0.0f;
@@ -140,14 +168,14 @@ int main(void)
     /* The real parser must accept a formerly rejected target, and one send
        must survive timeout, bus/speed/phase-current diagnostic thresholds. */
     unsigned rejected = app_command_rejected;
-    usb("send 4\rIq 0.40\r");
-    assert(app_command_rejected == rejected && foc.command == 0.40f);
+    usb("send 4\rIq 3.20\r");
+    assert(app_command_rejected == rejected && foc.command == 3.20f);
     for (unsigned n = 0; n < FOC_PRECHARGE_SAMPLES +
          FOC_PWM_ZERO_SETTLE_SAMPLES + FOC_PWM_ZERO_SAMPLES + 1u; ++n) {
         motor_sample_us += 100u;
         app_sample();
     }
-    assert(foc.state == FOC_RUN && foc.iq_ref == 0.40f);
+    assert(foc.state == FOC_RUN && foc.iq_ref == 3.20f);
     adc_sample.bus_voltage = 20.0f;
     adc_sample.b_voltage += 0.04f; /* 2 A on the nominal B-phase conversion. */
     for (unsigned n = 0; n < 2600u; ++n) {
@@ -156,7 +184,7 @@ int main(void)
         app_sample();
     }
     assert(foc.state == FOC_RUN && foc.fault == FOC_OK && control_scheduled());
-    assert(foc.iq_ref == 0.40f && foc.command == 0.40f);
+    assert(foc.iq_ref == 3.20f && foc.command == 3.20f);
     assert(!(foc.warnings & (1u << FOC_UART))); /* Persistent target needs no keepalive. */
     assert(foc.warnings & (1u << FOC_CURRENT));
     assert(foc.warnings & (1u << FOC_SPEED));
@@ -167,7 +195,7 @@ int main(void)
     assert(last_frame[6] == FOC_RUN && last_frame[10] == FOC_OK);
     assert(app_command("Iq -0.65"));
     motor_sample_us += 100u; app_sample();
-    assert(foc.iq_ref == -0.65f && foc.fault == FOC_OK);
+    assert(fabsf(foc.iq_ref + 0.65f) < 1e-6f && foc.fault == FOC_OK);
     assert(app_command("clear") && foc.warnings == 0u && foc.state == FOC_RUN);
     assert(foc.command == -0.65f); /* clear changes diagnostics, not torque. */
     assert(app_command("stop") && motor_mode == MOTOR_OFF && foc.state == FOC_IDLE);

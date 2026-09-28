@@ -1,5 +1,9 @@
 # tools：电机测试数据系统
 
+电流环的最新带载比较见[电流环改进记录](../../../../docs/current-loop-loaded-debug-2026-09-27.md)，当前 ZH3620-1 Kp=0.20、Ki=192/s。`current_probe.py` 的参数只是记录已烧录的增益；切组时会先排空旧帧，再检查序号连续性。
+
+新增 `overview_probe.py --port COM8 --out build/overview`：先断开 VOFA 串口，在约 12 V 空载条件下验证组 6 的转速、位置、电流目标与实际值；退出会发送 `stop` 并排空接收。该工具有自己的实验边界检查，不修改固件保护策略。[本轮验收](../../../../docs/vofa-overview-acceptance-2026-09-27.md)记录了显示修正、实测数据和仍存在的问题。
+
 **当前策略（2026-09-27）：** 固件默认 WARN，各型号均取消目标范围拒绝、通信超时关断和阈值跳闸，`send 4` 为数值诊断组。下文旧限幅与看门狗描述对应 TRIP/历史版本；详见[台架告警模式](../../../../docs/bench-warning-mode.md)。主机 `bench.py run` 的参考电机工况库和自有 `--iq-limit/--rpm-limit/--pos-limit` 检查独立于固件，不用于默认 ZH3620-1 的 VOFA 手动电流测试。
 
 本目录保存**主机端工具**。固件接口与命令见 [App/README.md](../../App/README.md)，
@@ -172,7 +176,17 @@ python tools/bench/current_probe.py COM8 --out build/bench_debug/current --label
 未标定项：相电流绝对精度与增益、编码器内部测量延迟、`FOC_EDGE_LIMIT` 隐含的
 模拟建立时间。不要把这些数字当成已标定事实。
 
-## 自检
+## 外环快速响应实验
+
+`response_probe.py` 在 COM8 上重复速度反向和位置换目标，保存每批原始 `.f32` 与 JSON。仅在已完成校准、确认负载可自由双向旋转且供电条件符合实验范围时使用；退出或越过主机实验边界会发送 stop。参数支持 `--kind speed/position/both`、`--repeat`、`--dwell`、`--rpm`、`--deg`、`--max-iq-ref`、`--max-position`。后两个只是 PC 实验中止边界，不改变固件限制。例如：
+
+```sh
+python tools/bench/response_probe.py --label response --out build/response --kind position --repeat 2 --dwell 0.4 --deg 15
+```
+
+时间从遥测目标变化计算，不从电脑写串口时间计算；位置要求 ±0.5° 连续保持 100 ms。短等待期间末值统计只取最后四分之一，避免把运动过程算成稳态。最新塑料臂带载参数、完整指标及同固件空载复测协议见[带载快速响应记录](../../../../docs/loaded-arm-fast-tuning-2026-09-28.md)。
+
+## 解析器自检
 
 不接硬件也可以验证解析器：
 

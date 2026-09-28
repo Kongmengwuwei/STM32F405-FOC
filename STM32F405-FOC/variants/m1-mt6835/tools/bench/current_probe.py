@@ -17,6 +17,11 @@ from benchlib import FRAME_BYTES, FrameReader, continuity
 
 def collect(link, group, seconds, events=()):
     link.write(f"send {group}\n".encode())
+    # Drain the previous group before decoding 52-byte frames. Group 6 has a
+    # different length; its trailing words can otherwise mimic an old header.
+    drain_until = time.monotonic() + 0.05
+    while time.monotonic() < drain_until:
+        link.read(max(1, min(link.in_waiting, 65536)))
     reader = FrameReader()
     records = []
     host_events = []

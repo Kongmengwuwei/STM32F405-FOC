@@ -13,9 +13,17 @@ int main(void)
 {
 #ifdef FOC_PORT_M0
 #if FOC_M0_DUAL_ADC
+#if FOC_M0_CURRENT_SAMPLE_CYCLES == 56u
+    _Static_assert(FOC_APERTURE_TICKS == 448u, "56-cycle simultaneous B/C hold");
+#else
     _Static_assert(FOC_APERTURE_TICKS == 224u, "simultaneous B/C hold");
+#endif
+#else
+#if FOC_M0_CURRENT_SAMPLE_CYCLES == 56u
+    _Static_assert(FOC_APERTURE_TICKS == 992u, "56-cycle sequential C hold");
 #else
     _Static_assert(FOC_APERTURE_TICKS == 544u, "cover sequential C hold");
+#endif
 #endif
     _Static_assert(FOC_SETTLE_TICKS == 631u, "include 127-tick dead time");
     float unsafe_edge[3] = {(float)(FOC_EDGE_LIMIT + 2u) / FOC_PWM_ARR, 0.5f, 0.5f};

@@ -20,6 +20,13 @@
 #define SPEED_KP FOC_OUTER_SPEED_KP
 #define SPEED_KI FOC_OUTER_SPEED_KI
 #define POSITION_KP FOC_OUTER_POSITION_KP
+#ifndef FOC_OUTER_POSITION_SPEED_KP
+#ifdef FOC_MOTOR_POSITION_SPEED_KP
+#define FOC_OUTER_POSITION_SPEED_KP FOC_MOTOR_POSITION_SPEED_KP
+#else
+#define FOC_OUTER_POSITION_SPEED_KP SPEED_KP
+#endif
+#endif
 #define CONTROL_BANDWIDTH 0.1f  /* Integrator back-calculation gain. */
 #define CONTROL_PERIOD_US 1000u /* Outer-loop period; runs once per millisecond. */
 #define CONTROL_JUMP_US 4000u   /* Gap above this is a discontinuity, not a dt. */
@@ -37,6 +44,7 @@ uint32_t control_mode(void) { return mode; }
 uint32_t control_fault(void) { return fault; }
 float control_speed_rpm(void) { return speed; }
 float control_speed_target(void) { return speed_target; }
+float control_speed_reference(void) { return speed_reference; }
 float control_position_deg(void) { return position; }
 float control_position_target(void) { return position_target; }
 
@@ -164,10 +172,17 @@ bool control_zero(void)
 /* Position P -> speed trajectory -> speed PI using the outer velocity estimate. */
 static float outer_output(float dt)
 {
+    float acceleration = mode == CONTROL_POSITION ?
+        FOC_MOTOR_POSITION_ACCEL_RPM_PER_S : FOC_MOTOR_SPEED_SLEW_RPM_PER_S;
     if (mode == CONTROL_POSITION) {
-        float omega = POSITION_KP * (position_target - position);
+        float distance = position_target - position;
+        float omega = POSITION_KP * distance;
         float ceiling = FOC_POSITION_SPEED_MAX;
-        if (fabsf(omega) > ceiling) foc_warn(FOC_SPEED);
+        /* Degrees = 3 * RPM^2 / acceleration(RPM/s). Approach fast while
+           distant; reserve enough remaining distance to brake. The linear P
+           branch takes over near the target instead of a sharp sqrt cusp. */
+        float brake_speed = sqrtf(FOC_MOTOR_POSITION_BRAKE_RPM_PER_S * fabsf(distance) / 3.0f);
+        if (brake_speed < ceiling) ceiling = brake_speed;
         /* Position approach speed is a trajectory parameter, not a fault or
            target rejection. Always approach a distant target at this speed. */
         if (omega > ceiling) omega = ceiling;
@@ -178,12 +193,13 @@ static float outer_output(float dt)
        Positive Iq follows the electrical direction, so invert both P and I
        for a motor whose calibrated mechanical direction is negative. */
     float change = speed_target - speed_reference;
-    float slew = FOC_MOTOR_SPEED_SLEW_RPM_PER_S * dt;
+    float slew = acceleration * dt;
     if (change > slew) change = slew;
     if (change < -slew) change = -slew;
     speed_reference += change;
     float error = (float)foc.calibration.direction * (speed_reference - speed);
-    float wanted = SPEED_KP * error + integral_speed;
+    float kp = mode == CONTROL_POSITION ? FOC_OUTER_POSITION_SPEED_KP : SPEED_KP;
+    float wanted = kp * error + integral_speed;
     float limited = wanted;
     if (fabsf(wanted) > FOC_CURRENT_MAX) foc_warn(FOC_CURRENT);
     if (FOC_PROTECTION_TRIP) {

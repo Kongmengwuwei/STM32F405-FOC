@@ -75,6 +75,13 @@ gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFO
 
 实机速度与位置结果见 [速度环与位置环调试记录](../../../docs/speed-position-debug-2026-09-27.md)。
 
+塑料臂负载的逐项参数比较、保留参数及三次复测见
+[带载调参记录](../../../docs/loaded-arm-tuning-2026-09-27.md)。
+
+随后电流环的 Ki=192/s 带载对照见[电流环改进记录](../../../docs/current-loop-loaded-debug-2026-09-27.md)。
+`test_current_window.c` 支持 `-DFOC_M0_CURRENT_SAMPLE_CYCLES=28/56` 与 `-DFOC_M0_DUAL_ADC=0/1` 四种窗口组合；
+`python tests/test_current_probe.py` 验证切组时不会把总览残留帧纳入电流记录。
+
 ## 历史资产（`tests/legacy/`）
 
 三个文件针对已删除的电压模式 API，**不能**对当前电流模式固件编译或连接使用：
@@ -132,3 +139,5 @@ CAN1：临时固件静默回环验证——20 帧入队后保留前 15 帧、丢
 M0 可选 `FOC_M0_ADC_MODE=SEQUENTIAL/DUAL`，默认顺序。`test_current_window.c` 分别以 `-DFOC_M0_DUAL_ADC=0/1` 检查保持窗口与量化边界。M0 同步配置的统一命令/遥测、M1 窗口回归通过；实机结果见[双 ADC 对照](../../../docs/dual-adc-experiment-2026-09-27.md)。
 
 `test_current_window.c` 覆盖 M0 第二相保持区间、M0/M1 不同死区预算、全电角度饱和调制仍保留窗口、独立回算系数和 stop。沿用上方真实 foc/control 编译方式分别选择 M0/ZH 和 M1/REFERENCE，默认 WARN。`test_m0_unified.c` 新增组 5 窗口平均与控制原值不受影响的检查，分别用 USB divider=1/2。实机短测工具为 `tools/bench/current_probe.py`，结果见[本轮报告](../../../docs/current-debug-2026-09-27.md)。
+
+`python tests/test_response_probe.py` 检查外环响应统计：必须按固件目标变化计时，不受主机 USB 缓冲时间影响；覆盖 24 位时间戳回绕、速度/位置两种模式及命令未出现在遥测时拒绝计算。M0 10 kHz、M1 20 kHz 的观察器回归均通过；真实电机快速定位及提前制动见[响应优化记录](../../../docs/fast-response-debug-2026-09-27.md)。M1 未做本轮实机测试。

@@ -26,6 +26,7 @@ uint32_t control_mode(void);          /* enum above; 0 means the current loop ho
 float control_iq_ref(void);           /* Speed/position output, amps. */
 float control_speed_rpm(void);        /* Measured, from position difference over 1 ms. */
 float control_speed_target(void);
+float control_speed_reference(void); /* Slewed speed used by the PI, RPM. */
 float control_position_deg(void);     /* Multi-turn, relative to the last control_zero(). */
 float control_position_target(void);
 

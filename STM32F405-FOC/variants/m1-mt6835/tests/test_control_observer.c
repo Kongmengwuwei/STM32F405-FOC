@@ -42,9 +42,12 @@ int main(void)
     CHECK(control_fault() == 0 && !(foc.warnings & (1u << FOC_UART)));
     float before = control_iq_ref();
     CHECK(control_speed(20.0f)); run(1, 0.0f);
-    CHECK(fabsf(control_iq_ref() - before) < .02f); /* Resend preserves integral. */
+    CHECK(fabsf(control_iq_ref() - before) <
+          fabsf(FOC_MOTOR_SPEED_KI * 20.0f * .001f) + .02f);
+    /* A resend preserves the integral; one normal PI update may still occur. */
     foc.voltage_scale = .5f; foc.iq = 0.0f;
-    before = control_iq_ref(); run(500, 0.0f);
+    run(1, 0.0f); /* Flush the last pre-saturation PI update. */
+    before = control_iq_ref(); run(499, 0.0f);
     CHECK(fabsf(control_iq_ref() - before) < .01f); /* No voltage windup. */
     CHECK(control_torque(.4f)); CHECK(control_iq_ref() == 0.0f);
     CHECK(control_speed(-20.0f)); CHECK(control_iq_ref() == 0.0f);
