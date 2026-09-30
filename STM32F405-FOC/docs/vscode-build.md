@@ -1,6 +1,8 @@
 # 在 VS Code 构建并烧录默认固件
 
-这里的默认固件是 **M0 功率接口 + TLE5012B + ZH3620-1 + 安装编号 1**。工作区目录是 `D:\STM32F405-FOC`，固件的 CMake 工程在其下的 `STM32F405-FOC/`。本机已配置 `Debug-local` 预设及 STM32CubeIDE 的 ARM 工具链。
+当前顶层默认构建已改为 M0/M1 双路 TLE5012B 固件。下文原单路操作与 VOFA 命令需改按[双路控制指南](dual-motor.md)核对；若需复现原 M0 单路，配置时显式使用 `-DFOC_DUAL=OFF`。
+
+当前默认固件为 **M0 + M1 双路 TLE5012B + ZH3620-1**，安装编号分别为 1、2。工作区目录是 `D:\STM32F405-FOC`，固件的 CMake 工程在其下的 `STM32F405-FOC/`。本机已配置 `Debug-local` 预设及 STM32CubeIDE 的 ARM 工具链。
 
 默认策略为 `FOC_PROTECTION=WARN`。检查配置输出中的 `protection=WARN`；单次 `Iq` 会保持，越限只告警，需主动发送 `stop`。行为见[台架告警模式](bench-warning-mode.md)。
 

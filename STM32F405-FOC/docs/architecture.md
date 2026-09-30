@@ -1,5 +1,7 @@
 # 当前 FOC 架构
 
+顶层默认双路构建使用 `variants/m1-mt6835/dual/`，两路独立运行同一套 M0 控制算法，硬件同步采样细节见[双路控制指南](dual-motor.md)。本页下述接口二选一架构对应 `FOC_DUAL=OFF` 的单路固件。
+
 可执行固件共用 `variants/m1-mt6835/` 内的 `App/`、`Core/` 和 USB 中间件。目录名 `m1-mt6835` 是来源历史，并不限制现在能构建的组合。顶层旧 M0 试验代码已经移除，避免误读成另一套可运行固件。
 
 四个选择有不同含义：`FOC_PORT` 指三相功率接口及其 PWM/ADC 路径；`FOC_ENCODER` 指机械角度芯片及 SPI 帧格式；`FOC_MOTOR` 指电机本体参数；`FOC_INSTALLATION_ID` 指磁铁、编码器与相线的具体安装。M0/M1 不是电机名称。

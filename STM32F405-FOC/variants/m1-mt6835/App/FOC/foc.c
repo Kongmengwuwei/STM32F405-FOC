@@ -16,7 +16,7 @@ static float previous, position, origin, forward, sum_sin, sum_cos, low, high;
 static uint32_t ticks;
 static float integral_d, integral_q, variance_b, variance_c, previous_command;
 static float pwm_offset_sum_b, pwm_offset_sum_c;
-static bool tracking, aligning;
+static bool tracking, aligning, test_mode;
 
 static void sincos_fast(float theta, float *s, float *c)
 {
@@ -86,6 +86,7 @@ void foc_stop(void)
     integral_d = integral_q = 0.0f;
     pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
     aligning = false;
+    test_mode = false;
     previous_command = 0.0f; /* Cancel any in-flight command ramp. */
     foc.duty[0] = foc.duty[1] = foc.duty[2] = 0.0f;
     control_stop();
@@ -132,10 +133,18 @@ bool foc_calibrate(void)
         if (FOC_PROTECTION_TRIP) return false;
     }
     aligning = true;
+    test_mode = false;
     integral_d = integral_q = 0.0f;
     position = previous; /* Keep alignment deltas precise after many revolutions. */
     ticks = 0u;
     foc.state = FOC_PRECHARGE;
+    return true;
+}
+
+bool foc_test(void)
+{
+    if (!foc_calibrate()) return false;
+    test_mode = true;
     return true;
 }
 
@@ -144,6 +153,7 @@ void foc_init(const foc_calibration_t *calibration)
     memset(&foc, 0, sizeof foc);
     tracking = false;
     aligning = FOC_AUTOCALIBRATE && calibration == NULL;
+    test_mode = false;
     ticks = 0u;
     integral_d = integral_q = variance_b = variance_c = 0.0f;
     pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
@@ -344,6 +354,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             theta = TURN * (float)(ticks - ALIGN_HOLD_END) / (float)FOC_CAL_TICKS(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ);
         if (ticks == ALIGN_FORWARD_END) {
             forward = position - origin;
+            if (test_mode) { foc_stop(); return; }
             if (fabsf(forward) < (360.0f / (float)FOC_POLE_PAIRS) * 0.8f ||
                 fabsf(forward) > (360.0f / (float)FOC_POLE_PAIRS) * 1.2f) {
                 /* A failed experiment is not a usable calibration record. */

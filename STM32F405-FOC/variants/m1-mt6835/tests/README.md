@@ -5,6 +5,8 @@
 | 文件 | 主要验证内容 |
 |---|---|
 | `test_m0_unified.c` | 默认 M0 组合的校准、命令、三种模式、总览遥测及 WARN 行为 |
+| `test_dual_isolation.c` | 双路 FOC/外环状态、校准和故障相互隔离 |
+| `test_tle5012b_response.c` | 用实机 SPI1/SPI3 帧检查两只编码器各自的传感器编号、CRC 和状态位 |
 | `test_app_usb.c`、`test_justfloat.c` | 命令解析、帧格式、旧组兼容与异常输入 |
 | `test_control_pid.c`、`test_control_observer.c`、`foc_stub.c` | 外环响应、模式切换、观察器和抗饱和 |
 | `test_current_window.c`、`test_pwm_zero_offset.c` | M0/M1 采样窗口和 PWM 等占空比校零 |
@@ -12,6 +14,7 @@
 | `test_mt6835_crc.c`、`test_usb_queue.c`、`usb_stubs/` | 编码器帧校验、USB 队列/背压 |
 | `test_current_probe.py`、`test_response_probe.py` | PC 采集切组、按设备时间计算运动响应 |
 | `capture_usb.py` | 实机 USB 连续性记录；打开 COM 前先断开 VOFA |
+| `../tools/dual_smoke.py` | 双路固件单轴限时校准监测；超时、故障或告警时发送 `stop` |
 
 在 `variants/m1-mt6835/` 目录，先建 `build/`，再用主机 GCC 运行核心测试，例如：
 

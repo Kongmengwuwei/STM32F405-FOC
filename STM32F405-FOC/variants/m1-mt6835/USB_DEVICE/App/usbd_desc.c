@@ -76,7 +76,9 @@
 #else
 #define FOC_USB_ENCODER "MT6835"
 #endif
-#ifdef FOC_PORT_M0
+#ifdef FOC_DUAL
+#define FOC_USB_PORT "M0+M1"
+#elif defined(FOC_PORT_M0)
 #define FOC_USB_PORT "M0"
 #else
 #define FOC_USB_PORT "M1"

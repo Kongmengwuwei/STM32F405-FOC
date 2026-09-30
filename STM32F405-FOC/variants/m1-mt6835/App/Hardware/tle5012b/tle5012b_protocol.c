@@ -45,20 +45,32 @@ bool tle5012b_safety_reset_clear(uint16_t safety)
   return (safety & 0x8000u) != 0u;
 }
 
-bool tle5012b_safety_sensor0_response(uint16_t safety)
+bool tle5012b_safety_sensor_response(uint16_t safety, unsigned sensor_number)
 {
-  return (safety & 0x0F00u) == 0x0E00u;
+  return sensor_number < 4u &&
+         (safety & 0x0F00u) == (uint16_t)((0x0Fu ^ (1u << sensor_number)) << 8);
 }
 
-bool tle5012b_angle_sample_valid(uint16_t command, uint16_t data,
-                                 uint16_t safety)
+bool tle5012b_safety_sensor0_response(uint16_t safety)
+{
+  return tle5012b_safety_sensor_response(safety, 0u);
+}
+
+bool tle5012b_angle_sample_valid_sensor(uint16_t command, uint16_t data,
+                                        uint16_t safety, unsigned sensor_number)
 {
   return tle5012b_safety_crc_ok(command, data, safety) &&
          tle5012b_safety_angle_valid(safety) &&
          tle5012b_safety_system_ok(safety) &&
          tle5012b_safety_interface_ok(safety) &&
          tle5012b_safety_reset_clear(safety) &&
-         tle5012b_safety_sensor0_response(safety);
+         tle5012b_safety_sensor_response(safety, sensor_number);
+}
+
+bool tle5012b_angle_sample_valid(uint16_t command, uint16_t data,
+                                 uint16_t safety)
+{
+  return tle5012b_angle_sample_valid_sensor(command, data, safety, 0u);
 }
 
 uint16_t tle5012b_angle15(uint16_t data)

@@ -32,6 +32,7 @@ extern foc_t foc; /* ISR-owned; foreground changes require a short IRQ critical 
 void foc_init(const foc_calibration_t *calibration);
 bool foc_current(float amps); /* Finite torque target; TRIP applies profile limits. */
 bool foc_calibrate(void);
+bool foc_test(void); /* Bounded open-loop electrical sweep; never saves calibration. */
 void foc_stop(void);
 void foc_trip(uint32_t fault);
 void foc_warn(uint32_t warning); /* Sticky bit (1 << code), no state change. */

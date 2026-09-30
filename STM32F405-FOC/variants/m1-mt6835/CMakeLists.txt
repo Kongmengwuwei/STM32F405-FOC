@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 project(405_FOC C ASM)
+option(FOC_DUAL "Run M0 and M1 together with TLE5012B encoders" OFF)
 set(FOC_PORT "M0" CACHE STRING "Three-phase power connector: M0 or M1")
 set(FOC_ENCODER "TLE5012B" CACHE STRING "Angle sensor model")
 set(FOC_MOTOR "ZH3620_1" CACHE STRING "Motor model (reference model name not yet known)")
 set(FOC_LOAD_PROFILE "PLASTIC_ARM" CACHE STRING "Mechanical load profile: FREE_SHAFT or PLASTIC_ARM")
 set(FOC_INSTALLATION_ID "1" CACHE STRING "Physical sensor/magnet/phase installation: 1..15")
+set(FOC_M1_INSTALLATION_ID "2" CACHE STRING "M1 physical installation: 1..15")
 set(FOC_PROTECTION "WARN" CACHE STRING "Threshold policy: WARN or TRIP")
 set(FOC_USB_DIVIDER "2" CACHE STRING "USB frame every N current samples")
 set(FOC_M0_ADC_MODE "SEQUENTIAL" CACHE STRING "M0 current acquisition: SEQUENTIAL or DUAL")
@@ -56,6 +58,14 @@ endif()
 if(NOT FOC_INSTALLATION_ID MATCHES "^([1-9]|1[0-5])$")
     message(FATAL_ERROR "FOC_INSTALLATION_ID must be a decimal integer from 1 to 15")
 endif()
+if(FOC_DUAL)
+    if(NOT FOC_PORT STREQUAL "M0" OR NOT FOC_ENCODER STREQUAL "TLE5012B")
+        message(FATAL_ERROR "FOC_DUAL requires FOC_PORT=M0 and FOC_ENCODER=TLE5012B")
+    endif()
+    if(NOT FOC_M1_INSTALLATION_ID MATCHES "^([1-9]|1[0-5])$")
+        message(FATAL_ERROR "FOC_M1_INSTALLATION_ID must be 1..15")
+    endif()
+endif()
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -68,6 +78,9 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     FOC_PORT_${FOC_PORT} FOC_ENCODER_${FOC_ENCODER}
     FOC_MOTOR_${FOC_MOTOR} FOC_LOAD_${FOC_LOAD_PROFILE} FOC_INSTALLATION_ID=${FOC_INSTALLATION_ID}
     FOC_PROTECTION_TRIP=${FOC_PROTECTION_TRIP} FOC_USB_DIVIDER=${FOC_USB_DIVIDER})
+if(FOC_DUAL)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE FOC_DUAL FOC_M1_INSTALLATION_ID=${FOC_M1_INSTALLATION_ID})
+endif()
 if(FOC_PORT STREQUAL "M0")
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE FOC_M0_DUAL_ADC=${FOC_M0_DUAL_ADC})
 endif()
@@ -89,23 +102,35 @@ else()
         App/Hardware/mt6835/mt6835.c
         App/Hardware/mt6835/mt6835_port_stm32.c)
 endif()
-message(STATUS "FOC build: port=${FOC_PORT}, encoder=${FOC_ENCODER}, motor=${FOC_MOTOR}, load=${FOC_LOAD_PROFILE}, installation=${FOC_INSTALLATION_ID}, protection=${FOC_PROTECTION}, usb_divider=${FOC_USB_DIVIDER}, m0_adc=${FOC_M0_ADC_MODE}")
+if(FOC_DUAL)
+    set(FOC_ADC_DESCRIPTION "shared-two-rank")
+else()
+    set(FOC_ADC_DESCRIPTION "${FOC_M0_ADC_MODE}")
+endif()
+message(STATUS "FOC build: dual=${FOC_DUAL}, port=${FOC_PORT}, encoder=${FOC_ENCODER}, motor=${FOC_MOTOR}, load=${FOC_LOAD_PROFILE}, installation=${FOC_INSTALLATION_ID}, m1_installation=${FOC_M1_INSTALLATION_ID}, protection=${FOC_PROTECTION}, usb_divider=${FOC_USB_DIVIDER}, adc=${FOC_ADC_DESCRIPTION}")
 if(DEFINED FOC_OUTPUT_NAME)
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
         OUTPUT_NAME "${FOC_OUTPUT_NAME}"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif()
 add_subdirectory(cmake/stm32cubemx)
+if(FOC_DUAL)
+    set(FOC_CONTROL_SOURCES
+        dual/app.c dual/hardware.c dual/record.c
+        dual/foc0.c dual/foc1.c dual/control0.c dual/control1.c)
+    set(FOC_SENSOR_SOURCES App/Hardware/tle5012b/tle5012b_protocol.c)
+else()
+    set(FOC_CONTROL_SOURCES
+        App/Control/app.c App/Control/control.c App/FOC/foc.c
+        App/Hardware/bsp/bsp_motor.c ${FOC_ADC_SOURCE})
+    set(FOC_SENSOR_SOURCES ${FOC_ENCODER_SOURCE})
+endif()
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    App/Control/app.c
-    App/Control/control.c
-    App/FOC/foc.c
-    App/Hardware/bsp/bsp_motor.c
-    ${FOC_ADC_SOURCE}
+    ${FOC_CONTROL_SOURCES}
     App/Hardware/bsp/bsp_can.c
     App/Hardware/bsp/bsp_uart.c
     App/Hardware/bsp/bsp_usb.c
-    ${FOC_ENCODER_SOURCE}
+    ${FOC_SENSOR_SOURCES}
 )
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/Control
@@ -116,6 +141,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/Hardware/tle5012b
     App/Config
     App/Protocols/JustFloat
+    dual
 )
 option(FOC_CAPTURE "2048-sample current capture (separate debug build)" OFF)
 if(FOC_CAPTURE)
@@ -134,9 +160,8 @@ set_source_files_properties(
     DIRECTORY cmake/stm32cubemx PROPERTIES COMPILE_OPTIONS "-O3")
 # Keep the 20 kHz path optimized in Debug too; -O0 misses PWM deadlines.
 set_source_files_properties(
-    App/FOC/foc.c App/Hardware/bsp/bsp_motor.c
-    App/Control/app.c App/Control/control.c ${FOC_ADC_SOURCE} App/Hardware/bsp/bsp_uart.c
-    ${FOC_ENCODER_SOURCE}
+    ${FOC_CONTROL_SOURCES} App/Hardware/bsp/bsp_uart.c
+    ${FOC_SENSOR_SOURCES}
     PROPERTIES COMPILE_OPTIONS "-O3")
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${CMAKE_PROJECT_NAME}>.bin

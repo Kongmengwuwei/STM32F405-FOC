@@ -1,5 +1,7 @@
 # 统一固件：选择接口、编码器和电机
 
+本页描述 `FOC_DUAL=OFF` 时的单路组合选择。顶层默认已改为 `FOC_DUAL=ON`，同时控制 M0/M1，接线、命令和遥测见[双路控制指南](dual-motor.md)。以下单路构建命令需另加 `-DFOC_DUAL=OFF`。
+
 M0 采样驱动另有 `FOC_M0_ADC_MODE=SEQUENTIAL/DUAL`：默认顺序采样，双 ADC 为可选实验配置，与电机/编码器选择独立。交替对照尚未显示稳定降噪收益，因此未更改默认；见[电流采样与调参](current-sampling-noise.md)。M1 使用原有同步 DMA 路径。
 
 ## 先分清四件事

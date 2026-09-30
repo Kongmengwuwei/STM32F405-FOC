@@ -1,8 +1,10 @@
 # F405 双路驱动板硬件核对
 
+顶层固件现在默认同时控制两轴；`m0` 驱动板上 M0 三相接口及原有电流采样，编码器使用 SPI1 的 PB3/PB4/PB5、CS1/PA1；`m1` 驱动板上 M1 三相接口及原有电流采样，编码器使用 SPI3 的 PC10/PC11/PC12、CS0/PA0。本页表格的 M0/M1 均指板上丝印；原有“当前默认实物 M0”描述记录的是改动前已验证的台架接线。详见[双路控制指南](dual-motor.md)。
+
 以下依据《ODrive原理图_F405.pdf》（下称“原理图”）、《驱动板405使用说明.pdf》（下称“使用说明”）和《SimpleFOC开箱测试.pdf》（下称“开箱测试”）。这些是板卡资料，不代表已经核对实物焊接版本。页码按 PDF 页面计。
 
-板上有 M0、M1 两组三相功率桥，另有 AUX 半桥。两组三相均由 STM32F405 的高级定时器驱动，各通过 EG2134 和六只 MOS 管连接电机；每组 B/C 相的低侧分流器供 ADC 采样。直流母线先到功率桥和母线电容，再经板上降压得到约 12 V 栅极驱动电源、5 V、3.3 V 逻辑电源。当前默认实物是 **M0 三相 + TLE5012B 的 SPI3/PA0 + ZH3620-1**；历史参考工程的 M1/MT6835 接线不能照搬。原理图图片见 [第 1 页](schematic/odrive-1.png)、[第 2 页](schematic/odrive-2.png)、[第 3 页](schematic/odrive-3.png)。更细的电源、接口及引脚索引仍保留在[参考板硬件拓扑](../variants/m1-mt6835/硬件PCB拓扑.md)；其中接线示例针对旧 M1/MT6835 组合，应以本页和实际焊接版本为准。
+板上有 M0、M1 两组三相功率桥，另有 AUX 半桥。两组三相均由 STM32F405 的高级定时器驱动，各通过 EG2134 和六只 MOS 管连接电机；每组 B/C 相的低侧分流器供 ADC 采样。直流母线先到功率桥和母线电容，再经板上降压得到约 12 V 栅极驱动电源、5 V、3.3 V 逻辑电源。此前已验证的台架组合是 **M0 三相 + TLE5012B 的 SPI3/PA0 + ZH3620-1**；双路固件已改为本页开头的 SPI 对应关系。历史参考工程的 M1/MT6835 接线不能照搬。原理图图片见 [第 1 页](schematic/odrive-1.png)、[第 2 页](schematic/odrive-2.png)、[第 3 页](schematic/odrive-3.png)。更细的电源、接口及引脚索引仍保留在[参考板硬件拓扑](../variants/m1-mt6835/硬件PCB拓扑.md)；其中接线示例针对旧 M1/MT6835 组合，应以本页和实际焊接版本为准。
 
 ## 控制与采样
 
@@ -19,7 +21,7 @@ J4 编码器接口：M1 占 1–6 脚，M0 占 7–12 脚；每组依次为 3.3 
 
 其他传感器接口：AS5600 使用 A/B 作为 SCL/SDA，因此 M0 的 PB4/PB5 需软件 I²C，M1 的 PB6/PB7 可用 I2C1（使用说明 p2；开箱测试 p3）。SPI 编码器共享 PC10/PC11/PC12，片选 CS0=PA0、CS1=PA1；相关 GPIO 经过可选焊桥，须核实焊桥位置（原理图 p1；使用说明 p2；开箱测试 p4–5）。
 
-当前实物反馈已改为 MENC15A，用户确认内置芯片为 TLE5012B，接在 M0/CS0（PA0）。只读固件按 PC10=SCK、PC11=MISO、PC12=MOSI、PA0=CS 配置 SPI3 模式 1，实测角度帧和安全字 CRC 正常。MENC15A 模块标注的 SPC/DSI/SDO 分别对应 SCK/MOSI/MISO；[逐飞科技公开驱动](https://gitee.com/seekfree/CYT2BL3_Brushless_Driver_Project/blob/master/Seekfree_CYT2BL3_Double_Foc_Project/libraries/zf_device/zf_device_menc15a.c)给模块 VCC 标为 3.3 V。
+当前实物反馈已改为 MENC15A，用户确认内置芯片为 TLE5012B。改动前只读固件按 PC10=SCK、PC11=MISO、PC12=MOSI、PA0=CS 配置 SPI3 模式 1，实测角度帧和安全字 CRC 正常；改动后两路接线见本页开头。MENC15A 模块标注的 SPC/DSI/SDO 分别对应 SCK/MOSI/MISO。用户提供的当前模块照片把电源接口标为 `5V`，实际两路也均接板上 5 V；[逐飞科技公开驱动](https://gitee.com/seekfree/CYT2BL3_Brushless_Driver_Project/blob/master/Seekfree_CYT2BL3_Double_Foc_Project/libraries/zf_device/zf_device_menc15a.c)给另一版本模块的 VCC 标为 3.3 V，不应直接用于当前实物接线。
 
 GPIO3/4 是另一组串口信号，对应 PA2/USART2_TX 与 PA3/USART2_RX，用于 USB 转 TTL 调试（原理图 p1；使用说明 p2；开箱测试 p6）。[AS5600 官方数据手册](https://look.ams-osram.com/m/7059eac7531a86fd/original/AS5600-DS000365.pdf)列出 I²C、模拟/PWM 输出，没有原生 UART。若实际模块连接在 GPIO3/4，必须另有串口转换电路和协议。
 

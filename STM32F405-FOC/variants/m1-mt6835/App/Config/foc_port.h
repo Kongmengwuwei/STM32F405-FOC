@@ -18,7 +18,12 @@
 #define FOC_SAMPLE_CYCLES_MIN 16000u
 #define FOC_SAMPLE_CYCLES_MAX 17600u
 #ifndef FOC_M0_TRIGGER_TICKS
+#ifdef FOC_DUAL
+/* Leave both controllers time to write their PWM preloads before the update. */
+#define FOC_M0_TRIGGER_TICKS 6500u
+#else
 #define FOC_M0_TRIGGER_TICKS 8200u
+#endif
 #endif
 #define FOC_TRIGGER_TICKS FOC_M0_TRIGGER_TICKS
 #define FOC_DEADTIME_TICKS 127u /* TIM1 BDTR: 127 / 168 MHz. */
@@ -28,7 +33,13 @@
 #if FOC_M0_CURRENT_SAMPLE_CYCLES != 28u && FOC_M0_CURRENT_SAMPLE_CYCLES != 56u
 #error M0 current sample length must be 28 or 56 ADC cycles
 #endif
-#if FOC_M0_DUAL_ADC
+#ifdef FOC_DUAL
+/* Two injected ranks on each ADC, with both ADCs sampling simultaneously. */
+#if FOC_M0_CURRENT_SAMPLE_CYCLES != 28u
+#error Dual acquisition uses 28 ADC sample cycles per rank
+#endif
+#define FOC_PORT_ADC_APERTURE_TICKS 640u
+#elif FOC_M0_DUAL_ADC
 #define FOC_PORT_ADC_APERTURE_TICKS (FOC_M0_CURRENT_SAMPLE_CYCLES * 8u)
 #else
 /* ADC1 sequential B then C: (sample + 12 convert + sample)*8.

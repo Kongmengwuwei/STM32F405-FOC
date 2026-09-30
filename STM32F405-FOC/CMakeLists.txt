@@ -10,4 +10,5 @@ set(FOC_INSTALLATION_ID "1" CACHE STRING "Physical sensor/magnet/phase installat
 set(FOC_PROTECTION "WARN" CACHE STRING "Threshold policy: WARN or TRIP")
 set(FOC_USB_DIVIDER "2" CACHE STRING "USB frame every N current samples")
 set(FOC_OUTPUT_NAME "STM32F405-FOC")
+option(FOC_DUAL "Run M0 and M1 together with TLE5012B encoders" ON)
 add_subdirectory(variants/m1-mt6835)
