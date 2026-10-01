@@ -1,0 +1,724 @@
+{
+  "type": "tabviews",
+  "vnumber": 100,
+  "ctx": [
+    {
+      "tabs": [
+        {
+          "name": "FOC 总览（send 6）",
+          "widgets": [
+            {
+              "path": "FOCOverview",
+              "type": "outside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 10,
+                      "y": 10,
+                      "width": 2780,
+                      "height": 570
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "WaveChart",
+              "type": "inside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "width": 910,
+                      "height": 850,
+                      "x": 10,
+                      "y": 600
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "status": {
+                            "mouse": {
+                              "mouseX": 3163,
+                              "mouseY": 897
+                            },
+                            "target": {
+                              "offset": {
+                                "x": 463,
+                                "y": 136
+                              },
+                              "x": 0,
+                              "y": 0,
+                              "width": 2727,
+                              "height": 780
+                            },
+                            "types": [
+                              0
+                            ]
+                          },
+                          "full_status": {
+                            "mouse": {
+                              "mouseX": 0,
+                              "mouseY": 0
+                            },
+                            "target": {
+                              "offset": {
+                                "x": 0,
+                                "y": 0
+                              },
+                              "x": 0,
+                              "y": 0,
+                              "width": 1580,
+                              "height": 880
+                            },
+                            "types": []
+                          },
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "font_size": 24,
+                  "xy_mode": false
+                },
+                "axis_x_wave": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 24999,
+                      "min_value": 0,
+                      "left_index": 20000,
+                      "right_index": 24999,
+                      "unit_text": "ms",
+                      "decimal": 0
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_wave2": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 0,
+                      "unit_text": ""
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_histog": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 10,
+                      "unit_text": "unit",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_freq": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 257,
+                      "unit_text": "hz",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_y_wave": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 100,
+                      "bottom_value": -100,
+                      "bar_index": 5,
+                      "decimal": 2
+                    }
+                  }
+                },
+                "axis_y_bar": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 5,
+                      "bottom_value": -5,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "wave_check": {
+                  "checked": true
+                },
+                "bar_check": {
+                  "checked": false
+                },
+                "freq_check": {
+                  "checked": false
+                },
+                "histog_check": {
+                  "checked": false
+                },
+                "simplify_check": {
+                  "checked": false
+                },
+                "all_font_on": {
+                  "checked": false
+                },
+                "hide_axis_x_check": {
+                  "checked": false
+                },
+                "hide_axis_y_check": {
+                  "checked": false
+                },
+                "hide_border_check": {
+                  "checked": false
+                },
+                "auto_bt_menu": {
+                  "locked": false
+                },
+                "rbw": {
+                  "ctx": {
+                    ".": {
+                      "histog_gap_num": 10,
+                      "freq_gap_num": 257,
+                      "lines": [
+                        0,
+                        1,
+                        18
+                      ],
+                      "fake_continuous": true,
+                      "line_width": 2
+                    }
+                  }
+                },
+                "x_ch_menu": {
+                  "indecies": []
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "lineColor2": "#ff5500",
+                      "lineColor2Follow1": true,
+                      "lineColor2Follow2": false,
+                      "lineColor": "black",
+                      "lineColorFollow1": false,
+                      "lineColorFollow2": true
+                    },
+                    "bgProperties": {
+                      "ctx": {
+                        ".": {
+                          "bgType": 0,
+                          "bgOnTop": true,
+                          "bgOpacity": 1,
+                          "bgRatio": 1,
+                          "bgFillMode": 1,
+                          "bgLR": 0,
+                          "bgLRMargin": 0,
+                          "bgTB": 0,
+                          "bgTBMargin": 0,
+                          "bgSource": "",
+                          "bgColor": "#ffffff",
+                          "bgColorOpacity": 0.6,
+                          "bgSourceFollowed": false,
+                          "bgColorFollowed": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "WaveChart",
+              "type": "inside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "width": 910,
+                      "height": 850,
+                      "x": 940,
+                      "y": 600
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "status": {
+                            "mouse": {
+                              "mouseX": 3163,
+                              "mouseY": 897
+                            },
+                            "target": {
+                              "offset": {
+                                "x": 463,
+                                "y": 136
+                              },
+                              "x": 0,
+                              "y": 0,
+                              "width": 2727,
+                              "height": 780
+                            },
+                            "types": [
+                              0
+                            ]
+                          },
+                          "full_status": {
+                            "mouse": {
+                              "mouseX": 0,
+                              "mouseY": 0
+                            },
+                            "target": {
+                              "offset": {
+                                "x": 0,
+                                "y": 0
+                              },
+                              "x": 0,
+                              "y": 0,
+                              "width": 1580,
+                              "height": 880
+                            },
+                            "types": []
+                          },
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "font_size": 24,
+                  "xy_mode": false
+                },
+                "axis_x_wave": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 24999,
+                      "min_value": 0,
+                      "left_index": 20000,
+                      "right_index": 24999,
+                      "unit_text": "ms",
+                      "decimal": 0
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_wave2": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 0,
+                      "unit_text": ""
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_histog": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 10,
+                      "unit_text": "unit",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_freq": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 257,
+                      "unit_text": "hz",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_y_wave": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 100,
+                      "bottom_value": -100,
+                      "bar_index": 5,
+                      "decimal": 2
+                    }
+                  }
+                },
+                "axis_y_bar": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 5,
+                      "bottom_value": -5,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "wave_check": {
+                  "checked": true
+                },
+                "bar_check": {
+                  "checked": false
+                },
+                "freq_check": {
+                  "checked": false
+                },
+                "histog_check": {
+                  "checked": false
+                },
+                "simplify_check": {
+                  "checked": false
+                },
+                "all_font_on": {
+                  "checked": false
+                },
+                "hide_axis_x_check": {
+                  "checked": false
+                },
+                "hide_axis_y_check": {
+                  "checked": false
+                },
+                "hide_border_check": {
+                  "checked": false
+                },
+                "auto_bt_menu": {
+                  "locked": false
+                },
+                "rbw": {
+                  "ctx": {
+                    ".": {
+                      "histog_gap_num": 10,
+                      "freq_gap_num": 257,
+                      "lines": [
+                        2,
+                        3
+                      ],
+                      "fake_continuous": true,
+                      "line_width": 2
+                    }
+                  }
+                },
+                "x_ch_menu": {
+                  "indecies": []
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "lineColor2": "#ff5500",
+                      "lineColor2Follow1": true,
+                      "lineColor2Follow2": false,
+                      "lineColor": "black",
+                      "lineColorFollow1": false,
+                      "lineColorFollow2": true
+                    },
+                    "bgProperties": {
+                      "ctx": {
+                        ".": {
+                          "bgType": 0,
+                          "bgOnTop": true,
+                          "bgOpacity": 1,
+                          "bgRatio": 1,
+                          "bgFillMode": 1,
+                          "bgLR": 0,
+                          "bgLRMargin": 0,
+                          "bgTB": 0,
+                          "bgTBMargin": 0,
+                          "bgSource": "",
+                          "bgColor": "#ffffff",
+                          "bgColorOpacity": 0.6,
+                          "bgSourceFollowed": false,
+                          "bgColorFollowed": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "WaveChart",
+              "type": "inside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "width": 910,
+                      "height": 850,
+                      "x": 1870,
+                      "y": 600
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "status": {
+                            "mouse": {
+                              "mouseX": 3163,
+                              "mouseY": 897
+                            },
+                            "target": {
+                              "offset": {
+                                "x": 463,
+                                "y": 136
+                              },
+                              "x": 0,
+                              "y": 0,
+                              "width": 2727,
+                              "height": 780
+                            },
+                            "types": [
+                              0
+                            ]
+                          },
+                          "full_status": {
+                            "mouse": {
+                              "mouseX": 0,
+                              "mouseY": 0
+                            },
+                            "target": {
+                              "offset": {
+                                "x": 0,
+                                "y": 0
+                              },
+                              "x": 0,
+                              "y": 0,
+                              "width": 1580,
+                              "height": 880
+                            },
+                            "types": []
+                          },
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "font_size": 24,
+                  "xy_mode": false
+                },
+                "axis_x_wave": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 24999,
+                      "min_value": 0,
+                      "left_index": 20000,
+                      "right_index": 24999,
+                      "unit_text": "ms",
+                      "decimal": 0
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_wave2": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 0,
+                      "unit_text": ""
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_histog": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 10,
+                      "unit_text": "unit",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_freq": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 257,
+                      "unit_text": "hz",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_y_wave": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 1.5,
+                      "bottom_value": -1.5,
+                      "bar_index": 5,
+                      "decimal": 2
+                    }
+                  }
+                },
+                "axis_y_bar": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 5,
+                      "bottom_value": -5,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "wave_check": {
+                  "checked": true
+                },
+                "bar_check": {
+                  "checked": false
+                },
+                "freq_check": {
+                  "checked": false
+                },
+                "histog_check": {
+                  "checked": false
+                },
+                "simplify_check": {
+                  "checked": false
+                },
+                "all_font_on": {
+                  "checked": false
+                },
+                "hide_axis_x_check": {
+                  "checked": false
+                },
+                "hide_axis_y_check": {
+                  "checked": false
+                },
+                "hide_border_check": {
+                  "checked": false
+                },
+                "auto_bt_menu": {
+                  "locked": false
+                },
+                "rbw": {
+                  "ctx": {
+                    ".": {
+                      "histog_gap_num": 10,
+                      "freq_gap_num": 257,
+                      "lines": [
+                        4,
+                        5,
+                        6,
+                        7
+                      ],
+                      "fake_continuous": true,
+                      "line_width": 2
+                    }
+                  }
+                },
+                "x_ch_menu": {
+                  "indecies": []
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "lineColor2": "#ff5500",
+                      "lineColor2Follow1": true,
+                      "lineColor2Follow2": false,
+                      "lineColor": "black",
+                      "lineColorFollow1": false,
+                      "lineColorFollow2": true
+                    },
+                    "bgProperties": {
+                      "ctx": {
+                        ".": {
+                          "bgType": 0,
+                          "bgOnTop": true,
+                          "bgOpacity": 1,
+                          "bgRatio": 1,
+                          "bgFillMode": 1,
+                          "bgLR": 0,
+                          "bgLRMargin": 0,
+                          "bgTB": 0,
+                          "bgTBMargin": 0,
+                          "bgSource": "",
+                          "bgColor": "#ffffff",
+                          "bgColorOpacity": 0.6,
+                          "bgSourceFollowed": false,
+                          "bgColorFollowed": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "file_url": "",
+          "bg": {
+            ".": {
+              "bgType": 0,
+              "bgOnTop": true,
+              "bgOpacity": 1,
+              "bgRatio": 1,
+              "bgFillMode": 1,
+              "bgLR": 0,
+              "bgLRMargin": 0,
+              "bgTB": 0,
+              "bgTBMargin": 0,
+              "bgSource": "",
+              "bgColor": "#ffffff",
+              "bgColorOpacity": 0.6,
+              "bgSourceFollowed": false,
+              "bgColorFollowed": true
+            }
+          }
+        }
+      ],
+      "is_top": true,
+      "x": 0,
+      "y": 0,
+      "width": 3840,
+      "height": 2064,
+      "currentIndex": 0,
+      "lastIndex": 0,
+      "file_url": ""
+    }
+  ]
+}
