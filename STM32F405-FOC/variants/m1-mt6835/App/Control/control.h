@@ -7,6 +7,10 @@
 /* Shared 1 kHz outer loops above the selected port's current loop. The ISR
    owns observation/controller state; commands publish targets under IRQ lock. */
 enum { CONTROL_TORQUE, CONTROL_SPEED, CONTROL_POSITION };
+#if FOC_GIMBAL
+bool control_test(uint32_t mode, float target); /* Timed Iq/speed diagnostics. */
+bool control_target_valid(uint32_t mode, float target, bool timed);
+#endif
 
 bool control_torque(float amps);      /* Target Iq, amps. */
 bool control_speed(float rpm);        /* Target speed, RPM, signed. */
@@ -14,6 +18,7 @@ bool control_position(float deg);     /* Target position, mechanical degrees, mu
 bool control_hold_position(void);     /* Re-target the last position, still scheduled. */
 bool control_zero(void);              /* Redefine the current position as 0 deg. */
 void control_stop(void);              /* stop/trip: torque mode, cleared integrators. */
+void control_resync(void);            /* Reset velocity history, preserve position zero. */
 
 /* Called every valid current-loop cycle, including idle, with the unwrapped
    mechanical position. Observes always; produces torque only in RUN at 1 kHz. */

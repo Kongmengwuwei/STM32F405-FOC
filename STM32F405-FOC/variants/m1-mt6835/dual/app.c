@@ -13,6 +13,13 @@
 static volatile int calibration_active = -1;
 static volatile uint32_t rejected;
 static uint32_t usb_session;
+#if FOC_GIMBAL
+static volatile bool axis_clear_pending;
+static volatile bool target_pending[2];
+static unsigned target_mode[2];
+static bool target_timed[2];
+static float target_value[2];
+#endif
 
 bool app_init(void)
 {
@@ -26,6 +33,10 @@ bool app_init(void)
 
 void app_abort(uint32_t fault)
 {
+#if FOC_GIMBAL
+    axis_clear_pending = false;
+    target_pending[0] = target_pending[1] = false;
+#endif
     dual_fault = fault;
     dual_hw_halt();
     foc0_trip(fault); foc1_trip(fault);
@@ -47,7 +58,6 @@ static void publish(unsigned i, foc_t *f, const dual_adc_t *a, float angle)
     else if (mode == 2u && !(i ? foc1_window(f->duty) : foc0_window(f->duty))) {
         app_fault(FOC_WINDOW); return;
     } else if (!dual_hw_write(i, f->duty, mode)) { app_fault(FOC_TIMING); return; }
-    if (i) foc1_outer_step(); else foc0_outer_step();
 }
 
 void dual_app_sample(void)
@@ -60,11 +70,38 @@ void dual_app_sample(void)
     float bus;
     if (!dual_hw_read_bus(&bus)) { app_fault(FOC_ADC); return; }
     a0.bus = a1.bus = bus;
+#if FOC_GIMBAL
+    if (axis_clear_pending) {
+        /* Reset only at the acquisition boundary. A foreground IRQ mask long
+           enough to reset both loops disturbed the 100 us sample interval. */
+        dual_hw_off_all();
+        foc_calibration_t c0 = foc0.calibration, c1 = foc1.calibration;
+        bool have0 = foc0.calibrated, have1 = foc1.calibrated;
+        foc0_init(have0 ? &c0 : NULL); foc1_init(have1 ? &c1 : NULL);
+        axis_clear_pending = false;
+    }
+#endif
     /* SPI1/PA1 now belongs to board M0; SPI3/PA0 belongs to board M1. */
     publish(0u, &foc0, &a0, angle[1]);
     if (dual_fault) return;
     publish(1u, &foc1, &a1, angle[0]);
     if (dual_fault) return;
+    /* Both current controllers must meet the preload deadline before either
+       slower outer loop runs. M0's 1 kHz work otherwise delays M1's write. */
+    foc0_outer_step(); foc1_outer_step();
+#if FOC_GIMBAL
+    for (unsigned i = 0; i < 2u; ++i) if (target_pending[i]) {
+        /* Both PWM preloads have already met this cycle's write deadline.
+           Apply commands here, never by delaying the ADC IRQ in foreground. */
+        bool ok = calibration_active < 0;
+        if (target_timed[i]) ok = ok && (i ? foc0.state : foc1.state) == FOC_IDLE &&
+            (i ? control1_test(target_mode[i], target_value[i]) : control0_test(target_mode[i], target_value[i]));
+        else ok = ok && (i ? control1_position(target_value[i]) : control0_position(target_value[i]));
+        if (ok && (i ? foc1.state : foc0.state) == FOC_PRECHARGE) dual_hw_arm(i);
+        if (!ok) ++rejected;
+        target_pending[i] = false;
+    }
+#endif
     ++dual_sequence;
     if (dual_sequence % (FOC_USB_DIVIDER * 5u) == 0u) {
         /* Two independent 12-channel snapshots, M0 first, then M1. */
@@ -103,17 +140,23 @@ static bool number(const char *s, float *out)
     return true;
 }
 
-static bool command_for(unsigned i, const char *cmd)
+static bool command_for(unsigned i, const char *cmd, bool numeric, float value)
 {
     foc_t *f = i ? &foc1 : &foc0;
     foc_t *other = i ? &foc0 : &foc1;
     if (!strcmp(cmd, "stop")) {
+#if FOC_GIMBAL
+        target_pending[i] = false;
+#endif
         dual_hw_off(i);
         if (i) foc1_stop(); else foc0_stop();
         if (calibration_active == (int)i) calibration_active = -1;
         return true;
     }
     if (dual_fault) return false;
+#if FOC_GIMBAL
+    if (target_pending[0] || target_pending[1]) return false;
+#endif
     if (calibration_active >= 0 && calibration_active != (int)i) return false;
     if (!strcmp(cmd, "test")) {
         if (f->state != FOC_IDLE) return false;
@@ -134,13 +177,24 @@ static bool command_for(unsigned i, const char *cmd)
         if (ok) dual_hw_arm(i);
         return ok;
     }
-    float value;
     bool ok;
-    if (!strncmp(cmd, "Iq ", 3u) && number(cmd + 3, &value))
+#if FOC_GIMBAL
+    if (!strncmp(cmd, "field ", 6u) && numeric)
+        ok = other->state == FOC_IDLE &&
+             (i ? foc1_field_test(value) : foc0_field_test(value));
+    else if (!strncmp(cmd, "itest ", 6u) && numeric)
+        ok = other->state == FOC_IDLE &&
+             (i ? control1_test(CONTROL_TORQUE, value) : control0_test(CONTROL_TORQUE, value));
+    else if (!strncmp(cmd, "stest ", 6u) && numeric)
+        ok = other->state == FOC_IDLE &&
+             (i ? control1_test(CONTROL_SPEED, value) : control0_test(CONTROL_SPEED, value));
+    else
+#endif
+    if (!strncmp(cmd, "Iq ", 3u) && numeric)
         ok = i ? control1_torque(value) : control0_torque(value);
-    else if (!strncmp(cmd, "rpm ", 4u) && number(cmd + 4, &value))
+    else if (!strncmp(cmd, "rpm ", 4u) && numeric)
         ok = i ? control1_speed(value) : control0_speed(value);
-    else if (!strncmp(cmd, "pos ", 4u) && number(cmd + 4, &value))
+    else if (!strncmp(cmd, "pos ", 4u) && numeric)
         ok = i ? control1_position(value) : control0_position(value);
     else return false;
     if (ok && f->state == FOC_PRECHARGE) dual_hw_arm(i);
@@ -152,12 +206,18 @@ bool app_command(const char *line)
     if (!strcmp(line, "stop") || !strcmp(line, "all stop")) {
         uint32_t key = __get_PRIMASK(); __disable_irq();
         dual_hw_off_all(); foc0_stop(); foc1_stop(); calibration_active = -1;
+#if FOC_GIMBAL
+        target_pending[0] = target_pending[1] = false;
+#endif
         __set_PRIMASK(key);
         return true;
     }
     if (!strcmp(line, "all test")) {
         uint32_t key = __get_PRIMASK(); __disable_irq();
         bool ok = !dual_fault && calibration_active < 0 &&
+#if FOC_GIMBAL
+                  !target_pending[0] && !target_pending[1] &&
+#endif
                   foc0.state == FOC_IDLE && foc1.state == FOC_IDLE &&
                   foc0_test() && foc1_test();
         if (ok) { dual_hw_arm(0u); dual_hw_arm(1u); }
@@ -166,24 +226,36 @@ bool app_command(const char *line)
         return ok;
     }
     if (!strcmp(line, "hello")) {
-        char banner[192];
+        char banner[256];
         int n = snprintf(banner, sizeof banner,
-            "#FOC dual 10k M0=SPI1/PA1:%lu/%lu M1=SPI3/PA0:%lu/%lu fault=%lu spi_pair_max=%lu cycles; use m0/m1 cal|test|Iq|rpm|pos|hold|zero|stop or all test\r\n",
+            "#FOC dual 10k M0=SPI1/PA1:%lu/%lu M1=SPI3/PA0:%lu/%lu fault=%lu spi_pair_max=%lu cycles; gimbal=%u; use m0/m1 cal|test|pos|hold|zero|stop; bench OFF also Iq|rpm\r\n",
             (unsigned long)foc0.state, (unsigned long)foc0.fault,
             (unsigned long)foc1.state, (unsigned long)foc1.fault,
-            (unsigned long)dual_fault, (unsigned long)dual_encoder_cycles_max);
+            (unsigned long)dual_fault, (unsigned long)dual_encoder_cycles_max, (unsigned)FOC_GIMBAL);
         if (n > 0 && (size_t)n < sizeof banner) (void)bsp_uart_write(banner, (size_t)n);
         bsp_uart_tick();
         return true;
     }
     if (!strcmp(line, "clear")) {
-        if (!dual_fault) {
+#if FOC_GIMBAL
+        if (!dual_fault && (foc0.fault || foc1.fault)) {
+            if (calibration_active >= 0 ||
+                (foc0.state != FOC_IDLE && foc0.state != FOC_FAULT) ||
+                (foc1.state != FOC_IDLE && foc1.state != FOC_FAULT)) return false;
+            axis_clear_pending = true;
+            return true;
+        }
+#endif
+        if (!dual_fault && !(FOC_GIMBAL && (foc0.fault || foc1.fault))) {
             uint32_t key = __get_PRIMASK(); __disable_irq();
             foc0_clear_warnings(); foc1_clear_warnings();
             __set_PRIMASK(key);
             return true;
         }
         if (calibration_active >= 0) return false;
+        if (FOC_GIMBAL && ((foc0.state != FOC_IDLE && foc0.state != FOC_FAULT) ||
+                           (foc1.state != FOC_IDLE && foc1.state != FOC_FAULT)))
+            return false; /* Explicit stop both axes before clearing a fault. */
         dual_hw_halt();
         if (!dual_hw_init()) return false;
         foc_calibration_t c0 = foc0.calibration, c1 = foc1.calibration;
@@ -195,8 +267,29 @@ bool app_command(const char *line)
     unsigned motor = 0u;
     if (!strncmp(line, "m0 ", 3u)) line += 3;
     else if (!strncmp(line, "m1 ", 3u)) { motor = 1u; line += 3; }
+    /* Decimal conversion can exceed the 5 us acquisition jitter allowance.
+       Parse with interrupts enabled; only publish controller state atomically. */
+    const char *argument = strchr(line, ' ');
+    float value = 0.0f;
+    bool numeric = argument && number(argument + 1, &value);
+#if FOC_GIMBAL
+    bool timed = !strncmp(line, "itest ", 6u) || !strncmp(line, "stest ", 6u);
+    if (numeric && (timed || !strncmp(line, "pos ", 4u))) {
+        unsigned wanted = !strncmp(line, "itest ", 6u) ? CONTROL_TORQUE :
+            !strncmp(line, "stest ", 6u) ? CONTROL_SPEED : CONTROL_POSITION;
+        unsigned other = 1u - motor;
+        if (target_pending[motor] || (target_pending[other] && (timed || target_timed[other])) || dual_fault || (calibration_active >= 0 && calibration_active != (int)motor) ||
+            (timed && (motor ? foc0.state : foc1.state) != FOC_IDLE) ||
+            !(motor ? control1_target_valid(wanted, value, timed) : control0_target_valid(wanted, value, timed)))
+            return false;
+        target_mode[motor] = wanted; target_timed[motor] = timed; target_value[motor] = value;
+        __DMB();
+        target_pending[motor] = true;
+        return true;
+    }
+#endif
     uint32_t key = __get_PRIMASK(); __disable_irq();
-    bool ok = command_for(motor, line);
+    bool ok = command_for(motor, line, numeric, value);
     __set_PRIMASK(key);
     return ok;
 }

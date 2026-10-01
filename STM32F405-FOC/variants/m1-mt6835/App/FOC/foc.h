@@ -12,6 +12,11 @@
 #define FOC_HOLD_TICKS (FOC_TRIGGER_TICKS + FOC_APERTURE_TICKS + FOC_TRIGGER_ALLOWANCE)
 #define FOC_EDGE_LIMIT ((FOC_TRIGGER_TICKS < FOC_PWM_PERIOD_TICKS - FOC_HOLD_TICKS ? \
                         FOC_TRIGGER_TICKS : FOC_PWM_PERIOD_TICKS - FOC_HOLD_TICKS) - FOC_SETTLE_TICKS - 2u)
+/* Equal duties give zero line voltage at any common-mode offset. With an
+   earlier ADC trigger, put the offset-measurement vector inside the same
+   quiet aperture as normal SVPWM instead of assuming 50% always fits. */
+#define FOC_PWM_ZERO_DUTY ((float)(FOC_EDGE_LIMIT < FOC_PWM_ARR / 2u ? \
+                                  FOC_EDGE_LIMIT : FOC_PWM_ARR / 2u) / (float)FOC_PWM_ARR)
 
 enum { FOC_IDLE, FOC_PRECHARGE, FOC_CALIBRATE, FOC_SAVE, FOC_RUN, FOC_FAULT, FOC_OFFSET, FOC_PWM_ZERO };
 enum { FOC_OK, FOC_SENSOR, FOC_ADC, FOC_TIMING, FOC_WINDOW, FOC_ALIGNMENT,
@@ -33,6 +38,14 @@ void foc_init(const foc_calibration_t *calibration);
 bool foc_current(float amps); /* Finite torque target; TRIP applies profile limits. */
 bool foc_calibrate(void);
 bool foc_test(void); /* Bounded open-loop electrical sweep; never saves calibration. */
+#if FOC_GIMBAL
+bool foc_field_test(float deg); /* 250 ms fixed-field current-path diagnostic. */
+#endif
+#if FOC_GIMBAL
+bool foc_start_run(void); /* Fresh PRECHARGE timing for a position-control run. */
+float foc_travel_deg(void); /* Travel from first valid angle at MCU boot. */
+bool foc_travel_ready(void);
+#endif
 void foc_stop(void);
 void foc_trip(uint32_t fault);
 void foc_warn(uint32_t warning); /* Sticky bit (1 << code), no state change. */

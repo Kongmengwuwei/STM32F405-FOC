@@ -18,6 +18,7 @@
 #include "foc_motor.h"
 #include "foc_encoder_profile.h"
 #include "foc_policy.h"
+#include "foc_gimbal.h"
 #include "foc_telemetry.h"
 #define FOC_USB_FRAME_HZ (FOC_SAMPLE_HZ / FOC_USB_DIVIDER)
 _Static_assert(FOC_SAMPLE_HZ % FOC_USB_DIVIDER == 0u, "USB divider must divide the control sample rate");
@@ -48,6 +49,31 @@ _Static_assert(FOC_SAMPLE_HZ % FOC_USB_DIVIDER == 0u, "USB divider must divide t
 #define FOC_POSITION_KP FOC_MOTOR_POSITION_KP
 #define FOC_POSITION_SPEED_MAX FOC_MOTOR_POSITION_SPEED_MAX
 #define FOC_AUTOCALIBRATE 0 /* First physical test always requires explicit cal. */
+
+#if FOC_GIMBAL
+#undef FOC_CURRENT_MAX
+#undef FOC_PHASE_TRIP
+#undef FOC_SPEED_MAX
+#undef FOC_TORQUE_SPEED_TRIP_RPM
+#undef FOC_SPEED_KP
+#undef FOC_SPEED_KI
+#undef FOC_POSITION_KP
+#undef FOC_POSITION_SPEED_MAX
+#undef FOC_ALIGNMENT_CURRENT_A
+#undef FOC_ALIGNMENT_VOLTS
+#undef FOC_VOLTAGE_FRACTION
+#define FOC_CURRENT_MAX FOC_GIMBAL_CURRENT_A
+#define FOC_PHASE_TRIP FOC_GIMBAL_PHASE_TRIP_A
+#define FOC_SPEED_MAX FOC_GIMBAL_SPEED_TRIP_RPM
+#define FOC_TORQUE_SPEED_TRIP_RPM FOC_SPEED_MAX
+#define FOC_SPEED_KP FOC_GIMBAL_SPEED_KP
+#define FOC_SPEED_KI FOC_GIMBAL_SPEED_KI
+#define FOC_POSITION_KP FOC_GIMBAL_POSITION_KP
+#define FOC_POSITION_SPEED_MAX FOC_GIMBAL_SPEED_RPM
+#define FOC_ALIGNMENT_CURRENT_A FOC_GIMBAL_ALIGNMENT_CURRENT_A
+#define FOC_ALIGNMENT_VOLTS FOC_GIMBAL_ALIGNMENT_VOLTS
+#define FOC_VOLTAGE_FRACTION FOC_GIMBAL_VOLTAGE_FRACTION
+#endif
 
 /* v3 Flash identity: port, motor model, encoder model, installation (4 bits
  * each). The old v1/v2 records cannot prove all four and are not reused. */

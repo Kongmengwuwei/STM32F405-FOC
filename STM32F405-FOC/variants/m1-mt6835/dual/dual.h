@@ -26,11 +26,24 @@ bool control##n##_zero(void); \
 uint32_t control##n##_mode(void); \
 float control##n##_speed_rpm(void); \
 float control##n##_speed_target(void); \
+float control##n##_speed_reference(void); \
 float control##n##_position_deg(void); \
 float control##n##_position_target(void)
 DECLARE_FOC(0);
 DECLARE_FOC(1);
 #undef DECLARE_FOC
+#if FOC_GIMBAL
+bool control0_test(uint32_t, float);
+bool control1_test(uint32_t, float);
+bool control0_target_valid(uint32_t, float, bool);
+bool control1_target_valid(uint32_t, float, bool);
+bool foc0_field_test(float);
+bool foc1_field_test(float);
+float foc0_travel_deg(void);
+float foc1_travel_deg(void);
+bool foc0_travel_ready(void);
+bool foc1_travel_ready(void);
+#endif
 
 typedef struct { float b, c, bus; } dual_adc_t;
 extern volatile uint32_t dual_sequence, dual_fault;

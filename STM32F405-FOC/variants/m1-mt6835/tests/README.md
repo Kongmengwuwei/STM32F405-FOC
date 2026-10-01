@@ -6,6 +6,7 @@
 |---|---|
 | `test_m0_unified.c` | 默认 M0 组合的校准、命令、三种模式、总览遥测及 WARN 行为 |
 | `test_dual_isolation.c` | 双路 FOC/外环状态、校准和故障相互隔离 |
+| `test_gimbal.c`、`run_gimbal.ps1`、`dual_stubs/` | 云台两轴定位、速度/电流限幅、正负限位、校准/试转限位和超速停机、清零/清故障不扩大行程、编码器和供电保护；真实双路解析器与控制器，WARN/TRIP 各 15 项（含负载释放制动、诊断超时、双轴目标排队/撤销、四方向 RL 电流跟踪、校准阻尼、端点稳定与起始磁场偏移补偿） |
 | `test_tle5012b_response.c` | 用实机 SPI1/SPI3 帧检查两只编码器各自的传感器编号、CRC 和状态位 |
 | `test_app_usb.c`、`test_justfloat.c` | 命令解析、帧格式、旧组兼容与异常输入 |
 | `test_control_pid.c`、`test_control_observer.c`、`foc_stub.c` | 外环响应、模式切换、观察器和抗饱和 |
@@ -16,7 +17,13 @@
 | `capture_usb.py` | 实机 USB 连续性记录；打开 COM 前先断开 VOFA |
 | `../tools/dual_smoke.py` | 双路固件单轴限时校准监测；超时、故障或告警时发送 `stop` |
 
-在 `variants/m1-mt6835/` 目录，先建 `build/`，再用主机 GCC 运行核心测试，例如：
+云台测试在主机安装 GCC 后，从项目最外层运行：
+
+```powershell
+./STM32F405-FOC/variants/m1-mt6835/tests/run_gimbal.ps1
+```
+
+其他旧台架测试不启用 `FOC_GIMBAL`。在 `variants/m1-mt6835/` 目录，先建 `build/`，再用主机 GCC 运行核心测试，例如：
 
 ```powershell
 gcc -std=c11 -Wall -Wextra -Werror -O2 -DFOC_PORT_M0 -DFOC_ENCODER_TLE5012B -DFOC_MOTOR_ZH3620_1 -DFOC_INSTALLATION_ID=1 -I App/Control -I App/FOC -I App/Protocols/JustFloat -I App/Hardware/bsp -I App/Hardware/encoder -I App/Config tests/test_m0_unified.c App/Control/app.c App/Control/control.c App/FOC/foc.c -lm -o build/test_m0_unified.exe

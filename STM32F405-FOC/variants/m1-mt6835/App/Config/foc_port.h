@@ -19,8 +19,10 @@
 #define FOC_SAMPLE_CYCLES_MAX 17600u
 #ifndef FOC_M0_TRIGGER_TICKS
 #ifdef FOC_DUAL
-/* Leave both controllers time to write their PWM preloads before the update. */
-#define FOC_M0_TRIGGER_TICKS 6500u
+/* SPI1 needs 2.625 MHz on the current wiring. Acquire earlier so both
+   controllers still meet the unchanged 600-tick PWM preload deadline.
+   foc_window()/foc_modulate() retain the quiet aperture and settling guard. */
+#define FOC_M0_TRIGGER_TICKS 4000u
 #else
 #define FOC_M0_TRIGGER_TICKS 8200u
 #endif

@@ -17,6 +17,18 @@ volatile uint16_t dual_init_status[2], dual_init_safety[2];
 volatile uint32_t dual_probe_spi_valid, dual_probe_crc_valid;
 volatile uint16_t dual_probe_status[4], dual_probe_safety[4];
 volatile uint32_t dual_after_probe_crc[8];
+#ifdef FOC_ENCODER_DIAGNOSTIC_ONLY
+/* Opt-in bench build: no ADC acquisition or motor command processing starts.
+ * Raw arrays use [rate][SPI lane][sample][data/safety]; samples alternate
+ * STAT (0x8001) and ANGLE (0x8021). SPI3 stays at its normal clock rate. */
+volatile uint32_t encoder_diag_complete;
+volatile uint32_t encoder_diag_hz[7];
+volatile uint32_t encoder_diag_spi_valid[7][2];
+volatile uint16_t encoder_diag_raw[7][2][32][2];
+volatile uint32_t encoder_diag_long_samples;
+volatile uint32_t encoder_diag_long_crc_good[2], encoder_diag_long_angle_good[2];
+volatile uint32_t encoder_diag_long_min[2], encoder_diag_long_max[2];
+#endif
 volatile uint32_t dual_angle_spi_valid, dual_angle_sample_valid;
 volatile uint16_t dual_angle_data[2], dual_angle_safety[2];
 volatile uint32_t dual_sensor_status_captured;
@@ -34,6 +46,9 @@ volatile uint32_t dual_sequence, dual_fault;
 volatile uint32_t dual_timing_site, dual_timing_counter, dual_timing_direction;
 volatile uint32_t dual_timing_reason, dual_timing_ready, dual_timing_mode;
 volatile uint32_t dual_timing_pending, dual_timing_foc_state[2], dual_timing_sequence;
+/* Motor order M0/M1. Downcount write minima and upcount update maxima expose
+   the measured margin to the unchanged 600-tick deadlines while armed. */
+volatile uint32_t dual_write_counter_min[2], dual_update_counter_max[2];
 static uint32_t last_sample;
 
 static TIM_TypeDef *timer(unsigned i) { return i ? TIM8 : TIM1; }
@@ -118,7 +133,11 @@ static bool spi_wait(SPI_TypeDef *spi, uint32_t flag, bool set)
 {
     uint32_t start = DWT->CYCCNT;
     while (((spi->SR & flag) != 0u) != set)
+#ifdef FOC_ENCODER_DIAGNOSTIC_ONLY
+        if (DWT->CYCCNT - start > 30000u) return false;
+#else
         if (DWT->CYCCNT - start > 3000u) return false;
+#endif
     return true;
 }
 
@@ -129,24 +148,15 @@ static void spi_recover(SPI_TypeDef *spi)
     spi->CR1 |= SPI_CR1_SPE;
 }
 
-/* Both 16-bit SPI peripherals run at 5.25 MHz. */
-static unsigned transfer_pair(unsigned active, uint16_t tx, uint16_t rx[2])
+/* Frames select one lane at a time. Avoid dual-lane arrays/loops on every
+   word, retaining the same TX/RX/busy waits and timeout recovery. */
+static bool transfer_word(SPI_TypeDef *spi, uint16_t tx, uint16_t *rx)
 {
-    SPI_TypeDef *const spi[2] = {SPI3, SPI1};
-    for (unsigned i = 0u; i < 2u; ++i)
-        if ((active & (1u << i)) && !spi_wait(spi[i], SPI_SR_TXE, true))
-            active &= ~(1u << i);
-    if (active & 1u) SPI3->DR = tx;
-    if (active & 2u) SPI1->DR = tx;
-    for (unsigned i = 0u; i < 2u; ++i) {
-        if (!(active & (1u << i))) continue;
-        if (!spi_wait(spi[i], SPI_SR_RXNE, true)) active &= ~(1u << i);
-        else rx[i] = (uint16_t)spi[i]->DR;
-    }
-    for (unsigned i = 0u; i < 2u; ++i)
-        if ((active & (1u << i)) && !spi_wait(spi[i], SPI_SR_BSY, false))
-            active &= ~(1u << i);
-    return active;
+    if (!spi_wait(spi, SPI_SR_TXE, true)) return false;
+    spi->DR = tx;
+    if (!spi_wait(spi, SPI_SR_RXNE, true)) return false;
+    *rx = (uint16_t)spi->DR;
+    return spi_wait(spi, SPI_SR_BSY, false);
 }
 
 /* Keep only one CS low. The board's original encoder wiring can share nets even
@@ -155,25 +165,25 @@ static unsigned frame_lane(unsigned lane, unsigned cs, uint16_t command,
                            uint16_t *data, uint16_t *safety)
 {
     unsigned bit = 1u << lane;
-    uint16_t ignored[2] = {0u, 0u}, rx_data[2] = {0u, 0u}, rx_safety[2] = {0u, 0u};
+    SPI_TypeDef *spi = lane ? SPI1 : SPI3;
+    uint16_t ignored = 0u;
+    *data = *safety = 0u;
     GPIOA->BSRR = GPIO_PIN_0 | GPIO_PIN_1;
     uint32_t gap = DWT->CYCCNT;
     while (DWT->CYCCNT - gap < 110u) {} /* SSC CS-off: at least 600 ns. */
     GPIOA->BSRR = (GPIO_PIN_0 << cs) << 16;
     gap = DWT->CYCCNT;
     while (DWT->CYCCNT - gap < 24u) {} /* CS setup: at least 105 ns. */
-    unsigned active = transfer_pair(bit, command, ignored);
+    bool active = transfer_word(spi, command, &ignored);
     gap = DWT->CYCCNT;
     while (DWT->CYCCNT - gap < 32u) {} /* TLE5012B command-to-read delay. */
-    active = transfer_pair(active, 0xffffu, rx_data);
-    active = transfer_pair(active, 0xffffu, rx_safety);
+    active = active && transfer_word(spi, 0xffffu, data);
+    active = active && transfer_word(spi, 0xffffu, safety);
     gap = DWT->CYCCNT;
     while (DWT->CYCCNT - gap < 24u) {} /* CS hold: at least 105 ns. */
     GPIOA->BSRR = GPIO_PIN_0 | GPIO_PIN_1;
-    if (!(active & bit)) spi_recover(lane ? SPI1 : SPI3);
-    *data = rx_data[lane];
-    *safety = rx_safety[lane];
-    return active & bit;
+    if (!active) spi_recover(spi);
+    return active ? bit : 0u;
 }
 
 static unsigned frame_pair(uint16_t command, uint16_t data[2], uint16_t safety[2])
@@ -182,6 +192,116 @@ static unsigned frame_pair(uint16_t command, uint16_t data[2], uint16_t safety[2
     active |= frame_lane(0u, 0u, command, &data[0], &safety[0]);
     return active;
 }
+
+#ifdef FOC_ENCODER_DIAGNOSTIC_ONLY
+static void diagnostic_delay(unsigned cycles)
+{
+    uint32_t start = DWT->CYCCNT;
+    while (DWT->CYCCNT - start < cycles) {}
+}
+
+static uint16_t diagnostic_gpio_word(uint16_t word)
+{
+    uint16_t received = 0u;
+    for (unsigned bit = 0u; bit < 16u; ++bit) {
+        GPIOB->BSRR = word & 0x8000u ? GPIO_PIN_5 : GPIO_PIN_5 << 16;
+        diagnostic_delay(1680u);
+        GPIOB->BSRR = GPIO_PIN_3;
+        diagnostic_delay(1680u);
+        GPIOB->BSRR = GPIO_PIN_3 << 16;
+        diagnostic_delay(168u);
+        received = (uint16_t)((received << 1) | !!(GPIOB->IDR & GPIO_PIN_4));
+        word = (uint16_t)(word << 1);
+    }
+    return received;
+}
+
+static void diagnostic_gpio_frame(uint16_t command, uint16_t *data, uint16_t *safety)
+{
+    GPIOA->BSRR = GPIO_PIN_0 | GPIO_PIN_1;
+    diagnostic_delay(1680u);
+    GPIOA->BSRR = GPIO_PIN_1 << 16;
+    diagnostic_delay(1680u);
+    (void)diagnostic_gpio_word(command);
+    diagnostic_delay(1680u);
+    *data = diagnostic_gpio_word(0xffffu);
+    *safety = diagnostic_gpio_word(0xffffu);
+    diagnostic_delay(1680u);
+    GPIOA->BSRR = GPIO_PIN_0 | GPIO_PIN_1;
+}
+
+static void encoder_link_diagnostic(void)
+{
+    static const unsigned baud_bits[6] = {3u, 4u, 5u, 6u, 7u, 3u};
+    dual_hw_off_all();
+    for (unsigned rate = 0u; rate < 6u; ++rate) {
+        SPI1->CR1 &= ~SPI_CR1_SPE;
+        (void)SPI1->DR; (void)SPI1->SR;
+        SPI1->CR1 = (SPI1->CR1 & ~SPI_CR1_BR) | (baud_bits[rate] << 3);
+        SPI1->CR1 |= SPI_CR1_SPE;
+        encoder_diag_hz[rate] = 84000000u / (2u << baud_bits[rate]);
+        for (unsigned sample = 0u; sample < 32u; ++sample) {
+            uint16_t data[2] = {0u, 0u}, safety[2] = {0u, 0u};
+            unsigned valid = frame_pair(sample & 1u ? 0x8021u : 0x8001u,
+                                        data, safety);
+            for (unsigned lane = 0u; lane < 2u; ++lane) {
+                encoder_diag_raw[rate][lane][sample][0] = data[lane];
+                encoder_diag_raw[rate][lane][sample][1] = safety[lane];
+                if (valid & (1u << lane))
+                    encoder_diag_spi_valid[rate][lane] |= 1u << sample;
+            }
+            HAL_Delay(1u);
+        }
+    }
+    /* CPOL=0/CPHA=1 on the same pins, independent of SPI1's AF input path.
+     * Half cycles are at least 10 us; motor gates remain low throughout. */
+    SPI1->CR1 &= ~SPI_CR1_SPE;
+    GPIOB->BSRR = GPIO_PIN_5 | (GPIO_PIN_3 << 16);
+    uint32_t saved_moder = GPIOB->MODER;
+    GPIOB->MODER = (saved_moder & ~(63u << 6)) | (1u << 6) | (1u << 10);
+    encoder_diag_hz[6] = 50000u; /* Upper bound; loop overhead lowers the clock. */
+    for (unsigned sample = 0u; sample < 32u; ++sample) {
+        uint16_t command = sample & 1u ? 0x8021u : 0x8001u;
+        uint16_t data = 0u, safety = 0u;
+        unsigned valid = frame_lane(0u, 0u, command, &data, &safety);
+        encoder_diag_raw[6][0][sample][0] = data;
+        encoder_diag_raw[6][0][sample][1] = safety;
+        if (valid) encoder_diag_spi_valid[6][0] |= 1u << sample;
+        diagnostic_gpio_frame(command, &data, &safety);
+        encoder_diag_raw[6][1][sample][0] = data;
+        encoder_diag_raw[6][1][sample][1] = safety;
+        encoder_diag_spi_valid[6][1] |= 1u << sample;
+        HAL_Delay(1u);
+    }
+    GPIOB->MODER = saved_moder;
+    SPI1->CR1 |= SPI_CR1_SPE;
+    SPI1->CR1 &= ~SPI_CR1_SPE;
+    SPI1->CR1 = (SPI1->CR1 & ~SPI_CR1_BR) | (4u << 3); /* SPI1 2.625 MHz. */
+    SPI1->CR1 |= SPI_CR1_SPE;
+    encoder_diag_long_min[0] = encoder_diag_long_min[1] = 32768u;
+    for (unsigned sample = 0u; sample < 10000u; ++sample) {
+        uint16_t data[2] = {0u, 0u}, safety[2] = {0u, 0u};
+        unsigned valid = frame_pair(0x8021u, data, safety);
+        for (unsigned lane = 0u; lane < 2u; ++lane) {
+            if ((valid & (1u << lane)) &&
+                tle5012b_safety_crc_ok(0x8021u, data[lane], safety[lane]))
+                ++encoder_diag_long_crc_good[lane];
+            if ((valid & (1u << lane)) &&
+                tle5012b_angle_sample_valid_sensor(0x8021u, data[lane], safety[lane],
+                                                   lane ? 3u : 0u)) {
+                ++encoder_diag_long_angle_good[lane];
+                unsigned angle = tle5012b_angle15(data[lane]);
+                if (angle < encoder_diag_long_min[lane]) encoder_diag_long_min[lane] = angle;
+                if (angle > encoder_diag_long_max[lane]) encoder_diag_long_max[lane] = angle;
+            }
+        }
+        ++encoder_diag_long_samples;
+        HAL_Delay(1u);
+    }
+    dual_hw_off_all();
+    encoder_diag_complete = 0x454e4344u;
+}
+#endif
 
 static void probe_single(unsigned lane, unsigned cs)
 {
@@ -277,11 +397,16 @@ bool dual_hw_init(void)
     __HAL_RCC_SPI1_CLK_ENABLE();
     SPI1->CR1 = 0u;
     SPI1->CR2 = 0u;
-    /* APB2=84 MHz / 16 matches SPI3's APB1=42 MHz / 8, both 5.25 MHz.
-       TLE5012B supports at most 8 MHz; preserve the verified SPI3 rate. */
+    /* M0's current wiring fails at APB2/16, but 10000 consecutive samples
+       passed at APB2/32 with both encoders connected. SPI3 stays unchanged. */
     SPI1->CR1 = SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI |
-                SPI_CR1_DFF | SPI_CR1_CPHA | SPI_CR1_BR_0 | SPI_CR1_BR_1;
+                SPI_CR1_DFF | SPI_CR1_CPHA | SPI_CR1_BR_2;
     SPI1->CR1 |= SPI_CR1_SPE;
+#ifdef FOC_ENCODER_DIAGNOSTIC_ONLY
+    encoder_link_diagnostic();
+    /* main's failed-init loop polls USB only and rejects all motor commands. */
+    return false;
+#endif
     uint16_t status[2] = {0u, 0u}, safety[2] = {0u, 0u};
     dual_init_first_crc_valid = dual_init_attempts = 0u;
     for (unsigned attempt = 0u; attempt < 5u; ++attempt) {
@@ -360,6 +485,8 @@ bool dual_hw_init(void)
 void dual_hw_start(void)
 {
     last_sample = 0u;
+    dual_write_counter_min[0] = dual_write_counter_min[1] = UINT32_MAX;
+    dual_update_counter_max[0] = dual_update_counter_max[1] = 0u;
     TIM8->CR1 |= TIM_CR1_CEN;
     TIM1->CR1 |= TIM_CR1_CEN;
 }
@@ -403,6 +530,8 @@ bool dual_hw_read_bus(float *voltage)
 bool dual_hw_write(unsigned i, const float duty[3], unsigned mode)
 {
     TIM_TypeDef *t = timer(i);
+    uint32_t counter = t->CNT;
+    if (counter < dual_write_counter_min[i]) dual_write_counter_min[i] = counter;
     if (motors[i].inhibited || !(t->CR1 & TIM_CR1_DIR) || t->CNT < 600u) {
         dual_timing_site = i + 1u;
         dual_timing_counter = t->CNT;
@@ -420,6 +549,12 @@ bool dual_hw_update(unsigned i)
 {
     TIM_TypeDef *t = timer(i);
     t->SR = ~TIM_SR_UIF;
+    /* An inhibited bridge has no PWM deadline: dual_hw_off() already forced
+       every gate low. Foreground stop may briefly mask this idle interrupt.
+       Armed/precharge/running bridges still require the checks below. */
+    if (motors[i].inhibited) { motors[i].ready = false; return true; }
+    uint32_t counter = t->CNT;
+    if (counter > dual_update_counter_max[i]) dual_update_counter_max[i] = counter;
     if ((t->CR1 & TIM_CR1_DIR) || t->CNT > 600u ||
         (!motors[i].ready && motors[i].mode != OFF)) {
         dual_timing_site = i + 3u;
@@ -436,7 +571,6 @@ bool dual_hw_update(unsigned i)
         dual_timing_sequence = dual_sequence;
         dual_hw_off_all(); return false;
     }
-    if (motors[i].inhibited) { motors[i].ready = false; return true; }
     if (motors[i].ready && motors[i].pending != motors[i].mode) {
         unsigned mode = motors[i].pending;
         if (mode == OFF) dual_hw_off(i);
