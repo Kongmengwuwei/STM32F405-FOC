@@ -19,6 +19,8 @@ static volatile bool target_pending[2];
 static unsigned target_mode[2];
 static bool target_timed[2];
 static float target_value[2];
+static volatile bool pair_pending;
+static float pair_value[2];
 #endif
 
 bool app_init(void)
@@ -36,6 +38,7 @@ void app_abort(uint32_t fault)
 #if FOC_GIMBAL
     axis_clear_pending = false;
     target_pending[0] = target_pending[1] = false;
+    pair_pending = false;
 #endif
     dual_fault = fault;
     dual_hw_halt();
@@ -90,6 +93,24 @@ void dual_app_sample(void)
        slower outer loop runs. M0's 1 kHz work otherwise delays M1's write. */
     foc0_outer_step(); foc1_outer_step();
 #if FOC_GIMBAL
+    if (pair_pending) {
+        /* Validate both axes before changing either target. One flag publishes
+           the complete foreground pair after both PWM writes meet their deadline. */
+        bool ok = calibration_active < 0 &&
+            control0_target_valid(CONTROL_POSITION, pair_value[0], false) &&
+            control1_target_valid(CONTROL_POSITION, pair_value[1], false);
+        if (ok) {
+            ok = control0_position(pair_value[0]) && control1_position(pair_value[1]);
+            if (ok) {
+                if (foc0.state == FOC_PRECHARGE) dual_hw_arm(0u);
+                if (foc1.state == FOC_PRECHARGE) dual_hw_arm(1u);
+            } else {
+                dual_hw_off_all(); foc0_stop(); foc1_stop();
+            }
+        }
+        if (!ok) ++rejected;
+        pair_pending = false;
+    }
     for (unsigned i = 0; i < 2u; ++i) if (target_pending[i]) {
         /* Both PWM preloads have already met this cycle's write deadline.
            Apply commands here, never by delaying the ADC IRQ in foreground. */
@@ -147,6 +168,7 @@ static bool command_for(unsigned i, const char *cmd, bool numeric, float value)
     if (!strcmp(cmd, "stop")) {
 #if FOC_GIMBAL
         target_pending[i] = false;
+        pair_pending = false;
 #endif
         dual_hw_off(i);
         if (i) foc1_stop(); else foc0_stop();
@@ -155,7 +177,7 @@ static bool command_for(unsigned i, const char *cmd, bool numeric, float value)
     }
     if (dual_fault) return false;
 #if FOC_GIMBAL
-    if (target_pending[0] || target_pending[1]) return false;
+    if (pair_pending || target_pending[0] || target_pending[1]) return false;
 #endif
     if (calibration_active >= 0 && calibration_active != (int)i) return false;
     if (!strcmp(cmd, "test")) {
@@ -203,11 +225,32 @@ static bool command_for(unsigned i, const char *cmd, bool numeric, float value)
 
 bool app_command(const char *line)
 {
+#if FOC_GIMBAL
+    if (!strncmp(line, "gimbal pos ", 11u)) {
+        const char *first = line + 11u;
+        const char *separator = strchr(first, ' ');
+        char yaw[24];
+        float values[2];
+        if (!separator || separator == first ||
+            (size_t)(separator - first) >= sizeof yaw) return false;
+        memcpy(yaw, first, (size_t)(separator - first));
+        yaw[separator - first] = 0;
+        if (!number(yaw, &values[0]) || !number(separator + 1, &values[1]) ||
+            pair_pending || target_pending[0] || target_pending[1] ||
+            axis_clear_pending || dual_fault || calibration_active >= 0 ||
+            !control0_target_valid(CONTROL_POSITION, values[0], false) ||
+            !control1_target_valid(CONTROL_POSITION, values[1], false)) return false;
+        pair_value[0] = values[0]; pair_value[1] = values[1];
+        __DMB(); pair_pending = true;
+        return true;
+    }
+#endif
     if (!strcmp(line, "stop") || !strcmp(line, "all stop")) {
         uint32_t key = __get_PRIMASK(); __disable_irq();
         dual_hw_off_all(); foc0_stop(); foc1_stop(); calibration_active = -1;
 #if FOC_GIMBAL
         target_pending[0] = target_pending[1] = false;
+        pair_pending = false;
 #endif
         __set_PRIMASK(key);
         return true;
@@ -216,7 +259,7 @@ bool app_command(const char *line)
         uint32_t key = __get_PRIMASK(); __disable_irq();
         bool ok = !dual_fault && calibration_active < 0 &&
 #if FOC_GIMBAL
-                  !target_pending[0] && !target_pending[1] &&
+                  !pair_pending && !target_pending[0] && !target_pending[1] &&
 #endif
                   foc0.state == FOC_IDLE && foc1.state == FOC_IDLE &&
                   foc0_test() && foc1_test();
@@ -278,7 +321,7 @@ bool app_command(const char *line)
         unsigned wanted = !strncmp(line, "itest ", 6u) ? CONTROL_TORQUE :
             !strncmp(line, "stest ", 6u) ? CONTROL_SPEED : CONTROL_POSITION;
         unsigned other = 1u - motor;
-        if (target_pending[motor] || (target_pending[other] && (timed || target_timed[other])) || dual_fault || (calibration_active >= 0 && calibration_active != (int)motor) ||
+        if (pair_pending || axis_clear_pending || target_pending[motor] || (target_pending[other] && (timed || target_timed[other])) || dual_fault || (calibration_active >= 0 && calibration_active != (int)motor) ||
             (timed && (motor ? foc0.state : foc1.state) != FOC_IDLE) ||
             !(motor ? control1_target_valid(wanted, value, timed) : control0_target_valid(wanted, value, timed)))
             return false;

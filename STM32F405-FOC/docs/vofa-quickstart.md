@@ -1,4 +1,8 @@
-# VOFA+：连接、命令与 24 通道总览
+# VOFA+：连接、命令与监控
+
+**当前默认双轴云台固件请使用[双轴命令与专用界面](vofa-gimbal.md)**：`m0 pos 10`、`m1 pos -10` 分别设角度，`gimbal pos 10 -10` 同时设两轴，`stop` 关闭两轴。固定 24 通道 / 1 kHz，M0 角度 I2/I3，M1 角度 I14/I15；载入 `vofa-gimbal.tabview.json`，时间间隔 1 ms，不发送 `send 6`。以下为历史单轴台架模式，通道含义与当前双轴不同。
+
+## 历史单轴台架总览（FOC_DUAL=OFF、FOC_GIMBAL=OFF）
 
 当前固件默认发送 `send 6`：24 个普通 float32 加 JustFloat 帧尾，共 100 字节/帧。M0 默认每 4 个 10 kHz 控制周期发一帧，即 2.5 kHz；电流环仍是 10 kHz。`send 0`～`send 5` 是兼容台架采集工具的 12 通道旧组，切到旧组时本页总览通道名不再适用。
 

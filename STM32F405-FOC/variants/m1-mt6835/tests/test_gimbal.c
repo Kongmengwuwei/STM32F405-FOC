@@ -131,6 +131,31 @@ int main(int argc, char **argv)
         CHECK(foc0.iq_ref > 0.0f && foc1.iq_ref > 0.0f); /* Opposite calibrated direction. */
         CHECK(command("m0 stop") && foc0.state == FOC_IDLE && foc1.state == FOC_RUN);
         CHECK(command("stop") && off == 3u && foc1.state == FOC_IDLE);
+    } else if (!strcmp(argv[1], "paired_commands")) {
+        CHECK(!command("gimbal pos 10 85.01"));
+        CHECK(!command("gimbal pos nan 0") && !command("gimbal pos 0 inf"));
+        CHECK(!command("gimbal pos 1 2 3") && !command("gimbal pos 1"));
+        CHECK(!command("gimbal pos 1000001 0"));
+        CHECK(!command("gimbal pos 1.001 2") && !command("gimbal pos  1 2"));
+        CHECK(foc0.state == FOC_IDLE && foc1.state == FOC_IDLE && armed == 0u);
+        CHECK(app_command("gimbal pos 10.25 -20.50"));
+        CHECK(control0_position_target() == 0 && control1_position_target() == 0);
+        CHECK(!app_command("m0 pos 1") && !app_command("gimbal pos 0 0"));
+        sample();
+        CHECK(armed == 3u && control0_position_target() == 10.25f && control1_position_target() == -20.5f);
+        CHECK(!command("gimbal pos 30 -86"));
+        CHECK(control0_position_target() == 10.25f && control1_position_target() == -20.5f);
+        CHECK(command("gimbal pos 360 85"));
+        CHECK(app_command("gimbal pos -360 -85") && app_command("stop"));
+        sample();
+        CHECK(foc0.state == FOC_IDLE && foc1.state == FOC_IDLE);
+        CHECK(app_command("gimbal pos 1 2") && app_command("m1 stop"));
+        sample();
+        CHECK(foc0.state == FOC_IDLE && foc1.state == FOC_IDLE);
+        CHECK(app_command("gimbal pos 1 2"));
+        foc1_trip(FOC_SENSOR); /* Fault between parse and commit must reject BOTH. */
+        sample();
+        CHECK(foc0.state == FOC_IDLE && control0_position_target() == 0);
     } else if (!strcmp(argv[1], "response")) {
         plant = true;
         CHECK(command("m0 pos 20") && command("m1 pos -15"));

@@ -1,0 +1,109 @@
+{
+  "type": "cmds",
+  "vnumber": 100,
+  "ctx": {
+    "name": "双轴云台",
+    "intro_on": true,
+    "intro": "任意角度使用画布输入框，或发送框：gimbal pos 10 -10",
+    "hex_on": false,
+    "loop_on": false,
+    "loop_ms": 100,
+    "loop_count": 1,
+    "cmd_hex": "",
+    "is_group": true,
+    "down": true,
+    "subCmds": [
+      {
+        "name": "关闭两轴输出",
+        "intro_on": true,
+        "intro": "关闭驱动；竖直轴会失去支撑力",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "73 74 6F 70 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "两轴回软件零位",
+        "intro_on": true,
+        "intro": "启动两轴并保持软件零位",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "67 69 6D 62 61 6C 20 70 6F 73 20 30 20 30 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "M0 保持当前位置",
+        "intro_on": true,
+        "intro": "启动水平轴位置保持",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "6D 30 20 68 6F 6C 64 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "M1 保持当前位置",
+        "intro_on": true,
+        "intro": "启动竖直轴位置保持",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "6D 31 20 68 6F 6C 64 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "关闭 M0",
+        "intro_on": true,
+        "intro": "只关闭水平轴",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "6D 30 20 73 74 6F 70 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "关闭 M1",
+        "intro_on": true,
+        "intro": "只关闭竖直轴",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "6D 31 20 73 74 6F 70 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "清除故障",
+        "intro_on": true,
+        "intro": "先停机并排除故障，不会自动启动",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "63 6C 65 61 72 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      }
+    ]
+  }
+}
