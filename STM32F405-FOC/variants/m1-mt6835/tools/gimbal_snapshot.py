@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
 import struct
 import subprocess
@@ -12,10 +13,20 @@ CUBE = Path("C:/Users/kongmeng/.vscode/extensions/stmicroelectronics.stm32cube-i
 NM = Path("D:/STM32CubeIDE/STM32CubeIDE_1.19.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.0.202411081344/tools/bin/arm-none-eabi-nm.exe")
 
 
+def default_programmer():
+    root = Path(os.environ.get("LOCALAPPDATA", "")) / "stm32cube/bundles/programmer"
+    candidates = list(root.glob("*/bin/STM32_Programmer_CLI.exe"))
+    if candidates:
+        return max(candidates, key=lambda p: tuple(int(x) for x in re.findall(r"\d+", p.parents[1].name)))
+    return CUBE
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("elf", type=Path)
     parser.add_argument("out", type=Path)
+    parser.add_argument("--programmer", type=Path, default=default_programmer(),
+                        help="cube.exe wrapper or STM32_Programmer_CLI.exe")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
@@ -39,7 +50,10 @@ def main():
     expected = binary.read_bytes()
 
     def read(name, address, size):
-        log = run([CUBE, "programmer", "-c", "port=SWD", "freq=1000", "mode=HOTPLUG", "-r32", hex(address), str(size)])
+        programmer = [args.programmer]
+        if args.programmer.name.lower() == "cube.exe":
+            programmer.append("programmer")
+        log = run(programmer + ["-c", "port=SWD", "freq=1000", "mode=HOTPLUG", "-r32", hex(address), str(size)])
         (args.out / (name + ".log")).write_text(log, encoding="utf-8")
         words = []
         for match in re.finditer(r"0x[0-9a-fA-F]+\s*:\s*((?:[0-9a-fA-F]{8}[ \t]*)+)", log):
@@ -102,6 +116,12 @@ def main():
         data = read(name, address, size)
         code = "H" if name in ("dual_init_status", "dual_init_safety") else "I"
         result[name] = list(struct.unpack("<" + code * (size // (2 if code == "H" else 4)), data))
+    if "dual_sensor_number" in symbols:
+        address, size = symbols["dual_sensor_number"][0]
+        result["dual_sensor_number"] = list(struct.unpack("<2I", read("dual_sensor_number", address, size)))
+    if "dual_probe_crc_valid" in symbols:
+        address, size = symbols["dual_probe_crc_valid"][0]
+        result["dual_probe_crc_valid"] = list(struct.unpack("<I", read("dual_probe_crc_valid", address, size)))
     # Sensor diagnostics use SPI lane order, unlike USB's M0/M1 motor order.
     # frame_pair(): lane 0 = SPI3/PA0/M1; lane 1 = SPI1/PA1/M0.
     result["encoder_startup_channels"] = []
@@ -118,6 +138,10 @@ def main():
         result["field_diagnostics"] = []
         for axis, (address, size) in enumerate(sorted(symbols["field_diagnostics"])):
             result["field_diagnostics"].append(list(struct.unpack("<8f", read(f"field_{axis}", address, size))))
+    if "current_trip_snapshot" in symbols:
+        result["current_trip_snapshot"] = []
+        for axis, (address, size) in enumerate(sorted(symbols["current_trip_snapshot"])):
+            result["current_trip_snapshot"].append(list(struct.unpack("<9f", read(f"current_trip_{axis}", address, size))))
     result["pwm_ccer"] = [struct.unpack("<I", read("tim1_ccer", 0x40010020, 4))[0],
                           struct.unpack("<I", read("tim8_ccer", 0x40010420, 4))[0]]
     result["outputs_off"] = result["pwm_ccer"] == [0x1000, 0]

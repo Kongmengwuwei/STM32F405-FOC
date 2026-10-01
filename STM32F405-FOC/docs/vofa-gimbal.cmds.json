@@ -42,7 +42,7 @@
       {
         "name": "M0 保持当前位置",
         "intro_on": true,
-        "intro": "启动水平轴位置保持",
+        "intro": "启动俯仰轴位置保持",
         "hex_on": false,
         "loop_on": false,
         "loop_ms": 100,
@@ -55,7 +55,7 @@
       {
         "name": "M1 保持当前位置",
         "intro_on": true,
-        "intro": "启动竖直轴位置保持",
+        "intro": "启动水平轴位置保持",
         "hex_on": false,
         "loop_on": false,
         "loop_ms": 100,
@@ -68,7 +68,7 @@
       {
         "name": "关闭 M0",
         "intro_on": true,
-        "intro": "只关闭水平轴",
+        "intro": "只关闭俯仰轴",
         "hex_on": false,
         "loop_on": false,
         "loop_ms": 100,
@@ -81,7 +81,7 @@
       {
         "name": "关闭 M1",
         "intro_on": true,
-        "intro": "只关闭竖直轴",
+        "intro": "只关闭水平轴",
         "hex_on": false,
         "loop_on": false,
         "loop_ms": 100,

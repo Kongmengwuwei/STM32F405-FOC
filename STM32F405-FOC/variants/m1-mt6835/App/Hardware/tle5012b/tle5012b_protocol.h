@@ -19,6 +19,7 @@ bool tle5012b_safety_system_ok(uint16_t safety);
 bool tle5012b_safety_interface_ok(uint16_t safety);
 bool tle5012b_safety_reset_clear(uint16_t safety);
 bool tle5012b_safety_sensor_response(uint16_t safety, unsigned sensor_number);
+unsigned tle5012b_safety_sensor_number(uint16_t safety); /* 0..3, or 4 for malformed response. */
 bool tle5012b_safety_sensor0_response(uint16_t safety);
 bool tle5012b_angle_sample_valid_sensor(uint16_t command, uint16_t data,
                                         uint16_t safety, unsigned sensor_number);

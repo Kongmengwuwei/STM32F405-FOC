@@ -17,7 +17,7 @@ try {
         )
         & gcc @compilerArgs
         if ($LASTEXITCODE -ne 0) { throw "Gimbal test compilation failed, policy=$policy" }
-        foreach ($case in @('commands', 'paired_commands', 'response', 'braking', 'speed_foldback', 'zero', 'travel', 'cal_limit', 'negative_limit', 'cal_speed', 'sensor', 'protection', 'diagnostic', 'cal_settle', 'cal_damping', 'field_tracking')) {
+        foreach ($case in @('commands', 'paired_commands', 'response', 'braking', 'speed_foldback', 'disturbance', 'heavy_disturbance', 'holding', 'noisy_hold', 'run_speed_trip', 'zero', 'travel', 'cal_limit', 'negative_limit', 'cal_speed', 'sensor', 'protection', 'diagnostic', 'cal_settle', 'cal_damping', 'field_tracking')) {
             & $gimbalExe $case
             if ($LASTEXITCODE -ne 0) { throw "Gimbal test failed: $case, policy=$policy" }
         }

@@ -56,6 +56,13 @@ bool tle5012b_safety_sensor0_response(uint16_t safety)
   return tle5012b_safety_sensor_response(safety, 0u);
 }
 
+unsigned tle5012b_safety_sensor_number(uint16_t safety)
+{
+  for (unsigned number = 0u; number < 4u; ++number)
+    if (tle5012b_safety_sensor_response(safety, number)) return number;
+  return 4u;
+}
+
 bool tle5012b_angle_sample_valid_sensor(uint16_t command, uint16_t data,
                                         uint16_t safety, unsigned sensor_number)
 {

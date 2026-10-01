@@ -46,6 +46,8 @@ void control_resync(void)
 }
 #if FOC_GIMBAL
 static float position_origin;
+static bool holding;
+static float hold_settle_s;
 static bool diagnostic;
 static uint32_t diagnostic_ms, diagnostic_duration_ms;
 static float diagnostic_origin;
@@ -79,6 +81,8 @@ void control_stop(void)
 {
 #if FOC_GIMBAL
     diagnostic = false;
+    holding = false;
+    hold_settle_s = 0.0f;
 #endif
     mode = CONTROL_TORQUE;
     fault = 0u;
@@ -147,6 +151,10 @@ static bool start(uint32_t wanted, float target)
 {
     if (!ready(wanted, target)) return false;
     if (!continuous(wanted)) {
+#if FOC_GIMBAL
+        holding = false;
+        hold_settle_s = 0.0f;
+#endif
         integral_speed = 0.0f;
         reference = 0.0f; /* Never reuse an old mode's outer-loop output. */
         speed_reference = speed;
@@ -229,6 +237,9 @@ bool control_position(float deg)
         if (FOC_PROTECTION_TRIP) return false;
     }
     if (!start(CONTROL_POSITION, deg)) return false;
+#if FOC_GIMBAL
+    if (deg != position_target) { holding = false; hold_settle_s = 0.0f; }
+#endif
     position_target = deg;
     return true;
 }
@@ -242,6 +253,8 @@ bool control_hold_position(void)
     if (!start(CONTROL_POSITION, 0.0f)) return false;
 #if FOC_GIMBAL
     position_target = held;
+    holding = false;
+    hold_settle_s = 0.0f;
 #else
     position_target = position; /* Stop where we are, but keep holding it. */
 #endif
@@ -272,6 +285,21 @@ static float outer_output(float dt)
     if (mode == CONTROL_POSITION) {
         float distance = position_target - position;
         float omega = POSITION_KP * distance;
+#if FOC_GIMBAL
+        /* Once settled, oppose external loads without waiting for a travel
+           acceleration ramp. Keep the latch through a displacement; a NEW
+           target returns to the trajectory. Identical resends preserve hold. */
+        if (!holding) {
+            /* A 1 ms encoder-count derivative can exceed 0.5 RPM even at
+               rest. The position window held for 100 ms still requires
+               settling; allow that measured quantisation in the speed gate. */
+            if (fabsf(distance) <= 0.15f && fabsf(speed) <= FOC_GIMBAL_HOLD_SETTLE_RPM)
+                hold_settle_s += dt;
+            else hold_settle_s = 0.0f;
+            if (hold_settle_s >= 0.10f) holding = true;
+        }
+        if (holding) omega = FOC_GIMBAL_HOLD_POSITION_KP * distance;
+#endif
         float ceiling = FOC_POSITION_SPEED_MAX;
         /* Degrees = 3 * RPM^2 / acceleration(RPM/s). Approach fast while
            distant; reserve enough remaining distance to brake. The linear P
@@ -279,6 +307,7 @@ static float outer_output(float dt)
         float brake_speed = sqrtf(FOC_MOTOR_POSITION_BRAKE_RPM_PER_S * fabsf(distance) / 3.0f);
 #if FOC_GIMBAL
         brake_speed = sqrtf(FOC_GIMBAL_ACCEL_RPM_PER_S * fabsf(distance) / 3.0f);
+        if (holding) brake_speed = ceiling; /* Speed PI supplies holding damping. */
 #endif
         if (brake_speed < ceiling) ceiling = brake_speed;
         /* Position approach speed is a trajectory parameter, not a fault or
@@ -297,6 +326,7 @@ static float outer_output(float dt)
     speed_reference += change;
 #if FOC_GIMBAL
     if (mode == CONTROL_POSITION) {
+        if (holding) speed_reference = speed_target;
         /* A load release can make actual velocity exceed the planned ramp.
            The distance-based braking ceiling must take priority over slew:
            otherwise the second ramp keeps asking for forward torque after
@@ -312,6 +342,14 @@ static float outer_output(float dt)
     kp = FOC_GIMBAL_SPEED_KP;
 #endif
     float wanted = kp * error + integral_speed;
+#if FOC_GIMBAL
+    /* A settled shaft needs restoring torque even after its desired return
+       speed reaches the trajectory ceiling. Keep velocity damping, integral
+       load compensation and the existing current/voltage/speed limits. */
+    if (mode == CONTROL_POSITION && holding)
+        wanted += (float)foc.calibration.direction *
+                  FOC_GIMBAL_HOLD_CURRENT_A_PER_DEG * (position_target - position);
+#endif
     float limited = wanted;
     if (fabsf(wanted) > FOC_CURRENT_MAX) foc_warn(FOC_CURRENT);
     if (FOC_PROTECTION_TRIP || FOC_GIMBAL) {
@@ -320,8 +358,13 @@ static float outer_output(float dt)
     }
     float applied = limited;
 #if FOC_GIMBAL
-    if (mode == CONTROL_POSITION)
-        applied = foc_gimbal_limit_speed_current(limited, foc.rpm, foc.calibration.direction);
+    if (mode == CONTROL_POSITION) {
+        /* Use the faster estimate on a released load. The FOC velocity has
+           a longer filter; waiting for it lets stored holding torque keep
+           accelerating the shaft. Both estimates remain subject to trips. */
+        float guard_speed = fabsf(speed) > fabsf(foc.rpm) ? speed : foc.rpm;
+        applied = foc_gimbal_limit_speed_current(limited, guard_speed, foc.calibration.direction);
+    }
 #endif
     /* Do not wind up against unavailable inverter voltage. Preserve WARN's
        direct-current commands and do not add a current threshold lockout. */
@@ -333,7 +376,7 @@ static float outer_output(float dt)
         if (integral_speed > FOC_CURRENT_MAX) integral_speed = FOC_CURRENT_MAX;
         if (integral_speed < -FOC_CURRENT_MAX) integral_speed = -FOC_CURRENT_MAX;
     }
-    return limited;
+    return applied;
 }
 
 void control_step(uint32_t sample_us, float mechanical_deg)

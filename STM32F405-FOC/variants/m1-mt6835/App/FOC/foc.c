@@ -32,6 +32,8 @@ static bool tracking, aligning, test_mode;
 static bool field_mode;
 static float field_angle;
 static volatile float field_diagnostics[8]; /* ud, uq, sin, cos, ib, ic, ia, beta */
+/* Latch the exact 10 kHz sample that trips, before 1 kHz USB can miss it. */
+static volatile float current_trip_snapshot[9]; /* ia, ib, ic, iq, id, ref, rpm, bus, sample_us */
 #endif
 
 #if FOC_GIMBAL
@@ -361,7 +363,20 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     foc.iq = -ia * s + beta * c;
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         float trip = FOC_PHASE_TRIP;
-        if ((fabsf(ia) >= trip || fabsf(ib) >= trip || fabsf(ic) >= trip) && foc_check(FOC_CURRENT)) return;
+        if (fabsf(ia) >= trip || fabsf(ib) >= trip || fabsf(ic) >= trip) {
+#if FOC_GIMBAL
+            current_trip_snapshot[0] = ia;
+            current_trip_snapshot[1] = ib;
+            current_trip_snapshot[2] = ic;
+            current_trip_snapshot[3] = foc.iq;
+            current_trip_snapshot[4] = foc.id;
+            current_trip_snapshot[5] = foc.iq_ref;
+            current_trip_snapshot[6] = foc.rpm;
+            current_trip_snapshot[7] = bus_voltage;
+            current_trip_snapshot[8] = (float)motor_sample_us;
+#endif
+            if (foc_check(FOC_CURRENT)) return;
+        }
         float speed_trip = control_mode() == CONTROL_TORQUE ? FOC_TORQUE_SPEED_TRIP_RPM : FOC_SPEED_MAX;
 #if FOC_GIMBAL
         if (aligning) {
@@ -369,7 +384,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             /* Calibration follows one electrical turn, with short settling
                peaks; fixed-field diagnostics still retain the 10 RPM limit. */
             if (FOC_GIMBAL_AXIS == 1 && field_mode)
-                speed_trip = FOC_SPEED_MAX;
+                speed_trip = FOC_GIMBAL_FIELD_SPEED_TRIP_RPM;
         }
 #endif
         if ((!aligning || FOC_GIMBAL) && fabsf(foc.rpm) >= speed_trip && foc_check(FOC_SPEED)) return;

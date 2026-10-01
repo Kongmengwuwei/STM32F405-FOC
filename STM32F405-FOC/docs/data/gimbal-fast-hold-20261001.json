@@ -1,0 +1,803 @@
+{
+  "m0": {
+    "passed": true,
+    "stop_confirmed": true,
+    "max_final_error_deg": 0.030517578125,
+    "max_final_span_deg": 0.10986328125,
+    "stages": [
+      {
+        "target": 1.0,
+        "frames": 3943,
+        "iq_mean": 0.2992653661236471,
+        "id_mean": -0.0009163353618588393,
+        "iq_error_rms": 0.08546785475104418,
+        "id_rms": 0.020397552859129635,
+        "rpm_mean": -0.018969333901697277,
+        "rpm_range": [
+          -3.683986186981201,
+          3.62666654586792
+        ],
+        "pos_final": 1.021728515625,
+        "pos_range": [
+          -0.010986328125,
+          1.0546875
+        ],
+        "iq_target_range": [
+          -0.022376546636223793,
+          0.6208876967430115
+        ],
+        "position_error": 0.021728515625,
+        "last_half_second_range": [
+          0.94482421875,
+          1.043701171875
+        ],
+        "settle_0_2_deg_s": 0.3601617999956943,
+        "other_position_error": 0.02197265625,
+        "other_last_half_second_range": [
+          -0.032958984375,
+          0.032958984375
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": -1.0,
+        "frames": 3999,
+        "iq_mean": -0.11279753848246418,
+        "id_mean": -0.0011927858917134824,
+        "iq_error_rms": 0.07045293139963726,
+        "id_rms": 0.01721833304082863,
+        "rpm_mean": -0.012209841815551908,
+        "rpm_range": [
+          -4.320068359375,
+          3.5874269008636475
+        ],
+        "pos_final": -0.977783203125,
+        "pos_range": [
+          -1.0546875,
+          1.021728515625
+        ],
+        "iq_target_range": [
+          -0.46019265055656433,
+          0.5133014917373657
+        ],
+        "position_error": 0.022216796875,
+        "last_half_second_range": [
+          -1.043701171875,
+          -0.933837890625
+        ],
+        "settle_0_2_deg_s": 0.42002010000578593,
+        "other_position_error": -0.010986328125,
+        "other_last_half_second_range": [
+          -0.032958984375,
+          0.02197265625
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": 10.0,
+        "frames": 3997,
+        "iq_mean": -0.2651799572976651,
+        "id_mean": 0.009353875974570488,
+        "iq_error_rms": 0.07235778190965557,
+        "id_rms": 0.04503306397276661,
+        "rpm_mean": -0.016962490837883065,
+        "rpm_range": [
+          -3.5304887294769287,
+          12.62384033203125
+        ],
+        "pos_final": 10.030517578125,
+        "pos_range": [
+          -1.03271484375,
+          10.34912109375
+        ],
+        "iq_target_range": [
+          -0.5961490869522095,
+          0.4827673137187958
+        ],
+        "position_error": 0.030517578125,
+        "last_half_second_range": [
+          9.95361328125,
+          10.052490234375
+        ],
+        "settle_0_2_deg_s": 0.5802988000068581,
+        "other_position_error": 0.02197265625,
+        "other_last_half_second_range": [
+          -0.0439453125,
+          0.032958984375
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": -10.0,
+        "frames": 3999,
+        "iq_mean": -0.1479739220995529,
+        "id_mean": 0.0007333628760249007,
+        "iq_error_rms": 0.032022316977114176,
+        "id_rms": 0.03569158875344733,
+        "rpm_mean": -0.008178020316157854,
+        "rpm_range": [
+          -21.296979904174805,
+          2.2338807582855225
+        ],
+        "pos_final": -9.99755859375,
+        "pos_range": [
+          -10.030517578125,
+          10.030517578125
+        ],
+        "iq_target_range": [
+          -0.7038500905036926,
+          0.2966695725917816
+        ],
+        "position_error": 0.00244140625,
+        "last_half_second_range": [
+          -10.030517578125,
+          -9.9755859375
+        ],
+        "settle_0_2_deg_s": 0.4401252999959979,
+        "other_position_error": 0.010986328125,
+        "other_last_half_second_range": [
+          -0.010986328125,
+          0.02197265625
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": 30.0,
+        "frames": 3999,
+        "iq_mean": 0.3853675982356071,
+        "id_mean": 2.8991681756451727e-06,
+        "iq_error_rms": 0.07557268245273951,
+        "id_rms": 0.03189088616639032,
+        "rpm_mean": 0.0217669677734375,
+        "rpm_range": [
+          -4.209874153137207,
+          26.932870864868164
+        ],
+        "pos_final": 29.981689453125,
+        "pos_range": [
+          -10.030517578125,
+          30.047607421875
+        ],
+        "iq_target_range": [
+          -0.3865741789340973,
+          0.7229012250900269
+        ],
+        "position_error": -0.018310546875,
+        "last_half_second_range": [
+          29.959716796875,
+          30.047607421875
+        ],
+        "settle_0_2_deg_s": 0.7099346999893896,
+        "other_position_error": -0.02197265625,
+        "other_last_half_second_range": [
+          -0.032958984375,
+          0.0439453125
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": -30.0,
+        "frames": 3999,
+        "iq_mean": -0.1981999225693174,
+        "id_mean": 0.0029191638799476445,
+        "iq_error_rms": 0.05996111760781222,
+        "id_rms": 0.025128150667198753,
+        "rpm_mean": -0.0038933011122269205,
+        "rpm_range": [
+          -27.23410415649414,
+          3.0038459300994873
+        ],
+        "pos_final": -29.99267578125,
+        "pos_range": [
+          -30.03662109375,
+          30.025634765625
+        ],
+        "iq_target_range": [
+          -0.6770946383476257,
+          0.6053339838981628
+        ],
+        "position_error": 0.00732421875,
+        "last_half_second_range": [
+          -30.025634765625,
+          -29.981689453125
+        ],
+        "settle_0_2_deg_s": 0.7600583000021288,
+        "other_position_error": -0.010986328125,
+        "other_last_half_second_range": [
+          -0.02197265625,
+          0.02197265625
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": 0.0,
+        "frames": 3999,
+        "iq_mean": 0.19056895256973802,
+        "id_mean": 0.001027992839808576,
+        "iq_error_rms": 0.07247257506325006,
+        "id_rms": 0.020853985425819305,
+        "rpm_mean": 0.02408500520512462,
+        "rpm_range": [
+          -2.40541410446167,
+          23.68872833251953
+        ],
+        "pos_final": 0.02197265625,
+        "pos_range": [
+          -30.0146484375,
+          0.054931640625
+        ],
+        "iq_target_range": [
+          -0.42186304926872253,
+          0.5277019143104553
+        ],
+        "position_error": 0.02197265625,
+        "last_half_second_range": [
+          -0.0439453125,
+          0.0439453125
+        ],
+        "settle_0_2_deg_s": 0.5404147999943234,
+        "other_position_error": -0.02197265625,
+        "other_last_half_second_range": [
+          -0.032958984375,
+          0.032958984375
+        ],
+        "other_hold_passed": true
+      }
+    ]
+  },
+  "m1": {
+    "passed": true,
+    "stop_confirmed": true,
+    "max_final_error_deg": 0.023193359375,
+    "max_final_span_deg": 0.06591796875,
+    "stages": [
+      {
+        "target": 10.0,
+        "frames": 3945,
+        "iq_mean": -0.5989129165044198,
+        "id_mean": 0.0002935922731502125,
+        "iq_error_rms": 0.03286428671383277,
+        "id_rms": 0.017401988153319847,
+        "rpm_mean": -0.0028615934895172427,
+        "rpm_range": [
+          -0.49104487895965576,
+          9.757050514221191
+        ],
+        "pos_final": 10.008544921875,
+        "pos_range": [
+          0.0,
+          10.030517578125
+        ],
+        "iq_target_range": [
+          -0.7127644419670105,
+          0.02050248347222805
+        ],
+        "position_error": 0.008544921875,
+        "last_half_second_range": [
+          9.9755859375,
+          10.030517578125
+        ],
+        "settle_0_2_deg_s": 0.7301114000001689,
+        "other_position_error": 0.0,
+        "other_last_half_second_range": [
+          -0.02197265625,
+          0.02197265625
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": -10.0,
+        "frames": 3999,
+        "iq_mean": 0.18041709796698005,
+        "id_mean": -0.006535356213269687,
+        "iq_error_rms": 0.041922115103947444,
+        "id_rms": 0.028475889446551814,
+        "rpm_mean": -0.007185896916241661,
+        "rpm_range": [
+          -13.762171745300293,
+          0.7109284996986389
+        ],
+        "pos_final": -10.008544921875,
+        "pos_range": [
+          -10.030517578125,
+          10.008544921875
+        ],
+        "iq_target_range": [
+          -0.6211581230163574,
+          0.4337119162082672
+        ],
+        "position_error": -0.008544921875,
+        "last_half_second_range": [
+          -10.030517578125,
+          -9.964599609375
+        ],
+        "settle_0_2_deg_s": 0.8400791000021854,
+        "other_position_error": 0.0,
+        "other_last_half_second_range": [
+          -0.054931640625,
+          0.0439453125
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": 30.0,
+        "frames": 3999,
+        "iq_mean": -0.5341697671899089,
+        "id_mean": 0.0031855638522689266,
+        "iq_error_rms": 0.032242693029011844,
+        "id_rms": 0.028642335105585812,
+        "rpm_mean": 0.009289483499877085,
+        "rpm_range": [
+          -0.41561803221702576,
+          20.59087371826172
+        ],
+        "pos_final": 30.003662109375,
+        "pos_range": [
+          -10.01953125,
+          30.025634765625
+        ],
+        "iq_target_range": [
+          -0.7331652641296387,
+          0.2336711585521698
+        ],
+        "position_error": 0.003662109375,
+        "last_half_second_range": [
+          29.981689453125,
+          30.025634765625
+        ],
+        "settle_0_2_deg_s": 0.9904523000004701,
+        "other_position_error": 0.0,
+        "other_last_half_second_range": [
+          -0.02197265625,
+          0.02197265625
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": -30.0,
+        "frames": 3999,
+        "iq_mean": 0.4670998549461365,
+        "id_mean": 0.004995405846275389,
+        "iq_error_rms": 0.020929630809090043,
+        "id_rms": 0.031031083653567434,
+        "rpm_mean": 0.002429917563567869,
+        "rpm_range": [
+          -24.858200073242188,
+          0.6493931412696838
+        ],
+        "pos_final": -29.981689453125,
+        "pos_range": [
+          -30.025634765625,
+          30.0146484375
+        ],
+        "iq_target_range": [
+          -0.5504899024963379,
+          0.5811619162559509
+        ],
+        "position_error": 0.018310546875,
+        "last_half_second_range": [
+          -30.025634765625,
+          -29.981689453125
+        ],
+        "settle_0_2_deg_s": 1.2401871999900322,
+        "other_position_error": -0.010986328125,
+        "other_last_half_second_range": [
+          -0.02197265625,
+          0.02197265625
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": 60.0,
+        "frames": 3999,
+        "iq_mean": -0.9427481276966702,
+        "id_mean": 0.0008004113147660838,
+        "iq_error_rms": 0.03807379549835554,
+        "id_rms": 0.017932290925598216,
+        "rpm_mean": 0.007887910457467225,
+        "rpm_range": [
+          -0.5358538627624512,
+          24.655929565429688
+        ],
+        "pos_final": 60.00732421875,
+        "pos_range": [
+          -30.0146484375,
+          60.029296875
+        ],
+        "iq_target_range": [
+          -1.0565341711044312,
+          0.5329276919364929
+        ],
+        "position_error": 0.00732421875,
+        "last_half_second_range": [
+          59.9853515625,
+          60.029296875
+        ],
+        "settle_0_2_deg_s": 1.4902521000039997,
+        "other_position_error": -0.010986328125,
+        "other_last_half_second_range": [
+          -0.02197265625,
+          0.02197265625
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": -60.0,
+        "frames": 3999,
+        "iq_mean": 0.8560839049956378,
+        "id_mean": -0.0003055900622926214,
+        "iq_error_rms": 0.03601808669907334,
+        "id_rms": 0.03463057583942689,
+        "rpm_mean": 0.00619996441887719,
+        "rpm_range": [
+          -24.487762451171875,
+          0.6138521432876587
+        ],
+        "pos_final": -60.00732421875,
+        "pos_range": [
+          -60.029296875,
+          60.018310546875
+        ],
+        "iq_target_range": [
+          -0.9460120797157288,
+          1.0213278532028198
+        ],
+        "position_error": -0.00732421875,
+        "last_half_second_range": [
+          -60.029296875,
+          -59.974365234375
+        ],
+        "settle_0_2_deg_s": 1.7500760000111768,
+        "other_position_error": -0.010986328125,
+        "other_last_half_second_range": [
+          -0.032958984375,
+          0.02197265625
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": 85.0,
+        "frames": 3999,
+        "iq_mean": -1.1105707777994815,
+        "id_mean": -0.0008652180691127813,
+        "iq_error_rms": 0.036038577755224725,
+        "id_rms": 0.02089518806026983,
+        "rpm_mean": 0.009302733171182884,
+        "rpm_range": [
+          -0.5851505994796753,
+          24.483596801757812
+        ],
+        "pos_final": 85.01220703125,
+        "pos_range": [
+          -60.018310546875,
+          85.0341796875
+        ],
+        "iq_target_range": [
+          -1.279989242553711,
+          0.9121720790863037
+        ],
+        "position_error": 0.01220703125,
+        "last_half_second_range": [
+          84.979248046875,
+          85.0341796875
+        ],
+        "settle_0_2_deg_s": 1.8299947000050452,
+        "other_position_error": -0.010986328125,
+        "other_last_half_second_range": [
+          -0.032958984375,
+          0.032958984375
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": -85.0,
+        "frames": 4002,
+        "iq_mean": 0.9134965151548385,
+        "id_mean": 0.0018369327939581127,
+        "iq_error_rms": 0.024808929944905484,
+        "id_rms": 0.03356925106303053,
+        "rpm_mean": 0.009172118410933763,
+        "rpm_range": [
+          -24.507047653198242,
+          0.645287811756134
+        ],
+        "pos_final": -85.023193359375,
+        "pos_range": [
+          -85.045166015625,
+          85.023193359375
+        ],
+        "iq_target_range": [
+          -1.1499606370925903,
+          1.349481463432312
+        ],
+        "position_error": -0.023193359375,
+        "last_half_second_range": [
+          -85.0341796875,
+          -84.979248046875
+        ],
+        "settle_0_2_deg_s": 1.8397162000037497,
+        "other_position_error": 0.010986328125,
+        "other_last_half_second_range": [
+          -0.0439453125,
+          0.0439453125
+        ],
+        "other_hold_passed": true
+      },
+      {
+        "target": 0.0,
+        "frames": 3999,
+        "iq_mean": -0.13426826377906423,
+        "id_mean": 0.0009507409511318449,
+        "iq_error_rms": 0.03179898076638817,
+        "id_rms": 0.033628899835615136,
+        "rpm_mean": 0.017495514074482237,
+        "rpm_range": [
+          -0.6649836897850037,
+          24.675127029418945
+        ],
+        "pos_final": 0.0,
+        "pos_range": [
+          -85.023193359375,
+          0.032958984375
+        ],
+        "iq_target_range": [
+          -0.5682317614555359,
+          0.9582419991493225
+        ],
+        "position_error": 0.0,
+        "last_half_second_range": [
+          -0.032958984375,
+          0.02197265625
+        ],
+        "settle_0_2_deg_s": 1.0500513000006322,
+        "other_position_error": 0.02197265625,
+        "other_last_half_second_range": [
+          -0.0439453125,
+          0.032958984375
+        ],
+        "other_hold_passed": true
+      }
+    ]
+  },
+  "firmware": {
+    "STM32F405-FOC.elf": "689744bffd389f6d70aaecd6f7605b40f8d0e9d5236d9049012b28cf18e40828",
+    "STM32F405-FOC.bin": "1c6122e4a0d3926a6eda1240243a3b47a3e3d3dd2d66a1d8a43599cb430b61fa"
+  },
+  "current_limit_A": 8,
+  "speed_RPM": 24,
+  "acceleration_RPM_s": 80,
+  "static_hold_8A": {
+    "passed": true,
+    "stop_confirmed": true,
+    "events": [
+      [],
+      []
+    ],
+    "local_travel_window_deg": 15.0,
+    "m0": {
+      "peak_error_deg": 0.054931640625,
+      "final_error_deg": 0.02197265625,
+      "last_second_span_deg": 0.098876953125,
+      "iq_target_range": [
+        -0.09671594947576523,
+        0.4468472898006439
+      ],
+      "observed_angle_disturbance": false
+    },
+    "m1": {
+      "peak_error_deg": 0.032958984375,
+      "final_error_deg": -0.010986328125,
+      "last_second_span_deg": 0.06591796875,
+      "iq_target_range": [
+        -0.24940551817417145,
+        0.007641816511750221
+      ],
+      "observed_angle_disturbance": false
+    },
+    "frames": 62698
+  },
+  "external_hold_8A_verified": false,
+  "snapshot": {
+    "elf_sha256": "689744bffd389f6d70aaecd6f7605b40f8d0e9d5236d9049012b28cf18e40828",
+    "calibration_records": [
+      {
+        "version": 5,
+        "identity": 571539463,
+        "zero": 1.6521382331848145,
+        "direction": 1,
+        "checksum_valid": true,
+        "record_valid": true
+      },
+      {
+        "version": 5,
+        "identity": 303169543,
+        "zero": 4.040125846862793,
+        "direction": -1,
+        "checksum_valid": true,
+        "record_valid": true
+      }
+    ],
+    "foc0": {
+      "state": 0,
+      "fault": 0,
+      "calibrated": true,
+      "zero_ready": true,
+      "calibration_zero": 1.6521382331848145,
+      "calibration_direction": 1
+    },
+    "foc1": {
+      "state": 0,
+      "fault": 0,
+      "calibrated": true,
+      "zero_ready": true,
+      "calibration_zero": 4.040125846862793,
+      "calibration_direction": -1
+    },
+    "dual_fault": [
+      0
+    ],
+    "dual_angle_sample_valid": [
+      3
+    ],
+    "dual_init_crc_valid": [
+      3
+    ],
+    "encoder_errors": [
+      0,
+      0
+    ],
+    "rejected": [
+      0
+    ],
+    "dual_write_counter_min": [
+      3541,
+      1719
+    ],
+    "dual_update_counter_max": [
+      363,
+      79
+    ],
+    "dual_timing_site": [
+      0
+    ],
+    "dual_timing_counter": [
+      0
+    ],
+    "dual_timing_direction": [
+      0
+    ],
+    "dual_timing_reason": [
+      0
+    ],
+    "dual_timing_ready": [
+      0
+    ],
+    "dual_timing_mode": [
+      0
+    ],
+    "dual_timing_pending": [
+      0
+    ],
+    "dual_timing_foc_state": [
+      0,
+      0
+    ],
+    "dual_timing_sequence": [
+      0
+    ],
+    "dual_encoder_cycles_max": [
+      5804
+    ],
+    "dual_init_first_crc_valid": [
+      3
+    ],
+    "dual_init_attempts": [
+      3
+    ],
+    "dual_init_spi_valid": [
+      3
+    ],
+    "dual_init_status": [
+      32768,
+      32768
+    ],
+    "dual_init_safety": [
+      65066,
+      65066
+    ],
+    "dual_sensor_number": [
+      0,
+      0
+    ],
+    "dual_probe_crc_valid": [
+      9
+    ],
+    "encoder_startup_channels": [
+      {
+        "lane": 0,
+        "motor": "M1",
+        "spi": "SPI3",
+        "cs": "PA0",
+        "status": 32768,
+        "safety": 65066,
+        "crc_and_sensor_id_valid": true
+      },
+      {
+        "lane": 1,
+        "motor": "M0",
+        "spi": "SPI1",
+        "cs": "PA1",
+        "status": 32768,
+        "safety": 65066,
+        "crc_and_sensor_id_valid": true
+      }
+    ],
+    "travel": [
+      -0.4833984375,
+      -0.32958984375
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "forward": [
+      0.0,
+      0.0
+    ],
+    "ticks": [
+      0,
+      0
+    ],
+    "field_diagnostics": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "current_trip_snapshot": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "pwm_ccer": [
+      4096,
+      0
+    ],
+    "outputs_off": true
+  }
+}

@@ -332,7 +332,7 @@
                   "xoffset": 0,
                   "decimal": 2,
                   "value": 0,
-                  "name": "M0 目标转速 rpm"
+                  "name": "M0 俯仰 目标转速 rpm"
                 },
                 {
                   "is_draw": false,
@@ -342,7 +342,7 @@
                   "xoffset": 0,
                   "decimal": 2,
                   "value": 0,
-                  "name": "M0 实际转速 rpm"
+                  "name": "M0 俯仰 实际转速 rpm"
                 },
                 {
                   "is_draw": true,
@@ -352,7 +352,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M0 目标角度 °"
+                  "name": "M0 俯仰 目标角度 °"
                 },
                 {
                   "is_draw": true,
@@ -362,7 +362,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M0 实际角度 °"
+                  "name": "M0 俯仰 实际角度 °"
                 },
                 {
                   "is_draw": false,
@@ -372,7 +372,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M0 目标 Iq A"
+                  "name": "M0 俯仰 目标 Iq A"
                 },
                 {
                   "is_draw": false,
@@ -382,7 +382,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M0 实际 Iq A"
+                  "name": "M0 俯仰 实际 Iq A"
                 },
                 {
                   "is_draw": false,
@@ -392,7 +392,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M0 实际 Id A"
+                  "name": "M0 俯仰 实际 Id A"
                 },
                 {
                   "is_draw": false,
@@ -402,7 +402,7 @@
                   "xoffset": 0,
                   "decimal": 2,
                   "value": 0,
-                  "name": "M0 母线电压 V"
+                  "name": "M0 俯仰 母线电压 V"
                 },
                 {
                   "is_draw": false,
@@ -412,7 +412,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M0 控制模式"
+                  "name": "M0 俯仰 控制模式"
                 },
                 {
                   "is_draw": false,
@@ -422,7 +422,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M0 运行状态"
+                  "name": "M0 俯仰 运行状态"
                 },
                 {
                   "is_draw": false,
@@ -432,7 +432,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M0 故障码"
+                  "name": "M0 俯仰 故障码"
                 },
                 {
                   "is_draw": false,
@@ -442,7 +442,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M0 告警位"
+                  "name": "M0 俯仰 告警位"
                 },
                 {
                   "is_draw": false,
@@ -452,7 +452,7 @@
                   "xoffset": 0,
                   "decimal": 2,
                   "value": 0,
-                  "name": "M1 目标转速 rpm"
+                  "name": "M1 水平 目标转速 rpm"
                 },
                 {
                   "is_draw": false,
@@ -462,7 +462,7 @@
                   "xoffset": 0,
                   "decimal": 2,
                   "value": 0,
-                  "name": "M1 实际转速 rpm"
+                  "name": "M1 水平 实际转速 rpm"
                 },
                 {
                   "is_draw": true,
@@ -472,7 +472,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M1 目标角度 °"
+                  "name": "M1 水平 目标角度 °"
                 },
                 {
                   "is_draw": true,
@@ -482,7 +482,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M1 实际角度 °"
+                  "name": "M1 水平 实际角度 °"
                 },
                 {
                   "is_draw": false,
@@ -492,7 +492,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M1 目标 Iq A"
+                  "name": "M1 水平 目标 Iq A"
                 },
                 {
                   "is_draw": false,
@@ -502,7 +502,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M1 实际 Iq A"
+                  "name": "M1 水平 实际 Iq A"
                 },
                 {
                   "is_draw": false,
@@ -512,7 +512,7 @@
                   "xoffset": 0,
                   "decimal": 3,
                   "value": 0,
-                  "name": "M1 实际 Id A"
+                  "name": "M1 水平 实际 Id A"
                 },
                 {
                   "is_draw": false,
@@ -522,7 +522,7 @@
                   "xoffset": 0,
                   "decimal": 2,
                   "value": 0,
-                  "name": "M1 母线电压 V"
+                  "name": "M1 水平 母线电压 V"
                 },
                 {
                   "is_draw": false,
@@ -532,7 +532,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M1 控制模式"
+                  "name": "M1 水平 控制模式"
                 },
                 {
                   "is_draw": false,
@@ -542,7 +542,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M1 运行状态"
+                  "name": "M1 水平 运行状态"
                 },
                 {
                   "is_draw": false,
@@ -552,7 +552,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M1 故障码"
+                  "name": "M1 水平 故障码"
                 },
                 {
                   "is_draw": false,
@@ -562,7 +562,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M1 告警位"
+                  "name": "M1 水平 告警位"
                 }
               ],
               "selected_line": -1,

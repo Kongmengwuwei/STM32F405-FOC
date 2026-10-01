@@ -13,6 +13,9 @@ volatile uint32_t dual_encoder_cycles_max;
 volatile uint32_t dual_init_spi_valid, dual_init_crc_valid;
 volatile uint32_t dual_init_first_crc_valid, dual_init_attempts;
 volatile uint16_t dual_init_status[2], dual_init_safety[2];
+/* SPI lane order: M1, M0. Learned only from CRC-valid startup responses,
+   confirmed on three consecutive frames, then immutable while sampling. */
+volatile uint32_t dual_sensor_number[2];
 /* Startup-only diagnostics: index = 2 * SPI lane + CS pin (0=PA0, 1=PA1). */
 volatile uint32_t dual_probe_spi_valid, dual_probe_crc_valid;
 volatile uint16_t dual_probe_status[4], dual_probe_safety[4];
@@ -312,7 +315,7 @@ static void probe_single(unsigned lane, unsigned cs)
     dual_probe_safety[index] = safety;
     if (active) dual_probe_spi_valid |= 1u << index;
     if (active && tle5012b_safety_crc_ok(0x8001u, data, safety) &&
-        tle5012b_safety_sensor_response(safety, lane ? 3u : 0u))
+        tle5012b_safety_sensor_response(safety, dual_sensor_number[lane]))
         dual_probe_crc_valid |= 1u << index;
 }
 
@@ -328,10 +331,10 @@ void dual_hw_encoder_pair(float angle[2])
     for (unsigned i = 0u; i < 2u; ++i) {
         dual_angle_data[i] = data[i];
         dual_angle_safety[i] = safety[i];
-        /* SPI3 reports sensor number 0; this board's SPI1 sensor reports 3. */
+        /* Response numbering is sensor configuration, independent of its CS. */
         bool sample_ok = (valid & (1u << i)) &&
             tle5012b_angle_sample_valid_sensor(0x8021u, data[i], safety[i],
-                                               i ? 3u : 0u);
+                                               dual_sensor_number[i]);
         if (sample_ok) dual_angle_sample_valid |= 1u << i;
         if (!sample_ok) {
             foc_t *f = i ? &foc0 : &foc1;
@@ -409,6 +412,8 @@ bool dual_hw_init(void)
 #endif
     uint16_t status[2] = {0u, 0u}, safety[2] = {0u, 0u};
     dual_init_first_crc_valid = dual_init_attempts = 0u;
+    dual_sensor_number[0] = dual_sensor_number[1] = 4u;
+    unsigned startup_consecutive = 0u;
     for (unsigned attempt = 0u; attempt < 5u; ++attempt) {
         if (attempt) HAL_Delay(1u);
         unsigned valid = frame_pair(0x8001u, status, safety);
@@ -418,15 +423,20 @@ bool dual_hw_init(void)
             dual_init_status[i] = status[i];
             dual_init_safety[i] = safety[i];
             if ((valid & (1u << i)) &&
-                tle5012b_safety_crc_ok(0x8001u, status[i], safety[i]) &&
-                tle5012b_safety_sensor_response(safety[i], i ? 3u : 0u))
-                dual_init_crc_valid |= 1u << i;
+                tle5012b_safety_crc_ok(0x8001u, status[i], safety[i])) {
+                unsigned number = tle5012b_safety_sensor_number(safety[i]);
+                if (number < 4u && dual_sensor_number[i] == 4u)
+                    dual_sensor_number[i] = number;
+                if (number < 4u && number == dual_sensor_number[i])
+                    dual_init_crc_valid |= 1u << i;
+            }
         }
         if (!attempt) dual_init_first_crc_valid = dual_init_crc_valid;
         dual_init_attempts = attempt + 1u;
-        if (dual_init_crc_valid == 3u) break;
+        startup_consecutive = dual_init_crc_valid == 3u ? startup_consecutive + 1u : 0u;
+        if (startup_consecutive >= 3u) break;
     }
-    if (dual_init_crc_valid != 3u) {
+    if (startup_consecutive < 3u) {
         dual_probe_spi_valid = dual_probe_crc_valid = 0u;
         for (unsigned lane = 0u; lane < 2u; ++lane)
             for (unsigned cs = 0u; cs < 2u; ++cs) probe_single(lane, cs);
@@ -440,7 +450,7 @@ bool dual_hw_init(void)
                 dual_init_safety[i] = safety[i];
                 if ((valid & (1u << i)) &&
                     tle5012b_safety_crc_ok(0x8001u, status[i], safety[i]) &&
-                    tle5012b_safety_sensor_response(safety[i], i ? 3u : 0u))
+                    tle5012b_safety_sensor_response(safety[i], dual_sensor_number[i]))
                     crc |= 1u << i;
             }
             dual_init_spi_valid = valid;
@@ -450,6 +460,13 @@ bool dual_hw_init(void)
         }
         if (consecutive < 3u) return false;
     }
+    /* Matching response numbers on separate SPI buses are legitimate, but
+       must not hide a shared/crossed CS net. Only each lane's own CS may
+       produce a valid response. This check runs with both bridges disabled. */
+    dual_probe_spi_valid = dual_probe_crc_valid = 0u;
+    for (unsigned lane = 0u; lane < 2u; ++lane)
+        for (unsigned cs = 0u; cs < 2u; ++cs) probe_single(lane, cs);
+    if (dual_probe_crc_valid != 0x9u) return false;
     __HAL_RCC_ADC1_CLK_ENABLE(); __HAL_RCC_ADC2_CLK_ENABLE();
     GPIOA->MODER |= 3u << 12; /* Bus PA6. */
     GPIOC->MODER |= 0xffu; /* M0 PC0/1; M1 PC2/3. */

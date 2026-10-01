@@ -6,7 +6,7 @@
 |---|---|
 | `test_m0_unified.c` | 默认 M0 组合的校准、命令、三种模式、总览遥测及 WARN 行为 |
 | `test_dual_isolation.c` | 双路 FOC/外环状态、校准和故障相互隔离 |
-| `test_gimbal.c`、`run_gimbal.ps1`、`dual_stubs/` | 云台两轴定位、速度/电流限幅、正负限位、校准/试转限位和超速停机、清零/清故障不扩大行程、编码器和供电保护；真实双路解析器与控制器，WARN/TRIP 各 15 项（含负载释放制动、诊断超时、双轴目标排队/撤销、四方向 RL 电流跟踪、校准阻尼、端点稳定与起始磁场偏移补偿） |
+| `test_gimbal.c`、`run_gimbal.ps1`、`dual_stubs/` | 云台两轴定位、速度/电流限幅、正负限位、校准/试转限位和超速停机、清零/清故障不扩大行程、编码器和供电保护；真实双路解析器与控制器，WARN/TRIP 各 21 项（含负载释放制动、诊断超时、双轴目标排队/撤销、四方向 RL 电流跟踪、校准阻尼、端点稳定与起始磁场偏移补偿） |
 | `test_tle5012b_response.c` | 用实机 SPI1/SPI3 帧检查两只编码器各自的传感器编号、CRC 和状态位 |
 | `test_app_usb.c`、`test_justfloat.c` | 命令解析、帧格式、旧组兼容与异常输入 |
 | `test_control_pid.c`、`test_control_observer.c`、`foc_stub.c` | 外环响应、模式切换、观察器和抗饱和 |

@@ -12,7 +12,7 @@ def write(name, data):
 
 base = json.loads((DOCS / "vofa-overview.config.json").read_text(encoding="utf-8"))
 tab_base = json.loads((DOCS / "vofa-overview.tabview.json").read_text(encoding="utf-8"))
-names = [f"M{motor} {label}" for motor in range(2) for label in
+names = [f"M{motor} {'俯仰' if motor == 0 else '水平'} {label}" for motor in range(2) for label in
          ["目标转速 rpm", "实际转速 rpm", "目标角度 °", "实际角度 °", "目标 Iq A", "实际 Iq A",
           "实际 Id A", "母线电压 V", "控制模式", "运行状态", "故障码", "告警位"]]
 colors = ["#ea8c28", "#007fc4", "#ea8c28", "#007fc4", "#aa55aa", "#00805f"] * 4
@@ -27,13 +27,13 @@ write("vofa-gimbal.channels.json", {"protocol": "JustFloat", "sample_hz": 1000, 
 (DOCS / "vofa-gimbal.datas.csv").write_bytes((",".join(names) + "\r\n" + ",".join(["0"] * 24) + "\r\n").encode("gbk"))
 
 chart = copy.deepcopy(tab_base["ctx"]["tabs"][0]["widgets"][1])
-chart["ctx"]["."]["ctx"] = {".": {"x": 10, "y": 685, "width": 2780, "height": 760}}
+chart["ctx"]["."]["ctx"] = {".": {"x": 10, "y": 885, "width": 2780, "height": 760}}
 chart["ctx"]["axis_x_wave"]["ctx"]["."] = {"max_value": 14999, "min_value": 0,
     "left_index": 0, "right_index": 14999, "unit_text": "ms", "decimal": 0}
 chart["ctx"]["axis_y_wave"]["ctx"]["."] = {"top_value": 100, "bottom_value": -100, "bar_index": 5, "decimal": 2}
 chart["ctx"]["rbw"]["ctx"]["."]["lines"] = [2, 3, 14, 15]
 tab = {"type": "tabview", "vnumber": 100, "ctx": {"tabs": [{"name": "双轴云台 · 角度控制", "widgets": [
-    {"path": "GimbalControl", "type": "outside", "ctx": {".": {"ctx": {".": {"x": 10, "y": 10, "width": 2780, "height": 650}}}}}, chart]}]}}
+    {"path": "GimbalControl", "type": "outside", "ctx": {".": {"ctx": {".": {"x": 10, "y": 10, "width": 2780, "height": 850}}}}}, chart]}]}}
 write("vofa-gimbal.tabview.json", tab)
 window = dict(tab["ctx"], is_top=False, x=0, y=0, width=3840, height=2064,
               currentIndex=0, lastIndex=0, file_url=(DOCS / "vofa-gimbal.tabview.json").as_posix())
@@ -49,10 +49,10 @@ def command(name, content, intro):
 
 commands = [command("关闭两轴输出", "stop", "关闭驱动；竖直轴会失去支撑力"),
             command("两轴回软件零位", "gimbal pos 0 0", "启动两轴并保持软件零位"),
-            command("M0 保持当前位置", "m0 hold", "启动水平轴位置保持"),
-            command("M1 保持当前位置", "m1 hold", "启动竖直轴位置保持"),
-            command("关闭 M0", "m0 stop", "只关闭水平轴"),
-            command("关闭 M1", "m1 stop", "只关闭竖直轴"),
+            command("M0 保持当前位置", "m0 hold", "启动俯仰轴位置保持"),
+            command("M1 保持当前位置", "m1 hold", "启动水平轴位置保持"),
+            command("关闭 M0", "m0 stop", "只关闭俯仰轴"),
+            command("关闭 M1", "m1 stop", "只关闭水平轴"),
             command("清除故障", "clear", "先停机并排除故障，不会自动启动")]
 group = {"name": "双轴云台", "intro_on": True, "intro": "任意角度使用画布输入框，或发送框：gimbal pos 10 -10",
          "hex_on": False, "loop_on": False, "loop_ms": 100, "loop_count": 1, "cmd_hex": "",

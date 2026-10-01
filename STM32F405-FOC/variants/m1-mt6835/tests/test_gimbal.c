@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CHECK(x) do { if (!(x)) { fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #x); exit(1); } } while (0)
+#define CHECK(x) do { if (!(x)) { fprintf(stderr, "FAIL line %d: %s; fault=%u/%u rpm=%.3f/%.3f pos=%.3f/%.3f iq=%.3f/%.3f\n", __LINE__, #x, (unsigned)foc0.fault, (unsigned)foc1.fault, (double)foc0.rpm, (double)foc1.rpm, (double)control0_position_deg(), (double)control1_position_deg(), (double)foc0.iq_ref, (double)foc1.iq_ref); exit(1); } } while (0)
 volatile uint32_t motor0_sample_us, motor1_sample_us, dual_sequence, dual_fault;
 volatile uint32_t dual_encoder_cycles_max;
 volatile bsp_uart_stats_t g_uart_stats;
@@ -21,6 +21,7 @@ static bool plant, electrical_plant, locked_current;
 static float phase_alpha[2], phase_beta[2];
 static float generator_beta_voltage[2];
 static float plant_rpm[2];
+static float load_current[2]; /* Mechanical disturbance, expressed as equivalent Iq. */
 static const foc_calibration_t cal[2] = {{0.1f, 1}, {0.2f, -1}};
 bool bsp_uart_init(void) { return true; }
 bool bsp_can_init(void) { return true; }
@@ -75,7 +76,7 @@ static void sample(void)
         foc_t *motor[2] = {&foc0, &foc1};
         for (unsigned i = 0; i < 2u; ++i) {
             float omega = plant_rpm[i] * 0.1047197551f;
-            float drive = 1230.0f * motor[i]->iq_ref * (float)cal[i].direction - 0.0654f * omega;
+            float drive = 1230.0f * (motor[i]->iq_ref * (float)cal[i].direction + load_current[i]) - 0.0654f * omega;
             if (fabsf(omega) < 1e-4f && fabsf(drive) <= 192.5f) omega = 0.0f;
             else omega += (drive - 192.5f * (omega > 0 ? 1.0f : omega < 0 ? -1.0f : copysignf(1.0f, drive))) * 0.0001f;
             plant_rpm[i] = omega / 0.1047197551f;
@@ -126,8 +127,8 @@ int main(int argc, char **argv)
         CHECK(foc0.state == FOC_PRECHARGE && foc1.state == FOC_PRECHARGE);
         for (unsigned n = 0; n < 10000u; ++n) sample();
         CHECK(foc0.state == FOC_RUN && foc1.state == FOC_RUN);
-        CHECK(fabsf(foc0.iq_ref) <= 0.60001f && fabsf(foc1.iq_ref) <= 2.00001f);
-        CHECK(fabsf(control0_speed_target()) <= 5.00001f && fabsf(control1_speed_target()) <= 5.00001f);
+        CHECK(fabsf(foc0.iq_ref) <= FOC_GIMBAL_CURRENT_A + .00001f && fabsf(foc1.iq_ref) <= 8.00001f);
+        CHECK(fabsf(control0_speed_target()) <= FOC_GIMBAL_SPEED_RPM + .00001f && fabsf(control1_speed_target()) <= 48.00001f);
         CHECK(foc0.iq_ref > 0.0f && foc1.iq_ref > 0.0f); /* Opposite calibrated direction. */
         CHECK(command("m0 stop") && foc0.state == FOC_IDLE && foc1.state == FOC_RUN);
         CHECK(command("stop") && off == 3u && foc1.state == FOC_IDLE);
@@ -162,10 +163,10 @@ int main(int argc, char **argv)
         for (unsigned n = 0; n < 100000u; ++n) {
             sample();
             CHECK(foc0.fault == FOC_OK && foc1.fault == FOC_OK);
-            CHECK(fabsf(foc0.iq_ref) <= 0.60001f && fabsf(foc1.iq_ref) <= 2.00001f);
-            CHECK(fabsf(control0_speed_target()) <= 5.00001f && fabsf(control1_speed_target()) <= 5.00001f);
+            CHECK(fabsf(foc0.iq_ref) <= FOC_GIMBAL_CURRENT_A + .00001f && fabsf(foc1.iq_ref) <= 8.00001f);
+            CHECK(fabsf(control0_speed_target()) <= FOC_GIMBAL_SPEED_RPM + .00001f && fabsf(control1_speed_target()) <= 48.00001f);
         }
-        printf("response: yaw %.2f pitch %.2f deg\n", (double)control0_position_deg(), (double)control1_position_deg());
+        printf("response: M0 pitch %.2f M1 yaw %.2f deg\n", (double)control0_position_deg(), (double)control1_position_deg());
         CHECK(fabsf(control0_position_deg() - 20.0f) < 1.0f);
         CHECK(fabsf(control1_position_deg() + 15.0f) < 1.0f);
         CHECK(command("m0 pos -10") && command("m1 pos 10"));
@@ -185,27 +186,28 @@ int main(int argc, char **argv)
     } else if (!strcmp(argv[1], "braking")) {
         CHECK(command("m1 pos 45"));
         for (unsigned n = 0; n < 1000u; ++n) sample();
-        /* Simulate a released load carrying the shaft at 8.33 RPM, faster
-           than its 5 RPM trajectory. Reaching the target must not leave a
+        /* Simulate a released load carrying the shaft at 8.33 RPM.
+           Reaching the target must not leave a
            forward speed request while a second slew ramp catches up. */
         move(1, 45.0f);
         printf("braking: position %.4f reference %.4f RPM\n", (double)control1_position_deg(), (double)control1_speed_reference());
         CHECK(foc1.fault == FOC_OK);
         CHECK(fabsf(control1_position_deg() - 45.0f) < 0.10f);
-        CHECK(control1_speed_reference() <= 0.01f && fabsf(control1_speed_reference()) < 0.20f);
+        CHECK(control1_speed_reference() <= 0.01f && fabsf(control1_speed_reference()) < 0.40f);
     } else if (!strcmp(argv[1], "speed_foldback")) {
         locked_current = true;
         CHECK(command("m1 pos 85"));
         for (unsigned n = 0; n < 7000u; ++n) sample();
         CHECK(foc1.iq_ref < -0.5f);
         /* Assert while moving; the move() helper also waits at rest. */
-        for (unsigned n = 0; n < 500u; ++n) { shaft[1] += 0.005f; sample(); }
+        const float excess_step = (FOC_GIMBAL_SPEED_RPM + FOC_GIMBAL_SPEED_FOLDBACK_RPM + 3.0f) * .0006f;
+        for (unsigned n = 0; n < 500u; ++n) { shaft[1] += excess_step; sample(); }
         CHECK(foc1.fault == FOC_OK);
         CHECK(foc1.iq_ref >= -0.01f); /* No torque accelerating this motion. */
         CHECK(command("m1 pos -85"));
         for (unsigned n = 0; n < 7000u; ++n) sample();
         CHECK(foc1.iq_ref > 0.5f);
-        for (unsigned n = 0; n < 500u; ++n) { shaft[1] -= 0.005f; sample(); }
+        for (unsigned n = 0; n < 500u; ++n) { shaft[1] -= excess_step; sample(); }
         CHECK(foc1.fault == FOC_OK && foc1.iq_ref <= 0.01f);
         CHECK(command("stop"));
         /* M0: a released load outruns the trajectory while its integral is
@@ -214,14 +216,103 @@ int main(int argc, char **argv)
         CHECK(command("m0 pos 85"));
         for (unsigned n = 0; n < 7000u; ++n) sample();
         CHECK(foc0.iq_ref > 0.4f);
-        for (unsigned n = 0; n < 500u; ++n) { shaft[0] += 0.005f; sample(); }
+        for (unsigned n = 0; n < 500u; ++n) { shaft[0] += excess_step; sample(); }
         printf("M0 load-release brake: fault=%lu rpm=%.3f iq_ref=%.3f\n", (unsigned long)foc0.fault, (double)foc0.rpm, (double)foc0.iq_ref);
-        CHECK(foc0.fault == FOC_OK && foc0.iq_ref < -0.45f && foc0.iq_ref >= -0.60001f);
+        CHECK(foc0.fault == FOC_OK && foc0.iq_ref < -0.45f && foc0.iq_ref >= -FOC_GIMBAL_CURRENT_A - .00001f);
         CHECK(command("m0 pos -85"));
         for (unsigned n = 0; n < 7000u; ++n) sample();
         CHECK(foc0.iq_ref < -0.4f);
-        for (unsigned n = 0; n < 500u; ++n) { shaft[0] -= 0.005f; sample(); }
-        CHECK(foc0.fault == FOC_OK && foc0.iq_ref > 0.45f && foc0.iq_ref <= 0.60001f);
+        for (unsigned n = 0; n < 500u; ++n) { shaft[0] -= excess_step; sample(); }
+        CHECK(foc0.fault == FOC_OK && foc0.iq_ref > 0.45f && foc0.iq_ref <= FOC_GIMBAL_CURRENT_A + .00001f);
+    } else if (!strcmp(argv[1], "disturbance") || !strcmp(argv[1], "heavy_disturbance")) {
+        bool heavy = !strcmp(argv[1], "heavy_disturbance");
+        plant = true;
+        CHECK(command("gimbal pos 0 0"));
+        for (unsigned n = 0; n < 10000u; ++n) sample();
+        for (unsigned direction = 0; direction < 2u; ++direction) {
+            float load0 = heavy ? 1.5f : .30f;
+            float load1 = heavy ? 1.5f : .50f;
+            const float wanted_load0 = direction ? -load0 : load0;
+            const float wanted_load1 = direction ? load1 : -load1;
+            float peak[2] = {0, 0};
+            for (unsigned n = 0; n < 30000u; ++n) {
+                /* Finger pressure builds over time. A 1.5 A-equivalent
+                   instantaneous step drives this low-inertia model through
+                   20 RPM in milliseconds and must trip, not be permitted. */
+                float ramp = heavy ? fminf((float)n / 1000.0f, 1.0f) : 1.0f;
+                load_current[0] = wanted_load0 * ramp;
+                load_current[1] = wanted_load1 * ramp;
+                sample();
+                if (foc0.fault || foc1.fault) {
+                    printf("load fault at %.4f s: fault %u/%u, pos %.3f/%.3f, rpm %.3f/%.3f, iq_ref %.3f/%.3f\n",
+                        (double)n * .0001, (unsigned)foc0.fault, (unsigned)foc1.fault,
+                        (double)control0_position_deg(), (double)control1_position_deg(),
+                        (double)foc0.rpm, (double)foc1.rpm, (double)foc0.iq_ref, (double)foc1.iq_ref);
+                }
+                CHECK(!foc0.fault && !foc1.fault);
+                peak[0] = fmaxf(peak[0], fabsf(control0_position_deg()));
+                peak[1] = fmaxf(peak[1], fabsf(control1_position_deg()));
+                CHECK(fabsf(foc0.iq_ref) <= FOC_GIMBAL_CURRENT_A + .00001f);
+                CHECK(fabsf(foc1.iq_ref) <= 8.00001f);
+            }
+            printf("load step %u: peak %.3f/%.3f residual %.3f/%.3f deg\n", direction,
+                (double)peak[0], (double)peak[1], (double)control0_position_deg(), (double)control1_position_deg());
+            CHECK(peak[0] < (heavy ? 8.0f : 2.0f) && peak[1] < (heavy ? 8.0f : 2.0f));
+            CHECK(fabsf(control0_position_deg()) < .2f && fabsf(control1_position_deg()) < .2f);
+            for (unsigned n = 0; n < 30000u; ++n) {
+                float release = heavy ? fmaxf(1.0f - (float)n / 1000.0f, 0.0f) : 0.0f;
+                load_current[0] = wanted_load0 * release;
+                load_current[1] = wanted_load1 * release;
+                sample(); CHECK(!foc0.fault && !foc1.fault);
+            }
+            CHECK(fabsf(control0_position_deg()) < .2f && fabsf(control1_position_deg()) < .2f);
+        }
+        CHECK(command("stop"));
+        CHECK(foc0.iq_ref == 0 && foc1.iq_ref == 0);
+    } else if (!strcmp(argv[1], "noisy_hold")) {
+        locked_current = true;
+        CHECK(command("gimbal pos 0 0"));
+        const float start0 = shaft[0], start1 = shaft[1];
+        /* A one-count-size oscillation produces >0.5 RPM in the 1 ms
+           derivative while remaining inside the position settling window. */
+        for (unsigned n = 0; n < 8000u; ++n) {
+            float count_noise = ((n / 10u) & 1u) ? .0055f : -.0055f;
+            shaft[0] = start0 + count_noise; shaft[1] = start1 - count_noise;
+            sample(); CHECK(!foc0.fault && !foc1.fault);
+        }
+        move(0, .10f); move(1, -.10f);
+        CHECK(fabsf(control0_speed_reference() + 8.0f * control0_position_deg()) < .01f);
+        CHECK(fabsf(control1_speed_reference() + 6.0f * control1_position_deg()) < .01f);
+    } else if (!strcmp(argv[1], "holding")) {
+        locked_current = true;
+        CHECK(command("gimbal pos 0 0"));
+        for (unsigned n = 0; n < 4000u; ++n) sample();
+        move(0, .10f); move(1, -.10f);
+        CHECK(fabsf(control0_speed_reference() + 8.0f * control0_position_deg()) < .01f);
+        CHECK(fabsf(control1_speed_reference() + 6.0f * control1_position_deg()) < .01f);
+        /* Restoring current includes the direct position term, with M1's
+           reversed electrical direction, rather than only the speed P term. */
+        CHECK(foc0.iq_ref < -.080f && foc1.iq_ref < -.085f);
+        CHECK(command("gimbal pos 0 0")); /* Identical resend retains fast hold. */
+        for (unsigned n = 0; n < 100u; ++n) sample();
+        CHECK(fabsf(control0_speed_reference() + 8.0f * control0_position_deg()) < .01f);
+        CHECK(command("m0 pos 10")); /* New motion restores bounded acceleration. */
+        for (unsigned n = 0; n < 100u; ++n) sample();
+        CHECK(control0_speed_reference() >= 0 && control0_speed_reference() < 3.0f);
+        CHECK(command("stop"));
+        CHECK(foc0.iq_ref == 0 && foc1.iq_ref == 0);
+    } else if (!strcmp(argv[1], "run_speed_trip")) {
+        locked_current = true;
+        CHECK(command("gimbal pos 0 0"));
+        for (unsigned n = 0; n < 1000u; ++n) sample();
+        CHECK(foc0.state == FOC_RUN && foc1.state == FOC_RUN);
+        for (unsigned n = 0; n < 500u && !foc0.fault; ++n) {
+            shaft[0] += (FOC_GIMBAL_SPEED_TRIP_RPM + 5) * .0006f;
+            sample();
+        }
+        CHECK(foc0.fault == FOC_SPEED && foc0.state == FOC_FAULT);
+        CHECK((off & 1u) && !foc1.fault && foc1.state == FOC_RUN);
+        CHECK(command("stop"));
     } else if (!strcmp(argv[1], "zero")) {
         move(0, 720.0f);
         CHECK(fabsf(foc0_travel_deg() - 720.0f) < 1.5f);

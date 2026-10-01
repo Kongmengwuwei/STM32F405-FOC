@@ -22,12 +22,16 @@ def main():
     p.add_argument("--seconds", type=float, default=4.0)
     p.add_argument("--hold-other-zero", action="store_true",
                    help="position tests only: hold the other axis at zero and verify its settling")
+    p.add_argument("--speed-limit-rpm", type=float, default=75.0,
+                   help="host stop threshold; set to the tested firmware's independent hard trip")
     p.add_argument("--out", type=Path, required=True)
     a = p.parse_args()
     if a.hold_other_zero and a.loop != "position":
         p.error("--hold-other-zero requires a position test")
     if not 0.1 <= a.seconds <= 10 or not all(math.isfinite(v) for v in a.values):
         p.error("invalid duration or target")
+    if not math.isfinite(a.speed_limit_rpm) or not 5 <= a.speed_limit_rpm <= 100:
+        p.error("speed limit must be between 5 and 100 RPM")
     ceiling = {"current": .30, "speed": 2, "position": 85, "field": 270}[a.loop]
     if any(abs(v) > ceiling for v in a.values):
         p.error(f"test target exceeds {ceiling}")
@@ -37,6 +41,7 @@ def main():
     origin = time.monotonic()
     results = {"axis": a.axis, "loop": a.loop, "values": a.values, "stages": [], "passed": False}
     results["hold_other_zero"] = a.hold_other_zero
+    results["host_speed_limit_rpm"] = a.speed_limit_rpm
     data = []
     stage = "idle"
     initial = None
@@ -70,16 +75,16 @@ def main():
                             if allow_fault:
                                 continue
                             raise RuntimeError(f"M{i} fault={f[b + 10]}")
-                        speed_ceiling = 60 if a.loop == "field" and i == a.axis == 0 else 10
+                        speed_ceiling = 60 if a.loop == "field" and i == a.axis == 0 else a.speed_limit_rpm
                         drive_active = int(f[b+9]) in (1, 2, 4, 7)
                         if not drive_active:
                             coast_rpm_peak[i] = max(coast_rpm_peak[i], abs(f[b+1]))
                         current_vector = math.hypot(f[b+5], f[b+6])
-                        # A 2.0 A reference is not an instantaneous current
-                        # ceiling. Keep an absolute guard below the 3.0 A
+                        # A 8.0 A reference is not an instantaneous current
+                        # ceiling. Keep an absolute guard below the 10 A
                         # firmware phase trip, and reject sustained excess.
-                        high_current_frames[i] = high_current_frames[i] + 1 if current_vector > (1.0 if i == 0 else 2.3) else 0
-                        if current_vector > (1.3 if i == 0 else 2.7) or high_current_frames[i] >= 20 or (drive_active and abs(f[b+1]) > speed_ceiling):
+                        high_current_frames[i] = high_current_frames[i] + 1 if current_vector > 8.8 else 0
+                        if current_vector > 9.5 or high_current_frames[i] >= 20 or (drive_active and abs(f[b+1]) > speed_ceiling):
                             raise RuntimeError(f"M{i} excessive current/speed: {current_vector:.3f} A, {f[b+1]:.2f} RPM, state={int(f[b+9])}")
                     if abs(f[15]) >= 88:
                         raise RuntimeError("M1 approaching travel boundary")
