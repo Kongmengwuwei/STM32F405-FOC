@@ -115,13 +115,13 @@ int main(int argc, char **argv)
     CHECK(command("m0 zero") && command("m1 zero"));
     if (!strcmp(argv[1], "commands")) {
         CHECK(!command("m0 rpm 1") && !command("m1 Iq 0.1"));
-        CHECK(command("m0 pos 360") && !command("m1 pos -360"));
+        CHECK(!command("m0 pos 360") && !command("m1 pos -360"));
         CHECK(!command("m0 pos nan") && !command("m1 pos inf"));
         CHECK(app_command("m0 pos 85") && app_command("m1 pos -85"));
         sample();
         CHECK(armed == 3u && control0_mode() == CONTROL_POSITION && control1_mode() == CONTROL_POSITION);
-        CHECK(command("m0 pos 850.01") && !command("m1 pos -85.01"));
-        CHECK(control0_position_target() == 850.01f && control1_position_target() == -85.0f);
+        CHECK(!command("m0 pos 85.01") && !command("m1 pos -85.01"));
+        CHECK(control0_position_target() == 85.0f && control1_position_target() == -85.0f);
         CHECK(!command("m0 zero"));
         sample();
         CHECK(foc0.state == FOC_PRECHARGE && foc1.state == FOC_PRECHARGE);
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
         CHECK(!command("gimbal pos 10 85.01"));
         CHECK(!command("gimbal pos nan 0") && !command("gimbal pos 0 inf"));
         CHECK(!command("gimbal pos 1 2 3") && !command("gimbal pos 1"));
-        CHECK(!command("gimbal pos 1000001 0"));
+        CHECK(!command("gimbal pos 85.01 0"));
         CHECK(!command("gimbal pos 1.001 2") && !command("gimbal pos  1 2"));
         CHECK(foc0.state == FOC_IDLE && foc1.state == FOC_IDLE && armed == 0u);
         CHECK(app_command("gimbal pos 10.25 -20.50"));
@@ -146,8 +146,8 @@ int main(int argc, char **argv)
         CHECK(armed == 3u && control0_position_target() == 10.25f && control1_position_target() == -20.5f);
         CHECK(!command("gimbal pos 30 -86"));
         CHECK(control0_position_target() == 10.25f && control1_position_target() == -20.5f);
-        CHECK(command("gimbal pos 360 85"));
-        CHECK(app_command("gimbal pos -360 -85") && app_command("stop"));
+        CHECK(command("gimbal pos 85 85"));
+        CHECK(app_command("gimbal pos -85 -85") && app_command("stop"));
         sample();
         CHECK(foc0.state == FOC_IDLE && foc1.state == FOC_IDLE);
         CHECK(app_command("gimbal pos 1 2") && app_command("m1 stop"));
@@ -314,10 +314,11 @@ int main(int argc, char **argv)
         CHECK((off & 1u) && !foc1.fault && foc1.state == FOC_RUN);
         CHECK(command("stop"));
     } else if (!strcmp(argv[1], "zero")) {
-        move(0, 720.0f);
-        CHECK(fabsf(foc0_travel_deg() - 720.0f) < 1.5f);
+        move(0, 40.0f);
+        CHECK(fabsf(foc0_travel_deg() - 40.0f) < 0.15f);
         CHECK(!foc0.fault && command("m0 zero"));
-        CHECK(command("m0 pos 720") && command("stop"));
+        CHECK(!command("m0 pos 50"));
+        CHECK(command("m0 pos 40") && command("stop"));
         move(1, 40.0f);
         CHECK(fabsf(foc1_travel_deg() - 40.0f) < 0.15f);
         CHECK(command("m1 zero"));
@@ -329,6 +330,8 @@ int main(int argc, char **argv)
         foc1_trip(FOC_BUS);
         CHECK(command("clear") && hardware_inits == 1u);
         settle();
+        CHECK(fabsf(foc0_travel_deg() - 40.0f) < 0.15f);
+        CHECK(!command("m0 pos 50"));
         CHECK(fabsf(foc1_travel_deg() - 40.0f) < 0.15f);
         CHECK(!command("m1 pos 50") && command("m1 pos -40"));
     } else if (!strcmp(argv[1], "travel")) {
@@ -348,6 +351,31 @@ int main(int argc, char **argv)
         CHECK(command("clear"));
         settle();
         CHECK(foc1.state == FOC_IDLE && command("m1 pos 0"));
+    } else if (!strcmp(argv[1], "m0_travel")) {
+        CHECK(command("all test"));
+        for (unsigned n = 0; n < 600u; ++n) sample();
+        move(0, 91.0f);
+        CHECK(foc0.state == FOC_FAULT && foc0.fault == FOC_POSITION);
+        CHECK(!foc1.fault && foc0.duty[0] == 0.0f && (off & 1u));
+        CHECK(!command("m0 pos 0") && !command("m0 zero"));
+        CHECK(!command("clear"));
+        CHECK(command("stop") && command("clear"));
+        sample();
+        CHECK(foc0.state == FOC_FAULT); /* Clear must preserve M0's centre. */
+        move(0, -91.0f);
+        CHECK(command("clear"));
+        settle();
+        CHECK(foc0.state == FOC_IDLE && command("m0 pos 0"));
+    } else if (!strcmp(argv[1], "m0_cal_limit")) {
+        CHECK(command("m0 cal"));
+        for (unsigned n = 0; n < 600u; ++n) sample();
+        move(0, 91.0f);
+        CHECK(foc0.state == FOC_FAULT && foc0.fault == FOC_POSITION);
+        CHECK(!foc1.fault && foc0.duty[0] == 0.0f);
+        app_poll();
+        CHECK(command("clear"));
+        sample();
+        CHECK(foc0.state == FOC_FAULT && foc0.fault == FOC_POSITION);
     } else if (!strcmp(argv[1], "cal_limit")) {
         CHECK(command("m1 cal"));
         for (unsigned n = 0; n < 600u; ++n) sample();
@@ -359,8 +387,8 @@ int main(int argc, char **argv)
         sample();
         CHECK(foc1.state == FOC_FAULT && foc1.fault == FOC_POSITION);
     } else if (!strcmp(argv[1], "negative_limit")) {
-        move(0, -720.0f);
-        CHECK(foc0.fault == FOC_OK);
+        move(0, -91.0f);
+        CHECK(foc0.state == FOC_FAULT && foc0.fault == FOC_POSITION);
         move(1, -91.0f);
         CHECK(foc1.state == FOC_FAULT && foc1.fault == FOC_POSITION);
         CHECK(off == 3u);

@@ -15,7 +15,7 @@ ResizableRectangle {
     property double nowMs: Date.now()
     property bool fresh: sys_manager.connected && lastDataMs > 0 && nowMs - lastDataMs < 1500
     property string message: "拖动滑条即可调角；输入框需点击发送；连接不会启动电机"
-    readonly property double m0Limit: 1000000
+    readonly property double m0Limit: 85
     readonly property double m1Limit: 85
     readonly property double m0SliderLimit: m0Limit > 85 ? 180 : 85
     readonly property double m1SliderLimit: m1Limit > 85 ? 180 : 85

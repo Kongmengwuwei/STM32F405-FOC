@@ -1,4 +1,5 @@
 """Install the gimbal widget and update its existing VOFA layout in place."""
+import argparse
 import json
 import re
 import shutil
@@ -8,7 +9,10 @@ docs = Path(__file__).resolve().parents[1]
 project = docs.parent
 context = Path("C:/Users/kongmeng/AppData/Local/vofa+/100/context")
 widget = Path("D:/APP/vofa+/x64/plugins/widgets/GimbalControl/GimbalControl.qml")
-backup = project / "build/gimbal-20261001/slider-speedup/vofa-backup"
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--backup", type=Path,
+                    default=project / "build/gimbal-20261001/slider-speedup/vofa-backup")
+backup = parser.parse_args().backup.resolve()
 backup.mkdir(parents=True, exist_ok=True)
 targets = [context / f"vofa+.{name}.json" for name in ("config", "tabviews", "cmds")]
 for target in targets + [widget]:

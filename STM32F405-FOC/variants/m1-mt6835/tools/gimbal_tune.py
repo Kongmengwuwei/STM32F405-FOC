@@ -22,12 +22,16 @@ def main():
     p.add_argument("--seconds", type=float, default=4.0)
     p.add_argument("--hold-other-zero", action="store_true",
                    help="position tests only: hold the other axis at zero and verify its settling")
+    p.add_argument("--paired-opposite", action="store_true",
+                   help="position tests only: command both axes together, with opposite targets")
     p.add_argument("--speed-limit-rpm", type=float, default=75.0,
                    help="host stop threshold; set to the tested firmware's independent hard trip")
     p.add_argument("--out", type=Path, required=True)
     a = p.parse_args()
     if a.hold_other_zero and a.loop != "position":
         p.error("--hold-other-zero requires a position test")
+    if a.paired_opposite and (a.loop != "position" or a.hold_other_zero):
+        p.error("--paired-opposite requires position and cannot combine with --hold-other-zero")
     if not 0.1 <= a.seconds <= 10 or not all(math.isfinite(v) for v in a.values):
         p.error("invalid duration or target")
     if not math.isfinite(a.speed_limit_rpm) or not 5 <= a.speed_limit_rpm <= 100:
@@ -41,6 +45,7 @@ def main():
     origin = time.monotonic()
     results = {"axis": a.axis, "loop": a.loop, "values": a.values, "stages": [], "passed": False}
     results["hold_other_zero"] = a.hold_other_zero
+    results["paired_opposite"] = a.paired_opposite
     results["host_speed_limit_rpm"] = a.speed_limit_rpm
     data = []
     stage = "idle"
@@ -86,11 +91,17 @@ def main():
                         high_current_frames[i] = high_current_frames[i] + 1 if current_vector > 8.8 else 0
                         if current_vector > 9.5 or high_current_frames[i] >= 20 or (drive_active and abs(f[b+1]) > speed_ceiling):
                             raise RuntimeError(f"M{i} excessive current/speed: {current_vector:.3f} A, {f[b+1]:.2f} RPM, state={int(f[b+9])}")
-                    if abs(f[15]) >= 88:
-                        raise RuntimeError("M1 approaching travel boundary")
+                    for i in range(2):
+                        if abs(f[i * 12 + 3]) >= 88:
+                            raise RuntimeError(f"M{i} approaching travel boundary")
                     travel_window = max(abs(v - initial[at+3]) for v in a.values) + 5 if initial and a.loop == "position" else 25
                     if initial and stage != "idle" and abs(f[at+3] - initial[at+3]) > travel_window:
                         raise RuntimeError("escaped local test window")
+                    if initial and stage != "idle" and a.paired_opposite:
+                        other_at = (1-a.axis) * 12
+                        other_window = max(abs(-v - initial[other_at+3]) for v in a.values) + 5
+                        if abs(f[other_at+3] - initial[other_at+3]) > other_window:
+                            raise RuntimeError("other axis escaped local test window")
                 if not batch:
                     raise RuntimeError("no feedback")
                 return batch
@@ -115,11 +126,15 @@ def main():
                 if held[-1][1][other_at+9] != 4 or abs(held[-1][1][other_at+3]) > .2:
                     raise RuntimeError("other axis did not establish zero hold")
             for v in a.values:
-                if abs(data[-1][1][at+1]) >= 5:
+                if abs(data[-1][1][at+1]) >= 5 or (a.paired_opposite and abs(data[-1][1][(1-a.axis)*12+1]) >= 5):
                     raise RuntimeError("shaft must settle below 5 RPM before another command")
                 stage = f"{a.loop}:{v:+.2f}"
                 cmd = {"current": "itest", "speed": "stest", "position": "pos", "field": "field"}[a.loop]
-                command(f"m{a.axis} {cmd} {v:.2f}")
+                if a.paired_opposite:
+                    targets = (v, -v) if a.axis == 0 else (-v, v)
+                    command(f"gimbal pos {targets[0]:.2f} {targets[1]:.2f}")
+                else:
+                    command(f"m{a.axis} {cmd} {v:.2f}")
                 samples = capture({"current": .6, "speed": 1.8, "position": a.seconds, "field": .45}[a.loop])
                 active = [(t, f) for t, f in samples if f[at+9] == (2 if a.loop == "field" else 4)]
                 if not active:
@@ -164,12 +179,16 @@ def main():
                     last_outside = max((t for t, f in active if abs(f[at+3]-v) > .2), default=active[0][0])
                     if abs(report["position_error"]) <= .2:
                         report["settle_0_2_deg_s"] = last_outside - active[0][0]
-                    if a.hold_other_zero:
+                    if a.hold_other_zero or a.paired_opposite:
                         other_at = (1-a.axis) * 12
+                        other_target = -v if a.paired_opposite else 0.0
                         other_steady = [f[other_at+3] for t, f in active if t >= end_t - .5]
-                        report["other_position_error"] = active[-1][1][other_at+3]
+                        report["other_position_target"] = other_target
+                        report["other_position_error"] = active[-1][1][other_at+3] - other_target
                         report["other_last_half_second_range"] = [min(other_steady), max(other_steady)]
                         report["other_hold_passed"] = (active[-1][1][other_at+9] == 4 and
+                            active[-1][1][other_at+8] == 2 and
+                            abs(active[-1][1][other_at+2] - other_target) < .01 and
                             abs(report["other_position_error"]) <= .2 and
                             max(other_steady) - min(other_steady) <= .2)
                 results["stages"].append(report)
@@ -177,8 +196,8 @@ def main():
                 if a.loop == "position" and (abs(report["position_error"]) > .2 or
                         report["last_half_second_range"][1] - report["last_half_second_range"][0] > .2):
                     raise RuntimeError("position did not settle inside 0.2 degrees")
-                if a.hold_other_zero and not report["other_hold_passed"]:
-                    raise RuntimeError("other axis did not maintain a stable zero hold")
+                if (a.hold_other_zero or a.paired_opposite) and not report["other_hold_passed"]:
+                    raise RuntimeError("other axis did not settle at its commanded position")
                 if a.loop != "position":
                     if samples[-1][1][at+9] != 0:
                         raise RuntimeError("firmware diagnostic timeout did not stop")
