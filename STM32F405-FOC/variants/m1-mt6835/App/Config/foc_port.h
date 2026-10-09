@@ -46,12 +46,22 @@
 #define FOC_PORT_ID 1u
 #define FOC_PORT_NAME "M1"
 #define FOC_PWM_TIMER TIM8
+#ifdef FOC_ENCODER_TLE5012B
+/* Three synchronous SPI words plus calibration computation exceeded the
+ * 20 kHz write window on the real board. Keep a full 50 us down-count. */
+#define FOC_PWM_ARR 8400u
+#define FOC_SAMPLE_HZ 10000u
+#define FOC_SAMPLE_CYCLES_MIN 16400u
+#define FOC_SAMPLE_CYCLES_MAX 17200u
+#define FOC_TRIGGER_TICKS 8200u
+#else
 #define FOC_PWM_ARR 4200u
 #define FOC_SAMPLE_HZ 20000u
-#define FOC_PORT_PWM_ZERO_SAMPLES 0u /* Reference M1 timing remains unchanged. */
 #define FOC_SAMPLE_CYCLES_MIN 8000u
 #define FOC_SAMPLE_CYCLES_MAX 8800u
 #define FOC_TRIGGER_TICKS 4100u
+#endif
+#define FOC_PORT_PWM_ZERO_SAMPLES 0u /* No PWM offset pass on M1. */
 #define FOC_DEADTIME_TICKS 84u /* TIM8 BDTR: 500 ns. */
 #define FOC_PORT_ADC_APERTURE_TICKS 224u /* Dual simultaneous 28-cycle hold. */
 #define FOC_PORT_BUS_MIN 8.0f

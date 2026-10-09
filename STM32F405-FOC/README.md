@@ -1,5 +1,7 @@
 # STM32F405 有感 FOC
 
+**本分支默认：M1 / L4225-6S420-A / 原 TLE5012B / 12 V / 安装 2 / FREE_SHAFT / WARN。** 原 SPI3/PA0 接线不变，电流环 10 kHz、USB 总览 2.5 kHz；Debug 输出位于 `build/longqiu/Debug/`。首次小电流运行与重新校准见[龙邱首测说明](docs/longqiu-first-test.md)。以下旧组合描述与负载性能记录保留为历史参考，新电机已完成校准保存、软件复位复用和空载短测，见[龙邱实测记录](docs/longqiu-bring-up-2026-10-09.md)；已继续完成速度和小角度定位短测，见[控制调试](docs/longqiu-control-tuning-2026-10-09.md)；低速纹波和带载性能仍未验收。
+
 本工程的默认实物组合是 **M0 功率接口 + TLE5012B 编码器 + ZH3620-1 电机 + 塑料臂负载**。M0/M1 只是板上的功率接口，不是电机型号。固件源码在 `variants/m1-mt6835/`；这个目录名沿用参考工程历史，当前所有组合共用其中一套控制程序。
 
 ## 从哪里开始
@@ -9,7 +11,7 @@
 | 了解 FOC 原理和代码调用链 | [初学者教程](variants/m1-mt6835/docs/FOC-从零读懂这个工程.md)、[逐文件导览](variants/m1-mt6835/docs/文件导览.md)、[当前架构](docs/architecture.md) |
 | 选择接口、编码器、电机、负载并校准 | [统一固件指南](docs/unified-firmware.md) |
 | 在 VS Code 编译、烧录、调试 | [VS Code 操作](docs/vscode-build.md) |
-| 连接 VOFA，看目标和实际电流、速度、位置 | [VOFA 操作与通道表](docs/vofa-quickstart.md) |
+| 连接 VOFA，看目标和实际电流、速度、位置 | [当前龙邱单电机配置](docs/vofa-longqiu.md)、[VOFA 操作与通道表](docs/vofa-quickstart.md) |
 | 查引脚和实物接线 | [硬件映射](docs/hardware-map.md) |
 | 理解告警和停机条件 | [台架告警模式](docs/bench-warning-mode.md) |
 | 理解采样点、电流环和双 ADC 的选择 | [电流采样与调参](docs/current-sampling-noise.md) |

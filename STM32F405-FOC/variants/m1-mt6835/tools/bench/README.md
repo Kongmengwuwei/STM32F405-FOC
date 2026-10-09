@@ -1,5 +1,14 @@
 # tools：电机测试数据系统
 
+龙邱 M1/TLE5012B / 12 V 空载调试工具：`longqiu_probe.py` 用于待机、校准及小电流检查；`longqiu_tune.py` 用于短时速度/位置对比。依赖 pyserial/numpy，运行前断开 VOFA。每目标最多 5 s、命令限 ±60 rpm/deg，检查母线、电流、速度和位置边界，每段结束及退出发送 stop 并检查 PWM 关闭；不能替代硬件保护。位置测试会在待机发送 zero。示例（从 variant 目录）：
+
+```powershell
+python tools/bench/longqiu_tune.py --stage speed --targets 10 -10 30 -30 --seconds 3 --out build/longqiu-speed
+python tools/bench/longqiu_tune.py --stage position --targets 1 -1 10 -10 30 -30 0 --seconds 3 --out build/longqiu-position
+```
+
+除固件速度统计外，工具从位置采样计算独立的 20 ms 速度，避免仅改变显示滤波就判为纹波改善。定位稳定时间要求进入 ±0.5° 后至少持续 0.25 s。本次参数和实测见[龙邱控制调试](../../../../docs/longqiu-control-tuning-2026-10-09.md)。
+
 本工具集的 `bench.py` 与 `frames.f32` 使用兼容遥测组 `send 0`～`send 5`，每帧 52 字节。**固件上电默认 `send 6` 是 24 通道、100 字节/帧，M0 为 2.5 kHz**；需要看全部目标/实际值时使用[VOFA 总览](../../../../docs/vofa-quickstart.md)，不要用下文 52 字节解析器直接解析总览。工具会按所需组号向固件发送 `send X`。
 
 电流环的最新带载比较见[电流采样与调参](../../../../docs/current-sampling-noise.md)，当前 ZH3620-1 Kp=0.20、Ki=192/s。`current_probe.py` 的参数只是记录已烧录的增益；切组时会先排空旧帧，再检查序号连续性。

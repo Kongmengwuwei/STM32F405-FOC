@@ -1,21 +1,18 @@
-# STM32F405 有感 FOC
+# STM32F405 有感 FOC：龙邱电机分支
 
-固件共用一套控制、USB CDC、USART2、CAN1 驱动和遥测代码。构建时分别选择 **功率接口、编码器型号、电机型号、安装实例**。M0/M1 只表示板上的三相输出与电流采样接口，不表示电机。CAN1 目前只有收发驱动，没有电机控制命令协议。
+本分支默认驱动 **龙邱 L4225-6S420-A（420KV）+ M1 功率口 + 原 TLE5012B 磁编**，用户确认供电为 **12 V**。编码器仍用 SPI3：PC10=SCK、PC11=MISO、PC12=MOSI、PA0=CS0。M1 切换三相功率输出与电流采样，磁编接口保持原接线。
 
-| 选择项 | 当前可选值 | 默认值 |
-|---|---|---|
-| `FOC_PORT` | `M0`、`M1` | `M0` |
-| `FOC_ENCODER` | `TLE5012B`、`MT6835` | `TLE5012B` |
-| `FOC_MOTOR` | `ZH3620_1`、`REFERENCE_24V` | `ZH3620_1` |
-| `FOC_INSTALLATION_ID` | 1–15，换磁铁安装或三相接线后递增 | `1` |
-| `FOC_PROTECTION` | `WARN` 告警、`TRIP` 越限跳闸 | `WARN` |
+| 配置 | 本分支默认值 |
+|---|---|
+| `FOC_PORT` | `M1`，TIM8，10 kHz 电流环 |
+| `FOC_ENCODER` | `TLE5012B`，SPI3/PA0 |
+| `FOC_MOTOR` | `L4225_6S420_A`，14 极 / 7 极对、12 槽 |
+| `FOC_LOAD_PROFILE` | `FREE_SHAFT`，已完成短时空载电流和速度测试 |
+| `FOC_INSTALLATION_ID` | `2`，当前装配已校准并保存 |
+| `FOC_PROTECTION` | `WARN`，沿用单次命令保持和阈值告警 |
 
-默认构建对应 **M0 接口 + TLE5012B + ZH3620-1**，使用 `STM32F405-FOC/` 下的 `Debug` 预设，生成 `build/Debug/STM32F405-FOC.elf`。原参考项目的电机型号尚未确认，`REFERENCE_24V` 是临时名称，保留原参数供对照，不能把它当作 ZH3620-1。原参考组合可在 `variants/m1-mt6835/` 单独构建。
+图片标注工作电压 11.1–24 V、最大电流 13.5 A、转矩 0.6–1.1 N·m。13.5 A 没有被当作首次 Iq 目标。新电机普通运行的 d/q 电压矢量幅值暂限为母线的 10%（12 V 时 1.2 V），在 WARN 下也生效；速度/位置外环输出限制为 ±2 A，WARN 下也生效；校准采用 3 A 目标、1.5 V 电压上限、15° 起始电角度。电流诊断阈值为 1 A、相电流诊断阈值为 4 A，**WARN 不按这些阈值关断，也不会在断开 USB 后停止**。绕组参数未知，电感和磁链前馈关闭。
 
-图片中的 ZH3620-1 是 14 极（7 极对）、12 槽、500 KV、7.4–12.4 V，20 V 为最高电压，12 A 为堵转电流。默认已改为 **WARN 台架告警模式**：取消 ±0.30 A 命令拒绝、200 ms 超时关断及电流/转速/母线越限跳闸，单次电流目标保持至新命令或 `stop`。配置值继续用于告警，物理 PWM 边界和有效采样条件保留；详见[台架告警模式说明](STM32F405-FOC/docs/bench-warning-mode.md)。没有匹配的有效校准记录时先发送 `cal`；既有 v3 记录仍按组合身份复用。
+在 `STM32F405-FOC/` 用 `cmake --preset Debug`、`cmake --build --preset Debug` 构建；本机可用 `Debug-local`。输出在 `build/longqiu/Debug/STM32F405-FOC.elf`，另有 `.bin` 和 `.hex`。本机 VS Code 构建、烧录和调试任务已指向该组合和目录；`.vscode/` 与 `CMakeUserPresets.json` 按现有规则仅保留在本机。
 
-电机、编码器与接口的选择方法、通信命令见[统一固件指南](STM32F405-FOC/docs/unified-firmware.md)；在 VS Code 中操作请看[构建与烧录步骤](STM32F405-FOC/docs/vscode-build.md)；用 USB 和 VOFA+ 看数据请看[VOFA+ 快速上手](STM32F405-FOC/docs/vofa-quickstart.md)；实机开始前按[ZH3620-1 首测清单](STM32F405-FOC/docs/zh3620-1-first-test.md)检查。旧 M0 [上板记录](STM32F405-FOC/docs/m0-torque-bring-up.md)和[FOC 初学者教程](STM32F405-FOC/variants/m1-mt6835/docs/FOC-从零读懂这个工程.md)用于了解硬件与算法；新组合只通过构建及主机侧测试，尚未完成实机验收。
-
-## 当前调试基线（2026-09-27）
-
-默认 M0/TLE5012B/ZH3620-1、WARN、USB 1000000、5 kHz 遥测，电流环仍为 10 kHz。`send 5` 提供目标/实际 Iq、Id、输出电压和饱和比例；电流网格继续绑定 I2/I9。已完成小电流短测，详见[问题与修复报告](STM32F405-FOC/docs/current-debug-2026-09-27.md)和[逐步改良路线](STM32F405-FOC/docs/foc-improvement-roadmap.md)。
+接线、校准、首次小电流试转见[龙邱电机首测说明](STM32F405-FOC/docs/longqiu-first-test.md)。已烧录并校验，校准保存及软件复位复用、±0.1 A 跟踪、±30 rpm 空载短测通过；后续调参使 ±30 rpm 末段均值改善为 +29.69/−29.89 rpm，位置 ±1/5/10/30/60° 短测末段误差约 0.03°以内，见[控制调试](STM32F405-FOC/docs/longqiu-control-tuning-2026-10-09.md)。低速纹波、带载、外部测量基准和长期温升尚未验收，见[实测记录](STM32F405-FOC/docs/longqiu-bring-up-2026-10-09.md)。历史 ZH3620-1/塑料臂测试结果不代表这台新电机的性能。其他入口见[工程说明](STM32F405-FOC/README.md)、[统一固件](STM32F405-FOC/docs/unified-firmware.md)、[硬件映射](STM32F405-FOC/docs/hardware-map.md)和[VOFA 操作](STM32F405-FOC/docs/vofa-quickstart.md)。

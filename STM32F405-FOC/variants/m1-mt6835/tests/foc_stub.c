@@ -30,6 +30,7 @@ bool foc_current(float amps)
 
 bool foc_calibrate(void) { return false; }
 void foc_init(const foc_calibration_t *calibration) { (void)calibration; }
+void foc_acquisition_resume(void) {}
 float foc_wrap(float radians) { return radians; }
 void foc_integrators(float *d, float *q) { *d = *q = 0.0f; }
 float foc_modulate(float alpha, float beta, float bus, float duty[3])

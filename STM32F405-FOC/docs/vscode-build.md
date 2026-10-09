@@ -1,5 +1,7 @@
 # 在 VS Code 构建并烧录默认固件
 
+**龙邱分支更新：本机默认构建/烧录/F5 已改为 M1 / TLE5012B / L4225_6S420_A / 安装 2 / FREE_SHAFT / WARN。ELF 为 `STM32F405-FOC/build/longqiu/Debug/STM32F405-FOC.elf`。** 接线、配置输出和首次校准以[龙邱首测说明](longqiu-first-test.md)为准。下文中的旧 M0/ZH3620-1 组合及 `build/Debug` 路径保留作历史操作参考。
+
 这里的默认固件是 **M0 功率接口 + TLE5012B + ZH3620-1 + 安装编号 1**。工作区目录是 `D:\STM32F405-FOC`，固件的 CMake 工程在其下的 `STM32F405-FOC/`。本机已配置 `Debug-local` 预设及 STM32CubeIDE 的 ARM 工具链。
 
 默认策略为 `FOC_PROTECTION=WARN`。检查配置输出中的 `protection=WARN`；单次 `Iq` 会保持，越限只告警，需主动发送 `stop`。行为见[台架告警模式](bench-warning-mode.md)。

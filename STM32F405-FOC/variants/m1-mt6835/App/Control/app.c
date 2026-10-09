@@ -486,6 +486,7 @@ void app_poll(void)
             foc.state = FOC_IDLE;
         }
         divider = 0u;
+        foc_acquisition_resume();
         bsp_adc_start();
     }
     /* Recover acquisition after a stalled DMA/ADC, never motor operation. */

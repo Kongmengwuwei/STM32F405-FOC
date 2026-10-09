@@ -68,6 +68,8 @@
 #define USBD_PID_FS     22336
 #ifdef FOC_MOTOR_ZH3620_1
 #define FOC_USB_MOTOR "ZH3620-1"
+#elif defined(FOC_MOTOR_L4225_6S420_A)
+#define FOC_USB_MOTOR "L4225-6S420-A"
 #else
 #define FOC_USB_MOTOR "Reference24V"
 #endif

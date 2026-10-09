@@ -5,7 +5,8 @@
 
 /* Basic cascade: position P -> speed PI -> Iq_ref, above the selected port's
    current loop. TRIP limits match the manual current command range; WARN
-   records the same thresholds and leaves the calculated reference intact.
+   records the same thresholds. A motor-specific actuator bound may also
+   limit WARN output, as used by the Longqiu commissioning profile.
    Tuning order: speed Kp first until it tracks without oscillating, then speed
    Ki to remove the steady-state error, then position Kp. */
 #ifndef FOC_OUTER_SPEED_KP
@@ -20,6 +21,9 @@
 #define SPEED_KP FOC_OUTER_SPEED_KP
 #define SPEED_KI FOC_OUTER_SPEED_KI
 #define POSITION_KP FOC_OUTER_POSITION_KP
+#ifndef FOC_MOTOR_SPEED_FILTER_S
+#define FOC_MOTOR_SPEED_FILTER_S 0.001f
+#endif
 #ifndef FOC_OUTER_POSITION_SPEED_KP
 #ifdef FOC_MOTOR_POSITION_SPEED_KP
 #define FOC_OUTER_POSITION_SPEED_KP FOC_MOTOR_POSITION_SPEED_KP
@@ -206,6 +210,11 @@ static float outer_output(float dt)
         if (limited > FOC_CURRENT_MAX) limited = FOC_CURRENT_MAX;
         if (limited < -FOC_CURRENT_MAX) limited = -FOC_CURRENT_MAX;
     }
+#ifdef FOC_MOTOR_OUTER_CURRENT_MAX
+    /* New-motor actuator ceiling is independent of diagnostic policy. */
+    if (limited > FOC_MOTOR_OUTER_CURRENT_MAX) limited = FOC_MOTOR_OUTER_CURRENT_MAX;
+    if (limited < -FOC_MOTOR_OUTER_CURRENT_MAX) limited = -FOC_MOTOR_OUTER_CURRENT_MAX;
+#endif
     /* Do not wind up against unavailable inverter voltage. Preserve WARN's
        direct-current commands and do not add a current threshold lockout. */
     bool pushing_voltage = foc.voltage_scale < 0.999f &&
@@ -216,6 +225,10 @@ static float outer_output(float dt)
         if (integral_speed > FOC_CURRENT_MAX) integral_speed = FOC_CURRENT_MAX;
         if (integral_speed < -FOC_CURRENT_MAX) integral_speed = -FOC_CURRENT_MAX;
     }
+#ifdef FOC_MOTOR_OUTER_CURRENT_MAX
+    if (integral_speed > FOC_MOTOR_OUTER_CURRENT_MAX) integral_speed = FOC_MOTOR_OUTER_CURRENT_MAX;
+    if (integral_speed < -FOC_MOTOR_OUTER_CURRENT_MAX) integral_speed = -FOC_MOTOR_OUTER_CURRENT_MAX;
+#endif
     return limited;
 }
 
@@ -257,12 +270,12 @@ void control_step(uint32_t sample_us, float mechanical_deg)
     }
     float dt = (float)elapsed * 1e-6f;
     previous_tick = sample_us;
-    /* Estimate at the outer-loop cadence with a time-based 1 ms filter.
+    /* Estimate at the outer-loop cadence with a profile-selected time filter.
        This avoids differentiating encoder quantisation at 10/20 kHz and
        leaves the current loop's angle prediction unchanged. */
     float measured = (velocity_position - last_velocity_position) / (6.0f * dt);
     last_velocity_position = velocity_position;
-    speed += (dt / (0.001f + dt)) * (measured - speed);
+    speed += (dt / (FOC_MOTOR_SPEED_FILTER_S + dt)) * (measured - speed);
     if (foc.state != FOC_RUN) { reference = 0.0f; return; }
     if (!commanded) return;
     /* Persistent WARN targets need no keepalive, including a position hold. */

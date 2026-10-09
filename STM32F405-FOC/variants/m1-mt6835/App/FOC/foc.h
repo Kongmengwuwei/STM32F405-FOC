@@ -30,6 +30,7 @@ typedef struct {
 extern foc_t foc; /* ISR-owned; foreground changes require a short IRQ critical section. */
 
 void foc_init(const foc_calibration_t *calibration);
+void foc_acquisition_resume(void); /* Gates off; resynchronise one sample after Flash save. */
 bool foc_current(float amps); /* Finite torque target; TRIP applies profile limits. */
 bool foc_calibrate(void);
 void foc_stop(void);

@@ -6,6 +6,7 @@
 
 #define PI 3.14159265358979323846f
 #define TURN (2.0f * PI)
+#define ALIGN_START (FOC_MOTOR_ALIGNMENT_START_DEG * (PI / 180.0f))
 #define ALIGN_HOLD_END FOC_CAL_TICKS(30000u)
 #define ALIGN_FORWARD_END FOC_CAL_TICKS(30000u + FOC_ALIGNMENT_SWEEP_TICKS_20KHZ)
 #define ALIGN_REVERSE_END FOC_CAL_TICKS(30000u + 2u * FOC_ALIGNMENT_SWEEP_TICKS_20KHZ)
@@ -16,7 +17,7 @@ static float previous, position, origin, forward, sum_sin, sum_cos, low, high;
 static uint32_t ticks;
 static float integral_d, integral_q, variance_b, variance_c, previous_command;
 static float pwm_offset_sum_b, pwm_offset_sum_c;
-static bool tracking, aligning;
+static bool tracking, aligning, resuming;
 
 static void sincos_fast(float theta, float *s, float *c)
 {
@@ -143,12 +144,22 @@ void foc_init(const foc_calibration_t *calibration)
 {
     memset(&foc, 0, sizeof foc);
     tracking = false;
+    resuming = false;
     aligning = FOC_AUTOCALIBRATE && calibration == NULL;
     ticks = 0u;
     integral_d = integral_q = variance_b = variance_c = 0.0f;
     pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
     if (calibration) { foc.calibration = *calibration; foc.calibrated = true; }
     foc.state = FOC_OFFSET; /* Gate-off current offsets precede any alignment. */
+}
+
+void foc_acquisition_resume(void)
+{
+    /* Flash save pauses acquisition with gates off. The first new delta
+       covers that pause, not one sample period; preserve position but do not
+       interpret it as instantaneous speed or a sensor discontinuity. */
+    resuming = true;
+    foc.rpm = 0.0f;
 }
 
 bool foc_current(float amps)
@@ -205,10 +216,11 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     if (delta > 180.0f) delta -= 360.0f;
     if (delta < -180.0f) delta += 360.0f;
     if (!tracking) { delta = 0.0f; position = mechanical_deg; tracking = true; }
-    else if (fabsf(delta) > FOC_MAX_STEP_DEG && foc_check(FOC_SENSOR)) return;
+    else if (!resuming && fabsf(delta) > FOC_MAX_STEP_DEG && foc_check(FOC_SENSOR)) return;
     previous = mechanical_deg;
     position += delta;
-    foc.rpm += FOC_RPM_FILTER_ALPHA * (delta * ((float)FOC_SAMPLE_HZ / 6.0f) - foc.rpm);
+    if (!resuming) foc.rpm += FOC_RPM_FILTER_ALPHA * (delta * ((float)FOC_SAMPLE_HZ / 6.0f) - foc.rpm);
+    resuming = false;
     if (foc.state == FOC_OFFSET) {
         if (fabsf(foc.rpm) >= 5.0f || fabsf(delta) >= FOC_STATIONARY_STEP_DEG) {
             foc_warn(FOC_ZERO);
@@ -314,7 +326,10 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         float ud = FOC_CURRENT_KP * ed + integral_d - omega * FOC_MOTOR_INDUCTANCE_H * foc.iq;
         float uq = FOC_CURRENT_KP * eq + integral_q + omega * (FOC_MOTOR_INDUCTANCE_H * foc.id + FOC_MOTOR_FLUX_WB);
         /* Linear SVPWM ceiling; modulation also accounts for the ADC window. */
-        float limit = bus_voltage * (FOC_PROTECTION_TRIP ? FOC_VOLTAGE_FRACTION : 0.5773502692f);
+        float fraction = FOC_PROTECTION_TRIP ? FOC_VOLTAGE_FRACTION : 0.5773502692f;
+        /* New-motor commissioning ceiling also applies under WARN; the
+           existing current/timeout warning policy remains independent. */
+        float limit = bus_voltage * fminf(fraction, FOC_MOTOR_RUN_VOLTAGE_FRACTION);
         float norm2 = ud * ud + uq * uq;
         if (!isfinite(norm2) || !isfinite(integral_d) || !isfinite(integral_q)) {
             foc_trip(FOC_NUMERIC); return;
@@ -336,12 +351,12 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         integral_q += FOC_CURRENT_KI_STEP * eq + FOC_CURRENT_AW_STEP * (foc.uq - uq);
     } else if (foc.state == FOC_CALIBRATE) {
         ++ticks;
-        float theta = 0.0f, ud = FOC_ALIGNMENT_VOLTS;
+        float theta = ALIGN_START, ud = FOC_ALIGNMENT_VOLTS;
         if (FOC_ALIGNMENT_CURRENT_A == 0.0f && ticks <= FOC_CAL_TICKS(10000u))
             ud *= (float)ticks / (float)FOC_CAL_TICKS(10000u);
         if (ticks == ALIGN_HOLD_END) origin = position;
         if (ticks > ALIGN_HOLD_END && ticks <= ALIGN_FORWARD_END)
-            theta = TURN * (float)(ticks - ALIGN_HOLD_END) / (float)FOC_CAL_TICKS(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ);
+            theta = ALIGN_START + TURN * (float)(ticks - ALIGN_HOLD_END) / (float)FOC_CAL_TICKS(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ);
         if (ticks == ALIGN_FORWARD_END) {
             forward = position - origin;
             if (fabsf(forward) < (360.0f / (float)FOC_POLE_PAIRS) * 0.8f ||
@@ -352,7 +367,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             }
         }
         if (ticks > ALIGN_FORWARD_END && ticks <= ALIGN_REVERSE_END)
-            theta = TURN * (1.0f - (float)(ticks - ALIGN_FORWARD_END) / (float)FOC_CAL_TICKS(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ));
+            theta = ALIGN_START + TURN * (1.0f - (float)(ticks - ALIGN_FORWARD_END) / (float)FOC_CAL_TICKS(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ));
         if (ticks == ALIGN_SETTLE_END) { sum_sin = sum_cos = 0.0f; low = high = position; }
         if (ticks > ALIGN_SETTLE_END) {
             float angle = mechanical_deg * (PI / 180.0f);
@@ -366,7 +381,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
                 return;
             }
             foc.calibration.direction = forward > 0.0f ? 1 : -1;
-            foc.calibration.zero = foc_wrap((float)foc.calibration.direction * (float)FOC_POLE_PAIRS * atan2f(sum_sin, sum_cos));
+            foc.calibration.zero = foc_wrap((float)foc.calibration.direction * (float)FOC_POLE_PAIRS * atan2f(sum_sin, sum_cos) - ALIGN_START);
             foc_stop();
             foc.state = FOC_SAVE;
             return;

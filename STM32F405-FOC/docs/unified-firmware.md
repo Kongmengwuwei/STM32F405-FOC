@@ -1,5 +1,7 @@
 # 统一固件：选择接口、编码器和电机
 
+**本分支默认已切换为 M1 / TLE5012B / L4225_6S420_A / FREE_SHAFT / 安装 2 / WARN，12 V 供电。Debug 输出在 `build/longqiu/Debug/`。** 原 SPI3/PA0 接线不变，M1/TLE5012B 电流环为 10 kHz；本次装配已校准保存，改接线后重新 `cal`。首次运行步骤与电压上限见[龙邱首测说明](longqiu-first-test.md)；本页后面的 ZH3620-1 默认值、参数和实测结果保留为历史参考。`PLASTIC_ARM` 仅允许 ZH3620_1，新电机使用 FREE_SHAFT 的初始增益。
+
 M0 采样驱动另有 `FOC_M0_ADC_MODE=SEQUENTIAL/DUAL`：默认顺序采样，双 ADC 为可选实验配置，与电机/编码器选择独立。交替对照尚未显示稳定降噪收益，因此未更改默认；见[电流采样与调参](current-sampling-noise.md)。M1 使用原有同步 DMA 路径。
 
 ## 先分清四件事
@@ -10,7 +12,7 @@ M0 采样驱动另有 `FOC_M0_ADC_MODE=SEQUENTIAL/DUAL`：默认顺序采样，�
 |---|---|---|
 | `FOC_PORT` | `M0`、`M1` | PWM 引脚/定时器、ADC 路径、采样频率和接口保护上限 |
 | `FOC_ENCODER` | `TLE5012B`、`MT6835` | SPI 帧格式、时钟模式、同步读取或 DMA、角度检查 |
-| `FOC_MOTOR` | `ZH3620_1`、`REFERENCE_24V` | 极对数、资料参数、控制器的保守限值与环路初值 |
+| `FOC_MOTOR` | `L4225_6S420_A`、`ZH3620_1`、`REFERENCE_24V` | 极对数、资料参数、控制器的保守限值与环路初值 |
 | `FOC_LOAD_PROFILE` | `PLASTIC_ARM`（默认）、`FREE_SHAFT` | 同一台 ZH3620-1 的机械负载对应的速度/位置环参数；电流环共用 |
 | `FOC_INSTALLATION_ID` | `1`–`15` | 当前磁铁、编码器、相线安装；参与 Flash 零点身份 |
 | `FOC_PROTECTION` | `WARN`（默认）、`TRIP` | 共用告警/跳闸策略，与型号和安装身份独立 |

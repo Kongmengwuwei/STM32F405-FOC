@@ -10,7 +10,7 @@
 #if (defined(FOC_ENCODER_TLE5012B) + defined(FOC_ENCODER_MT6835)) != 1
 #error Select exactly one supported FOC_ENCODER
 #endif
-#if (defined(FOC_MOTOR_ZH3620_1) + defined(FOC_MOTOR_REFERENCE_24V)) != 1
+#if (defined(FOC_MOTOR_ZH3620_1) + defined(FOC_MOTOR_REFERENCE_24V) + defined(FOC_MOTOR_L4225_6S420_A)) != 1
 #error Select exactly one supported FOC_MOTOR
 #endif
 
