@@ -1,6 +1,6 @@
 # 统一固件：选择接口、编码器和电机
 
-**本分支默认已切换为 M1 / TLE5012B / L4225_6S420_A / FREE_SHAFT / 安装 2 / WARN，12 V 供电。Debug 输出在 `build/longqiu/Debug/`。** 原 SPI3/PA0 接线不变，M1/TLE5012B 电流环为 10 kHz；本次装配已校准保存，改接线后重新 `cal`。首次运行步骤与电压上限见[龙邱首测说明](longqiu-first-test.md)；本页后面的 ZH3620-1 默认值、参数和实测结果保留为历史参考。`PLASTIC_ARM` 仅允许 ZH3620_1，新电机使用 FREE_SHAFT 的初始增益。
+**本分支默认已切换为 M1 / TLE5012B / L4225_6S420_A / FREE_SHAFT / 安装 4 / WARN，12 V 供电。Debug 输出在 `build/longqiu/Debug/`。** 原 SPI3/PA0 接线不变，M1/TLE5012B 电流环为 10 kHz；本次装配已校准保存，改接线后重新 `cal`。首次运行步骤与电压上限见[龙邱首测说明](longqiu-first-test.md)；本页后面的 ZH3620-1 默认值、参数和实测结果保留为历史参考。`PLASTIC_ARM` 仅允许 ZH3620_1，新电机使用 FREE_SHAFT 的初始增益。
 
 M0 采样驱动另有 `FOC_M0_ADC_MODE=SEQUENTIAL/DUAL`：默认顺序采样，双 ADC 为可选实验配置，与电机/编码器选择独立。交替对照尚未显示稳定降噪收益，因此未更改默认；见[电流采样与调参](current-sampling-noise.md)。M1 使用原有同步 DMA 路径。
 
@@ -13,12 +13,12 @@ M0 采样驱动另有 `FOC_M0_ADC_MODE=SEQUENTIAL/DUAL`：默认顺序采样，�
 | `FOC_PORT` | `M0`、`M1` | PWM 引脚/定时器、ADC 路径、采样频率和接口保护上限 |
 | `FOC_ENCODER` | `TLE5012B`、`MT6835` | SPI 帧格式、时钟模式、同步读取或 DMA、角度检查 |
 | `FOC_MOTOR` | `L4225_6S420_A`、`ZH3620_1`、`REFERENCE_24V` | 极对数、资料参数、控制器的保守限值与环路初值 |
-| `FOC_LOAD_PROFILE` | `PLASTIC_ARM`（默认）、`FREE_SHAFT` | 同一台 ZH3620-1 的机械负载对应的速度/位置环参数；电流环共用 |
+| `FOC_LOAD_PROFILE` | `FREE_SHAFT`（默认）、`PLASTIC_ARM`（仅 ZH3620_1） | 同一台 ZH3620-1 的机械负载对应的速度/位置环参数；电流环共用 |
 | `FOC_INSTALLATION_ID` | `1`–`15` | 当前磁铁、编码器、相线安装；参与 Flash 零点身份 |
 | `FOC_PROTECTION` | `WARN`（默认）、`TRIP` | 共用告警/跳闸策略，与型号和安装身份独立 |
 | `FOC_USB_DIVIDER` | 默认 `2`；1–1000 且整除控制频率 | 仅 USB 帧率，采样和电流 PI 保持原频率 |
 
-顶层 `STM32F405-FOC/` 和该子目录独立构建时均默认 `M0 + TLE5012B + ZH3620_1 + PLASTIC_ARM + 1`。原参考项目的电机准确型号尚未提供，暂用 `REFERENCE_24V` 区分，**不要用 M1 称呼它**。选择参考电机时显式设置 `-DFOC_LOAD_PROFILE=FREE_SHAFT`；该负载选项在参考电机分支中不使用。原来的 `variants/m1-mt6835` 目录名是历史来源；共享程序现在位于其中。
+顶层 `STM32F405-FOC/` 和该子目录独立构建时均默认 `M1 + TLE5012B + L4225_6S420_A + FREE_SHAFT + 4`。原参考项目的电机准确型号尚未提供，暂用 `REFERENCE_24V` 区分，**不要用 M1 称呼它**。选择参考电机时显式设置 `-DFOC_LOAD_PROFILE=FREE_SHAFT`；该负载选项在参考电机分支中不使用。原来的 `variants/m1-mt6835` 目录名是历史来源；共享程序现在位于其中。
 
 ## 图片中的 ZH3620-1
 
@@ -37,14 +37,14 @@ cmake --preset Debug
 cmake --build --preset Debug
 ```
 
-输出为 `build/Debug/STM32F405-FOC.elf`、`.bin`、`.hex`。切换任一选择时使用**独立构建目录**，例如把 ZH3620-1 和 TLE5012B 接到 M1：
+输出为 `build/longqiu/Debug/STM32F405-FOC.elf`、`.bin`、`.hex`。切换任一选择时使用**独立构建目录**，例如把 ZH3620-1 和 TLE5012B 接到 M1：
 
 ```sh
 cmake --preset Debug -B build/zh3620-m1-tle -DFOC_PORT=M1 -DFOC_ENCODER=TLE5012B -DFOC_MOTOR=ZH3620_1 -DFOC_INSTALLATION_ID=2
 cmake --build build/zh3620-m1-tle
 ```
 
-检查 CMake 输出的四个选择和 ELF 路径，再用 ST-Link 烧录**这个** ELF。切换回默认构建目录时再运行默认预设；VS Code 默认烧录任务只指向 `build/Debug/STM32F405-FOC.elf`。编码器两种驱动都针对板上 SPI3/PA0 片选，SPI3 引脚 PC10/PC11/PC12。M0 三相采样用 PC0/PC1、TIM1 10 kHz；M1 用 PC3/PC2、TIM8 20 kHz。PA6 是母线采样。先核对实物丝印与磁编码器供电，切换接口时重接三相并检查相序。
+检查 CMake 输出的四个选择和 ELF 路径，再用 ST-Link 烧录**这个** ELF。切换回默认构建目录时再运行默认预设；VS Code 默认烧录任务只指向 `build/longqiu/Debug/STM32F405-FOC.elf`。编码器两种驱动都针对板上 SPI3/PA0 片选，SPI3 引脚 PC10/PC11/PC12。M0 三相采样用 PC0/PC1、TIM1 10 kHz；M1 用 PC3/PC2、TIM8；TLE5012B 为 10 kHz、MT6835 为 20 kHz。PA6 是母线采样。先核对实物丝印与磁编码器供电，切换接口时重接三相并检查相序。
 
 卸下塑料臂时，可加 `-DFOC_LOAD_PROFILE=FREE_SHAFT` 重新配置、编译和烧录；装回塑料臂时改回 `PLASTIC_ARM`。这一选项不会更改电机/编码器校准身份。两种负载的实测范围与对比见[卸臂对比记录](free-shaft-vs-plastic-arm-2026-09-28.md)。CMake 会记住当前构建目录中的选项，所以切换后请检查配置输出的 `load=`，不能只看源码默认值。
 
@@ -68,11 +68,11 @@ cmake --build build/zh3620-m1-tle
 
 原生 USB 是 CDC 虚拟串口，产品字符串包含电机型号、编码器与功率接口；USART2 是 PA2/PA3 的独立串口。VOFA+ 选对应 COM、Serial、1000000 baud、8N1、无流控，协议选 JustFloat，并打开 DTR。CDC 里波特率只是主机设置，不改变 USB 线速。USB 输出二进制波形，没有文字 ACK；`hello` 的文本只经 USART2 返回，列出接口、编码器、电机、负载配置、安装编号及状态，便于核对烧录组合。文本命令需以真实 CR、LF 或 CRLF 结束。
 
-USB 默认 `send 6` 每帧为 24 个小端 float32 加 `+Inf` 帧尾，共 100 字节。默认 USB divider=2：M0 电流环 10 kHz、USB 2.5 kHz/250 kB/s；M1 电流环 20 kHz、USB 5 kHz/500 kB/s。组 6 是普通数值，包含转速、位置、Iq 的目标与实际值；完整通道表及 VOFA 操作见[VOFA 指南](vofa-quickstart.md)。兼容组 `send 0`～`send 5` 为 12 个 float32 加帧尾，共 52 字节；M0 divider=2 时 5 kHz/260 kB/s，第 0、1 通道是按位编码的时间、状态、序号和组号，不适合直接作为普通曲线。各旧组详见[台架工具说明](../variants/m1-mt6835/tools/bench/README.md)。默认 M0 完整性校验可用 `python tests/capture_usb.py COM端口 --sample-hz 10000 --usb-divider 2 --seconds 30`（在共用固件目录运行）。原 `bench.py run` 工况脚本仍按参考电机编排，不能直接驱动 ZH3620-1。
+USB 默认 `send 6` 每帧为 24 个小端 float32 加 `+Inf` 帧尾，共 100 字节。默认 USB divider=2：M0 电流环 10 kHz、USB 2.5 kHz/250 kB/s；M1/TLE5012B 为 10 kHz、USB 2.5 kHz/250 kB/s，M1/MT6835 为 20 kHz、USB 5 kHz/500 kB/s。组 6 是普通数值，包含转速、位置、Iq 的目标与实际值；完整通道表及 VOFA 操作见[VOFA 指南](vofa-quickstart.md)。兼容组 `send 0`～`send 5` 为 12 个 float32 加帧尾，共 52 字节；M0 divider=2 时 5 kHz/260 kB/s，第 0、1 通道是按位编码的时间、状态、序号和组号，不适合直接作为普通曲线。各旧组详见[台架工具说明](../variants/m1-mt6835/tools/bench/README.md)。默认 M0 完整性校验可用 `python tests/capture_usb.py COM端口 --sample-hz 10000 --usb-divider 2 --seconds 30`（在共用固件目录运行）。原 `bench.py run` 工况脚本仍按参考电机编排，不能直接驱动 ZH3620-1。
 
 | 命令 | 用途 | ZH3620-1 当前范围 |
 |---|---|---|
-| `send 0`～`send 6` | 选择 USB 遥测组；4 为诊断、5 为电流窗口、6 为 VOFA 总览 | 0–6 |
+| `send 0`～`send 9` | 4 为诊断、5 为电流窗口、6 为总览、7/8/9 为 R/L/磁编扫描/抗齿槽 | 0–9 |
 | `cal` | 静止待机时低电压扫描并存零点 | 首次必须显式发送 |
 | `Iq 0.05` | 电流目标，单位 A | WARN 接受有限数值；5 A 为当前短时诊断阈值 |
 | `rpm 10` | 速度目标，单位 RPM | 已在塑料臂负载下验证 ±60 rpm |

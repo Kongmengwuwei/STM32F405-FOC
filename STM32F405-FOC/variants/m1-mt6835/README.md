@@ -1,14 +1,20 @@
-# 共用固件源码与参考组合构建入口
+# 共用固件源码
 
-此目录以参考项目 `F405_FOC_Fork`（`2ac684d`）为基础，现承载全部组合的**共用应用、FOC、USB/UART/CAN 代码**。从这里单独构建和从[顶层默认工程](../..)构建时，均默认选择 M0 功率接口、TLE5012B、ZH3620-1、塑料臂负载。接口、编码器、电机和负载可独立选择；见[统一固件指南](../../docs/unified-firmware.md)。
+本目录承载唯一一套应用、FOC 和硬件适配代码。顶层及本目录的默认配置均为 **M1 / TLE5012B / L4225-6S420-A / FREE_SHAFT / 安装 4 / WARN**。目录名来自历史参考工程，M0 和 MT6835 驱动仍可选择。
 
-在本目录安装好 CMake、Ninja、ARM GCC 后构建：
+推荐从[工程根目录](../..)构建。也可在本目录独立运行：
 
-```sh
+```powershell
 cmake --preset Debug
 cmake --build --preset Debug
+python tests/run_tests.py --cc gcc
 ```
 
-输出是 `build/Debug/405_FOC.elf`、`.hex` 和 `.bin`。Release 同理使用 `Release` 预设。主机测试见 [`tests/README.md`](tests/README.md)。从[初学者教程](docs/FOC-从零读懂这个工程.md)了解公式、实时调用链、状态机与保护，再用[逐文件导览](docs/文件导览.md)查每个文件的职责。
+独立构建输出 `build/longqiu/Debug/405_FOC.elf/.hex/.bin`；顶层构建输出名称为 `STM32F405-FOC`。两者共用默认值和工具链，安装编号一致。修改已有构建配置时，注意 CMake 缓存和显式预设会覆盖默认值。
 
-M0 接口使用 TIM1、PC0/PC1 的 B/C 相电流与 PA6 母线采样；默认 TLE5012B 接 SPI3/PA0。M1 是可选的 TIM8、PC3/PC2 采样接口。换电机型号、编码器或功率接口后必须核对硬件连接并重新 `cal`。现有参考项目的板上记录不等于新组合已重新验收。
+- [当前架构](../../docs/architecture.md)、[应用层](App/README.md)
+- [选择接口与校准](../../docs/unified-firmware.md)、[硬件映射](../../docs/hardware-map.md)
+- [主机回归](tests/README.md)、[台架工具](tools/bench/README.md)
+- [教程](docs/FOC-从零读懂这个工程.md)、[文件导览](docs/文件导览.md)
+
+TLE5012B 使用原 SPI3/PA0；M1 使用 TIM8 和 PC3/PC2 电流采样，M0 使用 TIM1 和 PC0/PC1。更换磁铁、编码器或相线装配后，须按新的安装身份重新校准并验收。

@@ -5,6 +5,7 @@
 #include "bsp_uart.h"
 #include "bsp_usb.h"
 #include "control.h"
+#include "anticogging.h"
 #include "telemetry.h"
 #include "justfloat.h"
 #include "bsp_encoder.h"
@@ -58,14 +59,17 @@ bool app_init(void)
     foc_calibration_t calibration;
     bool calibrated=bsp_motor_load(&calibration);
     foc_init(calibrated ? &calibration : NULL);
-    if (calibrated && bsp_motor_load_parameters(&calibration,&foc_parameters)) foc_parameters_active=true;
+    motor_parameters_t parameters;
+    if (calibrated && bsp_motor_load_parameters(&calibration, &parameters))
+        foc_restore_parameters(&parameters);
+    if (calibrated) bsp_motor_load_cog();
     bsp_adc_start();
     return true;
 }
 
 void app_fault(uint32_t fault)
 {
-    if (foc_identifying()) { app_abort(fault);return; }
+    if (foc_identifying() || control_cog_learning()) { app_abort(fault);return; }
     if (!FOC_PROTECTION_TRIP && (fault == FOC_TIMING || fault == FOC_UART)) {
         foc_warn(fault);
         return; /* A missed deadline holds the last coherent PWM period. */
@@ -227,6 +231,13 @@ static void telemetry_usb(void)
             ((unsigned)foc_parameters_can_rollback()<<6));
         break;
     }
+    case 9: /* Anticogging status; headers retain the 12-float group ABI. */
+        payload[2]=(float)(cog_flags()|((unsigned)control_cog_learning()<<3)); payload[3]=(float)cog_uploaded();
+        payload[4]=control_absolute_deg(); payload[5]=cog_applied();
+        payload[6]=cog_table.gain; payload[7]=cog_peak();
+        payload[8]=foc.calibration.zero; payload[9]=(float)foc.calibration.direction;
+        payload[10]=(float)foc.calibration.pole_pairs; payload[11]=(float)FOC_CALIBRATION_ID;
+        break;
     case 8: /* Sensor calibration candidates and active runtime mapping. */
         payload[2]=(float)sensor_cal.phase;payload[3]=(float)sensor_cal.error;
         payload[4]=(float)sensor_cal.candidate.pole_pairs;
@@ -340,9 +351,14 @@ static bool parse_decimal(const char *p, float *value, float limit)
 /* Foreground parser; only state changes use the short critical section. */
 bool app_command(const char *line)
 {
+    /* Large table finalization runs in the stopped foreground, outside the
+     * short state-change interrupt mask. Numeric uploads are ordered, bounded. */
+    if (!strcmp(line,"cog commit")) return !tuning_save_pending && cog_commit();
     enum { STOP, CAL, CLEAR, ZERO, TORQUE, SPEED, POS, HOLD, HELLO, IDENTIFY,
-           TUNE_APPLY, TUNE_DEFAULT, TUNE_SAVE, TUNE_ROLLBACK, AUTOCAL, SENSOR_APPLY } command;
+           TUNE_APPLY, TUNE_DEFAULT, TUNE_SAVE, TUNE_ROLLBACK, AUTOCAL, SENSOR_APPLY,
+           COG_BEGIN, COG_POINT, COG_ON, COG_OFF, COG_GAIN, COG_SAVE, COG_LEARN } command;
     float value = 0.0f;
+    unsigned cog_index=0;
 #ifdef FOC_CAPTURE
     if (!strcmp(line, "quiet 0") || !strcmp(line, "quiet 1")) {
         quiet = line[6] == '1'; return true;
@@ -382,16 +398,35 @@ bool app_command(const char *line)
     else if (!strcmp(line,"tune default")) command=TUNE_DEFAULT;
     else if (!strcmp(line,"tune rollback")) command=TUNE_ROLLBACK;
     else if (!strcmp(line,"tune save")) command=TUNE_SAVE;
+    else if (!strcmp(line,"cog begin")) command=COG_BEGIN;
+    else if (!strcmp(line,"cog learn")) command=COG_LEARN;
+    else if (!strcmp(line,"cog on")) command=COG_ON;
+    else if (!strcmp(line,"cog off")) command=COG_OFF;
+    else if (!strcmp(line,"cog save")) command=COG_SAVE;
+    else if (!strncmp(line,"cog gain ",9u)) { command=COG_GAIN; if(!parse_decimal(line+9,&value,1.0f))return false; }
+    else if (!strncmp(line,"cog point ",10u)) {
+        const char *p=line+10;
+        if(*p<'0' || *p>'9')return false;
+        while(*p>='0' && *p<='9') {
+            cog_index=cog_index*10u+(unsigned)(*p++-'0');
+            if(cog_index>=COG_POINTS)return false;
+        }
+        if(*p++!=' ' || !parse_decimal(p,&value,COG_MAX_AMPS))return false;
+        command=COG_POINT;
+    }
     else if (!strncmp(line, "Iq ", 3u)) { command = TORQUE; if (!parse_decimal(line + 3, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "rpm ", 4u)) { command = SPEED; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "pos ", 4u)) { command = POS; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
-    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '8' && !line[6]) {
+    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '9' && !line[6]) {
         telemetry_group = (uint8_t)(line[5] - '0');
         return true;
     } else return false;
     uint32_t key = bsp_motor_lock();
     if (tuning_save_pending && command!=STOP) { bsp_motor_unlock(key);return false; }
     bool ok = true;
+    if(control_cog_learning() && command!=STOP && command!=POS && command!=ZERO && command!=CLEAR && command!=HELLO) {
+        bsp_motor_unlock(key);return false;
+    }
     switch (command) {
     case STOP:
 #ifdef FOC_CAPTURE
@@ -406,6 +441,16 @@ bool app_command(const char *line)
     case POS: ok = control_position(value); break;
     case HOLD: ok = control_hold_position(); break;
     case ZERO: ok = control_zero(); break;
+    case COG_BEGIN: ok=cog_begin();break;
+    case COG_LEARN: ok=control_cog_learn();break;
+    case COG_POINT: ok=cog_point(cog_index,value);break;
+    case COG_ON: ok=cog_enable(true);break;
+    case COG_OFF: ok=cog_enable(false);break;
+    case COG_GAIN: ok=cog_gain(value);break;
+    case COG_SAVE:
+        ok=foc.state==FOC_IDLE && cog_valid() && foc_parameters_active;
+        if(ok){tuning_save_pending=true;tuning_save_status=1u;}
+        break;
     case CAL: ok = foc_calibrate(); break;
     case SENSOR_APPLY: ok=foc_apply_calibration();break;
     case AUTOCAL:

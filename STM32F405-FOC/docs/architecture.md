@@ -1,19 +1,42 @@
 # 当前 FOC 架构
 
-可执行固件共用 `variants/m1-mt6835/` 内的 `App/`、`Core/` 和 USB 中间件。目录名 `m1-mt6835` 是来源历史，并不限制现在能构建的组合。顶层旧 M0 试验代码已经移除，避免误读成另一套可运行固件。
+唯一固件源码在 `variants/m1-mt6835/`，目录名保留来源历史。当前默认 **M1 / TLE5012B / 龙邱 L4225-6S420-A / FREE_SHAFT / 安装 4 / WARN**；默认值集中于 `cmake/foc-defaults.cmake`，顶层和独立构建共用工具链实现。
 
-四个选择有不同含义：`FOC_PORT` 指三相功率接口及其 PWM/ADC 路径；`FOC_ENCODER` 指机械角度芯片及 SPI 帧格式；`FOC_MOTOR` 指电机本体参数；`FOC_INSTALLATION_ID` 指磁铁、编码器与相线的具体安装。M0/M1 不是电机名称。
+## 配置与模块
 
-| 层 | 主要文件 | 职责 |
-|---|---|---|
-| 接口 | `App/Config/foc_port.h`、`bsp_motor.c`、`bsp_adc*.c` | M0/TIM1/ADC1 注入 10 kHz 或 M1/TIM8/双 ADC DMA 20 kHz，电流和母线采样、PWM 安全关断 |
-| 编码器 | `App/Config/foc_encoder_profile.h`、`bsp_encoder_*.c`、`Core/Src/spi.c` | TLE5012B 的 16 位模式 1 或 MT6835 的 8 位模式 3，角度有效性检查 |
-| 电机 | `App/Config/foc_motor.h` | 型号、极对数、资料参数与保守控制限值；当前 ZH3620-1 及型号待确认的参考电机 |
-| 组合 | `App/Config/foc_profile.h` | 综合接口与电机限值，绑定 Flash 校准身份 |
-| 共用算法 | `App/Control/app.c`、`control.c`、`App/FOC/foc.c` | 命令、遥测、位置/速度/电流环、SVPWM、对齐与故障状态机 |
+`FOC_PORT` 选择功率接口及 PWM/ADC 路径；`FOC_ENCODER` 选择磁编协议；`FOC_MOTOR` 和 `FOC_LOAD_PROFILE` 选择电机/负载参数；`FOC_INSTALLATION_ID` 标记磁铁、编码器与相线的装配实例。M0/M1 只是功率接口。
 
-M0 的 ADC1 中断或 M1 的 ADC DMA 半传输中断开始读取编码器。TLE5012B 同步完成后进入 `app_sample()`；MT6835 在 SPI DMA 完成后进入 `app_sample()`。因此接口与编码器可交叉构建，算法层不需要按具体型号复制。当前已经编译四种接口/编码器组合；交叉组合的 SPI/ADC 最坏耗时与实物接线仍需实测。
+| 模块 | 主要文件 | 职责 |
+| --- | --- | --- |
+| 硬件接口 | `foc_port.h`、`bsp_motor.c`、`bsp_adc*.c` | PWM/ADC、周期统计、采样窗口、功率关断 |
+| 磁编 | `foc_encoder_profile.h`、`bsp_encoder_*.c`、`spi.c` | TLE5012B/MT6835 协议和有效角度 |
+| 电机配置 | `foc_motor.h`、`foc_profile.h` | 型号/负载参数、组合限值、Flash 身份 |
+| 电流环 | `foc.c` | 角度与电流变换、PI、Ld/Lq 前馈、SVPWM、状态机 |
+| 外环 | `control.c` | 速度 PI、位置轨迹、目标保持和采集 PID |
+| 自动适配 | `sensor_cal.c`、`motor_ident.c` | 极对数/零点/方向、R/L 辨识和候选验证 |
+| 抗齿槽 | `anticogging.c` | 720 点 Iq 前馈、安装绑定和速度退出 |
+| 应用 | `app.c`、`telemetry.h` | 命令事务、遥测、告警和保存调度 |
 
-每次采样的数据流是：PWM 固定相位触发 ADC → 读取编码器和母线 → `foc_step()` 计算电角度、电流 PI 与 SVPWM → 写入下一周期的 PWM 预装载 → USB/UART 遥测。USB CDC 或 USART2 命令进入共用解析器。CAN1 尚无控制命令协议。
+M0 为 TIM1/10 kHz，ADC1 顺序采样或可选双 ADC；M1/TLE5012B 为 TIM8/双 ADC DMA/10 kHz，M1/MT6835 为 20 kHz。TLE5012B 同步 SPI 完成后进入采样函数，MT6835 由 SPI DMA 完成回调进入。普通外环 1 kHz，抗齿槽静态学习按采样频率执行。频率选择以 `foc_port.h` 为准。
 
-校准记录 v3 绑定功率接口、电机型号、编码器型号、安装编号及极对数。v1/v2 没有足够信息区分新组合，因此不会自动复用。所有组合上电只做静止电流零偏估计，首次需显式 `cal`；随后才允许转矩、速度与位置命令。具体构建和使用见[统一固件指南](unified-firmware.md)及[VOFA 操作](vofa-quickstart.md)。
+## 调度与保存
+
+```mermaid
+flowchart LR
+    ADC[固定相位 ADC] --> ENC[读取磁编]
+    ENC --> FOC[角度更新与电流环]
+    FOC --> PWM[下一周期 PWM 预装载]
+    PWM --> OUT[外环 / 采集 PID]
+    OUT --> LOG[遥测窗口与分频]
+    CMD[主循环命令解析] --> FOC
+    CMD --> OUT
+    CMD --> FLASH[停机 Flash 保存]
+```
+
+角度由整数圈数加瞬时机械角重建，外环位置通过原点差计算，抗齿槽表直接索引瞬时角度。电流参数保持 SI 单位，离散 PI 系数在参数事务时缓存。主循环修改运行状态和参数使用短中断临界区；Flash 擦写前关闭功率输出并暂停采集，恢复后不把暂停时间当作一个控制周期。
+
+Flash sector 11：角度校准记录在 +0，电流参数在 +64，抗齿槽表在 +128。校准支持现行 v4 与兼容的 v3；参数和补偿分别检查版本、安装身份、角度绑定及校验码。上电只做静止电流零偏估计，不自动旋转；有效表恢复后保持关闭。具体命令与 ABI 见[自动适配](motor-autotune.md)和[抗齿槽](anticogging.md)。
+
+USB `send 6` 是 24 float 的单电机总览；其余兼容组有两个头字和十个载荷，`send 7/8/9` 分别用于 R/L、磁编扫描、抗齿槽。UART 共用命令解析，CAN 当前只有底层收发队列，没有电机控制协议。
+
+构建和主机回归能验证算法及配置组合，ADC/SPI 最坏时序、绝对电流比例与机械负载表现仍需对应实物测量。历史文档按当时的固件与安装解释；本次整理范围和优化顺序见[清理记录](code-cleanup-2026-10-10.md)。

@@ -1,4 +1,5 @@
 #include "control.h"
+#include "anticogging.h"
 #include "bsp_uart.h"
 #include "foc.h"
 #include <math.h>
@@ -39,9 +40,20 @@ static uint32_t mode, fault;
 static float position, reference, speed, speed_target, position_target;
 static float integral_speed, last_deg, speed_reference;
 static float velocity_position, last_velocity_position;
+static float absolute_deg;
+static float position_origin;
 static uint32_t observer_tick;
 static uint32_t previous_tick, command_ms;
 static bool tracking, commanded;
+static volatile bool cog_learning;
+static float cog_velocity, cog_velocity_position;
+bool control_cog_learning(void) { return cog_learning; }
+bool control_cog_learn(void)
+{
+    if(foc.state!=FOC_IDLE || !foc.calibrated || !foc.zero_ready || (cog_flags()&6u))return false;
+    cog_velocity=speed;cog_velocity_position=velocity_position;
+    cog_learning=true;return true;
+}
 
 /* The free-shaft Longqiu needs stronger low-speed damping but less reaction
    to fast velocity ripple at higher speed. Interpolate on the shaped reference
@@ -63,6 +75,7 @@ float control_speed_target(void) { return speed_target; }
 float control_speed_reference(void) { return speed_reference; }
 float control_position_deg(void) { return position; }
 float control_position_target(void) { return position_target; }
+float control_absolute_deg(void) { return absolute_deg; }
 
 /* WARN holds a target until the next command or explicit stop. */
 bool control_scheduled(void)
@@ -73,6 +86,9 @@ bool control_scheduled(void)
 
 void control_stop(void)
 {
+    cog_learning=false;
+    cog_stop();
+    cog_cancel();
     mode = CONTROL_TORQUE;
     fault = 0u;
     commanded = false;
@@ -101,11 +117,9 @@ static bool arm(uint32_t wanted, float target)
 /* Start from idle through the existing PRECHARGE interlock, whose two
    milliseconds of all-low-side conduction are also what foc_calibrate uses.
    The target is already set by the caller; foc_stop() cleared the previous one. */
-static bool go(void)
+static void go(void)
 {
-    if (foc.state != FOC_IDLE) return true;
-    foc.state = FOC_PRECHARGE;
-    return true;
+    if (foc.state == FOC_IDLE) foc.state = FOC_PRECHARGE;
 }
 
 /* A resend must not disturb the loops. WARN also treats a new target after
@@ -127,7 +141,7 @@ static bool start(uint32_t wanted, float target)
         reference = 0.0f; /* Never reuse an old mode's outer-loop output. */
         speed_reference = speed;
     }
-    if (!go()) return false;
+    go();
     mode = wanted;
     accept();
     return true;
@@ -135,6 +149,7 @@ static bool start(uint32_t wanted, float target)
 
 bool control_torque(float amps)
 {
+    if(cog_learning)return false;
     if (!isfinite(amps)) return false;
     if (fabsf(amps) > FOC_CURRENT_MAX) {
         foc_warn(FOC_CURRENT);
@@ -148,6 +163,7 @@ bool control_torque(float amps)
 
 bool control_speed(float rpm)
 {
+    if(cog_learning)return false;
     if (!isfinite(rpm)) return false;
     if (fabsf(rpm) > FOC_SPEED_MAX) {
         foc_warn(FOC_SPEED);
@@ -185,6 +201,21 @@ bool control_zero(void)
     return true;
 }
 
+static float cog_hold_output(float dt, float live_position, float velocity)
+{
+    /* Static capture needs stiffness against negative cogging slope,
+     * without the normal position->speed cascade's extra phase lag.
+     * All terms are physical Iq; direction is applied exactly once. */
+    float error=(float)foc.calibration.direction*(position_target-live_position);
+    float wanted=1.2f*error-.020f*(float)foc.calibration.direction*velocity+integral_speed;
+    float limited=fminf(2.0f,fmaxf(-2.0f,wanted));
+    if(foc.voltage_scale>=.999f || error*(wanted-foc.iq)<=0)
+        integral_speed+=error*dt;
+    integral_speed+=CONTROL_BANDWIDTH*(limited-wanted);
+    integral_speed=fminf(1.5f,fmaxf(-1.5f,integral_speed));
+    speed_target=speed_reference=0;
+    return limited;
+}
 /* Position P -> speed trajectory -> speed PI using the outer velocity estimate. */
 static float outer_output(float dt)
 {
@@ -227,7 +258,12 @@ static float outer_output(float dt)
 #endif
     ki += blend * (FOC_MOTOR_SPEED_HIGH_KI - ki);
 #endif
-    float wanted = kp * error + integral_speed;
+    /* During a fast reversal the shaped reference crosses zero while the
+     * shaft is still moving quickly. Do not re-enable the low-speed map at
+     * that instant, or add it to an already large acceleration demand. */
+    float compensation_rpm=fmaxf(fabsf(speed_target),
+        fmaxf(fabsf(speed_reference),fabsf(speed)));
+    float wanted = kp * error + integral_speed + cog_output(absolute_deg, compensation_rpm, dt);
     float limited = wanted;
     if (fabsf(wanted) > FOC_CURRENT_MAX) foc_warn(FOC_CURRENT);
     if (FOC_PROTECTION_TRIP) {
@@ -256,12 +292,14 @@ static float outer_output(float dt)
     return limited;
 }
 
-void control_step(uint32_t sample_us, float mechanical_deg)
+void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float encoder_deg)
 {
     if (foc.fault && !fault) fault = foc.fault; /* A trip latches this loop too. */
-    if (!isfinite(mechanical_deg)) return;
+    if (!isfinite(mechanical_deg) || !isfinite(encoder_deg)) return;
+    absolute_deg = encoder_deg;
     if (!tracking) {
         last_deg = velocity_position = last_velocity_position = mechanical_deg;
+        position_origin=mechanical_deg-position;
         previous_tick = observer_tick = sample_us;
         speed = 0.0f;
         tracking = true;
@@ -280,12 +318,27 @@ void control_step(uint32_t sample_us, float mechanical_deg)
         velocity_position += observation_dt / (0.0002f + observation_dt) *
             (mechanical_deg - velocity_position);
     }
+    /* Static capture runs at the current-sample cadence. The normal 1 kHz
+     * cascade is retained for user motion; its sampling delay is unsuitable
+     * for a stiff hold on this very light free shaft. */
+    if(cog_learning) {
+        if(observation_us>CONTROL_JUMP_US) { fault=FOC_TIMING;return; }
+        float dt=(float)observation_us*1e-6f;
+        if(dt>0) {
+            float measured=(velocity_position-cog_velocity_position)/(6*dt);
+            cog_velocity += dt/(.0005f+dt)*(measured-cog_velocity);
+        }
+        cog_velocity_position=velocity_position;
+        if(foc.state==FOC_RUN && commanded && dt>0) {
+            if((uint32_t)(bsp_uart_millis()-command_ms)>=200u) { fault=FOC_UART;return; }
+            reference=cog_hold_output(dt,mechanical_deg-position_origin,cog_velocity);
+        }
+    }
     uint32_t elapsed = (sample_us - previous_tick) & 0xffffffu;
     if (elapsed < CONTROL_PERIOD_US) return;
     /* At the 9400 RPM limit, one millisecond moves less than 57 degrees. */
-    float step_deg = mechanical_deg - last_deg; /* foc_step already unwraps. */
     last_deg = mechanical_deg;
-    position += step_deg;
+    position = mechanical_deg-position_origin;
     if (elapsed > CONTROL_JUMP_US) {
         previous_tick = sample_us; /* Resynchronise without integrating the gap. */
         last_velocity_position = velocity_position;
@@ -303,15 +356,29 @@ void control_step(uint32_t sample_us, float mechanical_deg)
 #ifdef FOC_MOTOR_SPEED_HIGH_KP
     filter_s += speed_gain_blend() * (FOC_MOTOR_SPEED_HIGH_FILTER_S - filter_s);
 #endif
+    if(cog_learning)filter_s=.0005f;
     speed += (dt / (filter_s + dt)) * (measured - speed);
-    if (foc.state != FOC_RUN) { reference = 0.0f; return; }
+    if (foc.state != FOC_RUN) { reference = 0.0f; cog_stop(); return; }
     if (!commanded) return;
+    /* Learning has a hard keepalive even under WARN. A vanished host cannot
+     * leave a calibration target energized indefinitely. */
+    if(cog_learning && (uint32_t)(bsp_uart_millis()-command_ms)>=200u) {
+        fault=FOC_UART;return;
+    }
     /* Persistent WARN targets need no keepalive, including a position hold. */
     if (FOC_PROTECTION_TRIP && (uint32_t)(bsp_uart_millis() - command_ms) >= CONTROL_COMMAND_MS) {
         foc_warn(FOC_UART);
         fault = FOC_UART; return;
     }
     if (fault == FOC_UART) fault = 0u;
-    if (mode == CONTROL_TORQUE) return; /* Its Iq ramp lives in foc_step(). */
+    if(cog_learning)return;
+    if (mode == CONTROL_TORQUE) { cog_stop(); return; } /* Direct Iq excludes compensation. */
     reference = outer_output(dt);
+}
+void control_step(uint32_t sample_us, float mechanical_deg)
+{
+    /* Compatibility entry for host outer-loop fixtures. Hardware supplies
+     * the instantaneous encoder phase separately from its multi-turn value. */
+    control_step_with_angle(sample_us,mechanical_deg,
+        mechanical_deg-360.0f*floorf(mechanical_deg/360.0f));
 }

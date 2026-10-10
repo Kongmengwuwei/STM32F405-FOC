@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 project(405_FOC C ASM)
-set(FOC_PORT "M1" CACHE STRING "Three-phase power connector: M0 or M1")
-set(FOC_ENCODER "TLE5012B" CACHE STRING "Angle sensor model")
-set(FOC_MOTOR "L4225_6S420_A" CACHE STRING "Motor model (reference model name not yet known)")
-set(FOC_LOAD_PROFILE "FREE_SHAFT" CACHE STRING "Mechanical load profile: FREE_SHAFT or PLASTIC_ARM")
-set(FOC_INSTALLATION_ID "4" CACHE STRING "Physical sensor/magnet/phase installation: 1..15")
-set(FOC_PROTECTION "WARN" CACHE STRING "Threshold policy: WARN or TRIP")
-set(FOC_USB_DIVIDER "2" CACHE STRING "USB frame every N current samples")
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/foc-defaults.cmake)
 set(FOC_M0_ADC_MODE "SEQUENTIAL" CACHE STRING "M0 current acquisition: SEQUENTIAL or DUAL")
 set_property(CACHE FOC_M0_ADC_MODE PROPERTY STRINGS SEQUENTIAL DUAL)
 if(FOC_M0_ADC_MODE STREQUAL "DUAL")
@@ -99,6 +93,7 @@ add_subdirectory(cmake/stm32cubemx)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Control/app.c
     App/Control/control.c
+    App/Control/anticogging.c
     App/FOC/foc.c
     App/FOC/motor_ident.c
     App/FOC/sensor_cal.c
@@ -134,10 +129,10 @@ set_source_files_properties(
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_usb.c
     DIRECTORY cmake/stm32cubemx PROPERTIES COMPILE_OPTIONS "-O3")
-# Keep the 20 kHz path optimized in Debug too; -O0 misses PWM deadlines.
+# Keep the 10/20 kHz path optimized in Debug too; -O0 misses PWM deadlines.
 set_source_files_properties(
     App/FOC/foc.c App/FOC/motor_ident.c App/FOC/sensor_cal.c App/Hardware/bsp/bsp_motor.c
-    App/Control/app.c App/Control/control.c ${FOC_ADC_SOURCE} App/Hardware/bsp/bsp_uart.c
+    App/Control/app.c App/Control/control.c App/Control/anticogging.c ${FOC_ADC_SOURCE} App/Hardware/bsp/bsp_uart.c
     ${FOC_ENCODER_SOURCE}
     PROPERTIES COMPILE_OPTIONS "-O3")
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD

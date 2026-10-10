@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-10",
+  "host_c_configurations": 40,
+  "host_python_suites": 5,
+  "host_result": "passed",
+  "builds": {
+    "Debug": {
+      "path": "build\\cleanup\\Debug\\STM32F405-FOC.elf",
+      "sha256": "657ab631619aeeaef48bcffda67546f78f0365697ba07f362ea4a6e1feb8b066",
+      "configuration": {
+        "FOC_ENCODER": "TLE5012B",
+        "FOC_INSTALLATION_ID": "4",
+        "FOC_LOAD_PROFILE": "FREE_SHAFT",
+        "FOC_M0_ADC_MODE": "SEQUENTIAL",
+        "FOC_M0_TRIGGER_TICKS": "",
+        "FOC_MOTOR": "L4225_6S420_A",
+        "FOC_PORT": "M1",
+        "FOC_PROTECTION": "WARN",
+        "FOC_USB_DIVIDER": "2"
+      }
+    },
+    "Release": {
+      "path": "build\\cleanup\\Release\\STM32F405-FOC.elf",
+      "sha256": "8a26574f27bf60ddffceb7af75bf8b62364eef533dc9c54444da77c747b34e76",
+      "configuration": {
+        "FOC_ENCODER": "TLE5012B",
+        "FOC_INSTALLATION_ID": "4",
+        "FOC_LOAD_PROFILE": "FREE_SHAFT",
+        "FOC_M0_ADC_MODE": "SEQUENTIAL",
+        "FOC_M0_TRIGGER_TICKS": "",
+        "FOC_MOTOR": "L4225_6S420_A",
+        "FOC_PORT": "M1",
+        "FOC_PROTECTION": "WARN",
+        "FOC_USB_DIVIDER": "2"
+      }
+    },
+    "Standalone": {
+      "path": "build\\cleanup\\Standalone\\405_FOC.elf",
+      "sha256": "0e62f9eb5f6a661e219fb6472c3f09f0e1027b5a46d950211215cdb62c3bb6fe",
+      "configuration": {
+        "FOC_ENCODER": "TLE5012B",
+        "FOC_INSTALLATION_ID": "4",
+        "FOC_LOAD_PROFILE": "FREE_SHAFT",
+        "FOC_M0_ADC_MODE": "SEQUENTIAL",
+        "FOC_M0_TRIGGER_TICKS": "",
+        "FOC_MOTOR": "L4225_6S420_A",
+        "FOC_PORT": "M1",
+        "FOC_PROTECTION": "WARN",
+        "FOC_USB_DIVIDER": "2"
+      }
+    },
+    "M0": {
+      "path": "build\\cleanup\\M0\\STM32F405-FOC.elf",
+      "sha256": "966dade890051aa727c0b530823b60afbb53023c691996790e53c2077bd129d6",
+      "configuration": {
+        "FOC_ENCODER": "TLE5012B",
+        "FOC_INSTALLATION_ID": "1",
+        "FOC_LOAD_PROFILE": "PLASTIC_ARM",
+        "FOC_M0_ADC_MODE": "SEQUENTIAL",
+        "FOC_M0_TRIGGER_TICKS": "",
+        "FOC_MOTOR": "ZH3620_1",
+        "FOC_PORT": "M0",
+        "FOC_PROTECTION": "WARN",
+        "FOC_USB_DIVIDER": "2"
+      }
+    },
+    "Reference": {
+      "path": "build\\cleanup\\Reference\\STM32F405-FOC.elf",
+      "sha256": "21b2d8b1f2f09eca29ee1661ec175659af69e9fdf9d2682321373a6721f19661",
+      "configuration": {
+        "FOC_ENCODER": "MT6835",
+        "FOC_INSTALLATION_ID": "1",
+        "FOC_LOAD_PROFILE": "FREE_SHAFT",
+        "FOC_M0_ADC_MODE": "SEQUENTIAL",
+        "FOC_M0_TRIGGER_TICKS": "",
+        "FOC_MOTOR": "REFERENCE_24V",
+        "FOC_PORT": "M1",
+        "FOC_PROTECTION": "WARN",
+        "FOC_USB_DIVIDER": "2"
+      }
+    }
+  },
+  "archived_files": 33,
+  "archived_bytes": 15545713,
+  "duplicate_schematics_removed": 3,
+  "assembly_vdiv_before": 16,
+  "assembly_vdiv_after": 14,
+  "board_flashed": false,
+  "hardware_measurements": false,
+  "debug_memory": {
+    "flash_bytes": 91108,
+    "ram_bytes": 17000,
+    "ccmram_bytes": 65536
+  }
+}

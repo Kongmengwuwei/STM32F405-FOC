@@ -29,7 +29,12 @@ int main(void)
     assert(FOC_MOTOR_ID == 3u && FOC_MOTOR_SLOTS == 12u);
     assert(FOC_MOTOR_KV_RPM_PER_V == 420.0f);
     assert(FOC_BUS_MIN == 11.1f && FOC_BUS_MAX <= 24.0f);
-    assert(FOC_CURRENT_MAX == 1.0f && FOC_PHASE_TRIP == 4.0f);
+    assert(FOC_CURRENT_MAX == 5.0f);
+#ifdef FOC_PORT_M0
+    assert(FOC_PHASE_TRIP == 6.0f);
+#else
+    assert(FOC_PHASE_TRIP == 10.0f);
+#endif
     assert(FOC_CURRENT_MAX < FOC_MOTOR_DATASHEET_MAX_CURRENT_A);
     assert(FOC_MOTOR_INDUCTANCE_H == 0.0f && FOC_MOTOR_FLUX_WB == 0.0f);
     assert(FOC_ENCODER_HARMONIC_DEG == 0.0f);

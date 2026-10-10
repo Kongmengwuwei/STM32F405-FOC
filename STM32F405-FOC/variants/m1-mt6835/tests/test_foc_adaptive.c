@@ -20,12 +20,20 @@ static void sample(float bus,bool model)
 }
 int main(void)
 {
-    foc_calibration_t cal={0,1,FOC_POLE_PAIRS};foc_init(&cal);
-    for(unsigned n=0;n<5000;++n)sample(12,false);
-    assert(foc.state==FOC_IDLE && foc.zero_ready);
     motor_parameters_t p={.2f,.0003f,.0005f,0,0,0,200};
     p.kp_d=6.2831853072f*p.bandwidth_hz*p.ld;p.kp_q=6.2831853072f*p.bandwidth_hz*p.lq;
     p.ki=6.2831853072f*p.bandwidth_hz*p.resistance;
+    foc_calibration_t cal={0,1,FOC_POLE_PAIRS};foc_init(&cal);
+    assert(foc_restore_parameters(&p) && foc_parameters_active);
+    assert(!foc_parameters_can_rollback());
+    for(unsigned n=0;n<5000;++n)sample(12,false);
+    assert(foc.state==FOC_IDLE && foc.zero_ready);
+    assert(!foc_restore_parameters(&p));
+    /* First run uses the boot-restored discrete coefficients. */
+    assert(control_torque(.3f));
+    for(unsigned n=0;n<4000;++n)sample(12,true);
+    assert(fabsf(iq-.3f)<.003f);
+    foc_stop();assert(foc_default_parameters());
     assert(foc_apply_parameters(&p) && foc_parameters_active);
     assert(foc_rollback_parameters() && !foc_parameters_active);
     assert(!foc_rollback_parameters());
@@ -81,5 +89,6 @@ int main(void)
     motor_ident.phase=IDENT_READY;motor_ident.valid=true;
     foc_trip(FOC_TIMING);assert(!motor_ident.valid);
     assert(!foc_apply_parameters(&p));
+    foc_init(NULL);assert(!foc_restore_parameters(&p));
     puts("PASS: real FOC runtime gains, 12/18/24 V adaptation, both current signs, stop/default/calibration guards");
 }

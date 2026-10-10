@@ -30,11 +30,12 @@ typedef struct {
     float voltage_scale; /* Applied/requested voltage ratio; zero when stopped. */
 } foc_t;
 extern foc_t foc; /* ISR-owned; foreground changes require a short IRQ critical section. */
-extern motor_parameters_t foc_parameters;
+extern motor_parameters_t foc_parameters; /* Read-only outside foc.c; use parameter APIs. */
 extern bool foc_parameters_active;
 bool foc_identifying(void);
 bool foc_identify(float test_current, float bus_voltage);
 bool foc_apply_parameters(const motor_parameters_t *parameters); /* Idle, IRQ locked. */
+bool foc_restore_parameters(const motor_parameters_t *parameters); /* Boot, before ADC start. */
 bool foc_default_parameters(void); /* Idle, IRQ locked; no movement. */
 bool foc_rollback_parameters(void); /* Restore the gains preceding the last apply. */
 bool foc_parameters_can_rollback(void);

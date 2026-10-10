@@ -58,7 +58,7 @@ static void calibrate(int direction)
 int main(void)
 {
     CHECK(FOC_SAMPLE_HZ == 10000u && FOC_PWM_ARR == 8400u);
-    CHECK(FOC_CALIBRATION_ID == 0x1312u); /* M1/new motor/TLE/installation 2. */
+    CHECK(FOC_CALIBRATION_ID == (0x1310u | FOC_INSTALLATION_ID)); /* M1/Longqiu/TLE/current installation. */
     record_t record = {.version = 3u, .magic = 0x464f4331u,
         .poles = (FOC_CALIBRATION_ID << 16) | FOC_POLE_PAIRS,
         .cal = {.zero = 0.0f, .direction = 1}};

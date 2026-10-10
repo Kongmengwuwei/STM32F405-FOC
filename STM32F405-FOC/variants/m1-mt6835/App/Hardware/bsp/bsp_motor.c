@@ -207,7 +207,7 @@ void bsp_motor_sample_end(void)
 
 bool bsp_motor_load(foc_calibration_t *calibration)
 {
-    const record_t *r = (const record_t *)0x080e0000u;
+    const record_t *r = (const record_t *)FOC_RECORD_ADDRESS;
     if (!record_valid(r)) return false;
     *calibration = (foc_calibration_t){r->cal.zero,r->cal.direction,r->poles&0xffffu};
     return true;
@@ -215,10 +215,28 @@ bool bsp_motor_load(foc_calibration_t *calibration)
 
 bool bsp_motor_load_parameters(const foc_calibration_t *calibration, motor_parameters_t *parameters)
 {
-    const tuning_record_t *r=(const tuning_record_t *)0x080e0040u;
+    const tuning_record_t *r=(const tuning_record_t *)FOC_TUNING_ADDRESS;
     if (!tuning_record_valid(r,calibration)) return false;
     *parameters=r->parameters;return true;
 }
+bool bsp_motor_load_cog(void)
+{
+    const cog_record_t *r=(const cog_record_t *)FOC_COG_ADDRESS;
+    return cog_record_valid(r,&foc.calibration) && cog_restore(&r->table);
+}
+/* Records are word sized and have magic at the last word (asserted in the
+ * ABI header). Stop on the first error, so incomplete records cannot commit. */
+static __attribute__((noinline)) bool program_record(uint32_t address, const void *record, size_t size)
+{
+    for (size_t i = 0; i < size; i += sizeof(uint32_t)) {
+        uint32_t word;
+        memcpy(&word, (const uint8_t *)record + i, sizeof word);
+        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address + (uint32_t)i, word) != HAL_OK)
+            return false;
+    }
+    return true;
+}
+
 static bool save_record(const foc_calibration_t *calibration, const motor_parameters_t *parameters)
 {
     if (motor_mode != MOTOR_OFF || (FOC_PWM_TIMER->CR1 & TIM_CR1_CEN)) return false;
@@ -226,24 +244,28 @@ static bool save_record(const foc_calibration_t *calibration, const motor_parame
                   .cal = {calibration->zero,calibration->direction}, .magic = 0x464f4331u};
     r.checksum = checksum(&r);
     if(!record_valid(&r))return false;
+    static cog_record_t cog_record; /* Avoid a 3 kB foreground stack frame. */
+    bool save_cog=parameters && cog_valid() &&
+        memcmp(&cog_table.calibration,calibration,sizeof *calibration)==0;
+    if(save_cog) {
+        cog_record.version=1u;cog_record.profile=r.poles;cog_record.points=COG_POINTS;
+        cog_record.table=cog_table;cog_record.magic=0x434f4731u;
+        cog_record.checksum=cog_checksum(&cog_record);
+    }
     FLASH_EraseInitTypeDef erase = {.TypeErase = FLASH_TYPEERASE_SECTORS,
         .VoltageRange = FLASH_VOLTAGE_RANGE_3, .Sector = FLASH_SECTOR_11, .NbSectors = 1u};
     uint32_t failed;
     if (HAL_FLASH_Unlock() != HAL_OK) return false;
     bool ok = HAL_FLASHEx_Erase(&erase, &failed) == HAL_OK;
-    for (unsigned i = 0; ok && i < sizeof r; i += 4u) {
-        uint32_t word;
-        memcpy(&word, (const uint8_t *)&r + i, sizeof word);
-        ok = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, 0x080e0000u + i, word) == HAL_OK;
-    }
+    ok = ok && program_record(FOC_RECORD_ADDRESS, &r, sizeof r);
     if (parameters) {
         tuning_record_t tuning={.version=1u,.profile=(FOC_CALIBRATION_ID<<16)|calibration->pole_pairs,
             .cal={calibration->zero,calibration->direction},.parameters=*parameters,.magic=0x524c5049u};
         tuning.checksum=tuning_checksum(&tuning);
-        for(unsigned i=0;ok && i<sizeof tuning;i+=4u) {
-            uint32_t word;memcpy(&word,(const uint8_t *)&tuning+i,sizeof word);
-            ok=HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD,0x080e0040u+i,word)==HAL_OK;
-        }
+        ok = ok && program_record(FOC_TUNING_ADDRESS, &tuning, sizeof tuning);
+    }
+    if(save_cog) {
+        ok = ok && program_record(FOC_COG_ADDRESS, &cog_record, sizeof cog_record);
     }
     HAL_FLASH_Lock();
     foc_calibration_t readback;
@@ -251,6 +273,10 @@ static bool save_record(const foc_calibration_t *calibration, const motor_parame
     if (ok && parameters) {
         motor_parameters_t read_parameters;
         ok=bsp_motor_load_parameters(calibration,&read_parameters) && memcmp(&read_parameters,parameters,sizeof *parameters)==0;
+    }
+    if(ok && save_cog) {
+        const cog_record_t *read_cog=(const cog_record_t *)FOC_COG_ADDRESS;
+        ok=cog_record_valid(read_cog,calibration) && memcmp(read_cog,&cog_record,sizeof cog_record)==0;
     }
     return ok;
 }

@@ -34,6 +34,7 @@ void bsp_motor_unlock(uint32_t key) { (void)key; }
 void bsp_motor_arm(void) {}
 void bsp_motor_off(void) { motor_mode = MOTOR_OFF; }
 bool bsp_motor_load(foc_calibration_t *cal) { *cal = (foc_calibration_t){0.0f, 1, FOC_POLE_PAIRS}; return true; }
+bool bsp_motor_load_cog(void) { return false; }
 bool bsp_motor_save(const foc_calibration_t *cal) { (void)cal; return true; }
 bool bsp_motor_load_parameters(const foc_calibration_t *cal,motor_parameters_t *p) { (void)cal;(void)p;return false; }
 bool bsp_motor_save_parameters(const foc_calibration_t *cal,const motor_parameters_t *p) { (void)cal;(void)p;return true; }
@@ -125,7 +126,7 @@ int main(void)
     const char *bad[] = {"Iq nan\r", "Iq inf\r", "Iq 5.01\r", "Iq -5.01\r",
         "Iq 0.123\r", "Iq 1e0\r", "Iq .5\r", "Iq 1.\r", "Iq 0.2junk\r",
         "Iq 0000000000000000000000000000000000001\r", "Iq 0.\00120\r",
-        "send 9\r", "send -1\r", "send\r", "send 0 extra\r", "send \r",
+        "send 10\r", "send -1\r", "send\r", "send 0 extra\r", "send \r",
         "rpm nan\r", "rpm 9400.01\r", "pos 1000001\r", "position 10\r", "zero 1\r"};
     for (unsigned i = 0; i < sizeof bad / sizeof bad[0]; ++i) {
         unsigned rejected = app_command_rejected;
@@ -217,6 +218,13 @@ int main(void)
     /* `zero` needs the idle, stationary encoder state. */
     foc.zero_ready = true; foc.rpm = 0.0f; foc.state = FOC_IDLE;
     assert(app_command("zero") && control_position_deg() == 0.0f);
+    assert(!app_command("cog on") && !app_command("cog commit") && !app_command("cog point 0 nan"));
+    assert(app_command("cog begin") && !app_command("cog point 1 0.10"));
+    assert(app_command("cog point 0 0.10") && !app_command("cog commit"));
+    assert(app_command("stop") && !app_command("cog point 1 0.10"));
+    assert(app_command("send 9"));
+    for(unsigned i=0;i<FOC_USB_DIVIDER;++i){motor_sample_us+=50u;app_sample();}
+    assert(index_word()>>24==9u && channel(2)==0);
     foc.rpm = 100.0f; assert(!app_command("zero")); foc.rpm = 0.0f;
     assert(!app_command("autocal nan") && !app_command("autocal 3.01") &&
            !app_command("autocal 1.500") && !app_command("autocal 0.10") && !app_command("sensor apply"));

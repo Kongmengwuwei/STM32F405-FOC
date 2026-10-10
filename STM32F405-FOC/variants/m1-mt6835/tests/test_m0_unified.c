@@ -42,6 +42,7 @@ void bsp_motor_unlock(uint32_t key) { (void)key; }
 void bsp_motor_arm(void) {}
 void bsp_motor_off(void) { motor_mode = MOTOR_OFF; }
 bool bsp_motor_load(foc_calibration_t *cal) { (void)cal; return false; }
+bool bsp_motor_load_cog(void) { return false; }
 bool bsp_motor_save(const foc_calibration_t *cal) { (void)cal; return true; }
 bool bsp_motor_load_parameters(const foc_calibration_t *cal,motor_parameters_t *p) { (void)cal;(void)p;return false; }
 bool bsp_motor_save_parameters(const foc_calibration_t *cal,const motor_parameters_t *p) { (void)cal;(void)p;return true; }
@@ -125,7 +126,7 @@ int main(void)
     for (unsigned n = 0; n < FOC_USB_DIVIDER * 2u; ++n) { motor_sample_us += 100u; app_sample(); }
     assert(last_frame_size == sizeof last_frame);
     assert(app_command("send 7"));
-    assert(!app_command("send 9"));
+    assert(!app_command("send 10"));
     assert(app_command("send 6"));
     frames = 0u;
     foc.calibrated = true; /* Stand in for a completed, profile-matched record. */

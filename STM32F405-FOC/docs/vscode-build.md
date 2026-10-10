@@ -1,15 +1,15 @@
 # 在 VS Code 构建并烧录默认固件
 
-**龙邱分支更新：本机默认构建/烧录/F5 已改为 M1 / TLE5012B / L4225_6S420_A / 安装 2 / FREE_SHAFT / WARN。ELF 为 `STM32F405-FOC/build/longqiu/Debug/STM32F405-FOC.elf`。** 接线、配置输出和首次校准以[龙邱首测说明](longqiu-first-test.md)为准。下文中的旧 M0/ZH3620-1 组合及 `build/Debug` 路径保留作历史操作参考。
+**龙邱分支更新：本机默认构建/烧录/F5 已改为 M1 / TLE5012B / L4225_6S420_A / 安装 4 / FREE_SHAFT / WARN。ELF 为 `STM32F405-FOC/build/longqiu/Debug/STM32F405-FOC.elf`。** 接线、配置输出和首次校准以[龙邱首测说明](longqiu-first-test.md)为准。当前调参、自动适配和抗齿槽说明见工程首页。
 
-这里的默认固件是 **M0 功率接口 + TLE5012B + ZH3620-1 + 安装编号 1**。工作区目录是 `D:\STM32F405-FOC`，固件的 CMake 工程在其下的 `STM32F405-FOC/`。本机已配置 `Debug-local` 预设及 STM32CubeIDE 的 ARM 工具链。
+这里的默认固件是 **M1 功率接口 + TLE5012B + L4225-6S420-A + 安装编号 4**。工作区目录是 `D:\STM32F405-FOC`，固件的 CMake 工程在其下的 `STM32F405-FOC/`。本机已配置 `Debug-local` 预设及 STM32CubeIDE 的 ARM 工具链。
 
 默认策略为 `FOC_PROTECTION=WARN`。检查配置输出中的 `protection=WARN`；单次 `Iq` 会保持，越限只告警，需主动发送 `stop`。行为见[台架告警模式](bench-warning-mode.md)。
 
 ## 操作步骤
 
 1. 用 VS Code “文件 → 打开文件夹”打开 `D:\STM32F405-FOC`。不要只打开历史名称的 `variants/m1-mt6835/` 子目录。把 ST-Link 的 SWDIO、SWCLK、GND 与目标电压参考接到控制板，给控制板提供合适的逻辑电源；首次烧录时先让电机轴空载，不要直接启动功率输出。
-2. 按 **`Ctrl+Shift+B`**，运行默认任务 `STM32: Build Debug`。该任务会先配置再编译，并明确把四项选择设回默认组合。终端中应看到 `FOC build: port=M0, encoder=TLE5012B, motor=ZH3620_1, installation=1` 和最后的内存占用。生成文件是 `STM32F405-FOC/build/Debug/STM32F405-FOC.elf`；同目录还会生成 `.bin`、`.hex`。
+2. 按 **`Ctrl+Shift+B`**，运行默认任务 `STM32: Build Debug`。该任务会先配置再编译，并明确把四项选择设回默认组合。终端中应看到 `FOC build: port=M1, encoder=TLE5012B, motor=L4225_6S420_A, installation=4` 和最后的内存占用。生成文件是 `STM32F405-FOC/build/longqiu/Debug/STM32F405-FOC.elf`；同目录还会生成 `.bin`、`.hex`。
 3. 确认 ST-Link 已连接且未被其他调试软件占用。按 **`Ctrl+Shift+P`**，选 `Tasks: Run Task`（中文界面为“任务: 运行任务”），再选 **`STM32: Build and flash via ST-Link`**。它会重新确认配置和构建，用 SWD 1 MHz 烧录上述 ELF、校验并复位。终端显示下载和校验成功才算完成。
 4. 新固件复位后不会自动驱动电机。先检查 USB 枚举、编码器角度、ADC 零偏和输出关断，再按[统一固件指南](unified-firmware.md)和[VOFA 操作](vofa-quickstart.md)进行 `cal` 与小目标短测。换磁铁或相线安装后改 `FOC_INSTALLATION_ID`，重新构建和 `cal`；旧 v1/v2 零点不会沿用。
 

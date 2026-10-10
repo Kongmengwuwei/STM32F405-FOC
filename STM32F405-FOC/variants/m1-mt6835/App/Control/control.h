@@ -18,6 +18,7 @@ void control_stop(void);              /* stop/trip: torque mode, cleared integra
 /* Called every valid current-loop cycle, including idle, with the unwrapped
    mechanical position. Observes always; produces torque only in RUN at 1 kHz. */
 void control_step(uint32_t sample_us, float mechanical_deg);
+void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float absolute_deg);
 
 /* Latched reason to trip the FOC state machine; read every current cycle. */
 uint32_t control_fault(void);
@@ -29,5 +30,8 @@ float control_speed_target(void);
 float control_speed_reference(void); /* Slewed speed used by the PI, RPM. */
 float control_position_deg(void);     /* Multi-turn, relative to the last control_zero(). */
 float control_position_target(void);
+float control_absolute_deg(void); /* Encoder mechanical origin, unaffected by zero. */
+bool control_cog_learn(void); /* Idle: quiet bounded position hold for map capture. */
+bool control_cog_learning(void);
 
 #endif

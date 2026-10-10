@@ -226,3 +226,5 @@ python tools/bench/selftest.py
 
 覆盖帧字节往返、拆分/粘连读取、错位重同步、丢帧检测、损坏拒绝、通道表、
 归档往返与工况限值校验。
+
+抗齿槽采集与开关对比使用 `anticogging.py`，完整方案、采集边界和 VOFA 命令见[抗齿槽说明](../../../../docs/anticogging.md)。

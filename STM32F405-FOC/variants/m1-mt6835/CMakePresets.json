@@ -12,7 +12,7 @@
         "FOC_ENCODER": "TLE5012B",
         "FOC_MOTOR": "L4225_6S420_A",
         "FOC_LOAD_PROFILE": "FREE_SHAFT",
-        "FOC_INSTALLATION_ID": "2",
+        "FOC_INSTALLATION_ID": "4",
         "FOC_PROTECTION": "WARN",
         "FOC_USB_DIVIDER": "2"
       }
