@@ -83,7 +83,7 @@ int main(void)
     foc_calibration_t cal = {0.0f, 1};
     foc_init(&cal);
     zero_current();
-    if (FOC_PROTECTION_TRIP) CHECK(!foc_current(1.1f));
+    if (FOC_PROTECTION_TRIP) CHECK(!foc_current(FOC_CURRENT_MAX + 0.1f));
     else {
         CHECK(foc_current(4.0f)); /* WARN retains existing command semantics. */
         foc_stop();
@@ -92,14 +92,14 @@ int main(void)
     for (unsigned n = 0; n < 30000u; ++n) {
         sample(0.0f);
         CHECK(foc.state == FOC_PRECHARGE || foc.state == FOC_RUN);
-        CHECK(hypotf(foc.ud, foc.uq) <= 1.20001f);
+        CHECK(hypotf(foc.ud, foc.uq) <= 12.0f * FOC_MOTOR_RUN_VOLTAGE_FRACTION + 1e-5f);
         if (foc.state == FOC_RUN) CHECK(foc_window(foc.duty));
     }
     CHECK(foc.voltage_scale < 1.0f && (foc.warnings & (1u << FOC_VOLTAGE)));
     CHECK(foc_current(-0.9f));
     for (unsigned n = 0; n < 40000u; ++n) {
         sample(0.0f);
-        CHECK(hypotf(foc.ud, foc.uq) <= 1.20001f && foc_window(foc.duty));
+        CHECK(hypotf(foc.ud, foc.uq) <= 12.0f * FOC_MOTOR_RUN_VOLTAGE_FRACTION + 1e-5f && foc_window(foc.duty));
     }
     CHECK(foc.uq < 0.0f);
     foc_stop();
@@ -115,7 +115,8 @@ int main(void)
         outer_peak = fmaxf(outer_peak, fabsf(control_iq_ref()));
         if (FOC_PROTECTION_TRIP) CHECK(fabsf(control_iq_ref()) <= FOC_CURRENT_MAX);
     }
-    CHECK(outer_peak > (FOC_PROTECTION_TRIP ? 0.99f : 1.99f));
+    const float expected_peak = FOC_PROTECTION_TRIP ? fminf(FOC_CURRENT_MAX, FOC_MOTOR_OUTER_CURRENT_MAX) : FOC_MOTOR_OUTER_CURRENT_MAX;
+    CHECK(outer_peak > expected_peak - 0.01f);
     foc_stop();
     foc_clear_warnings();
     foc_acquisition_resume();

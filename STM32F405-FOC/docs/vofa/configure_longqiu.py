@@ -40,7 +40,7 @@ def main():
     args = parser.parse_args()
     docs = Path(__file__).resolve().parent.parent
     repo = docs.parent.parent
-    output = repo / "exports/vofa-longqiu-single-motor-20261009"
+    output = repo / "exports/vofa-longqiu-single-motor-20261010"
     config = read(docs / "vofa-overview.config.json")
     wave = config["ctx"]["wave_view"]["ctx"]
     serial = wave["left_panel"]["ctx"]["pal"]["ctx"]
@@ -64,7 +64,7 @@ def main():
     tabview = read(docs / "vofa-overview.tabview.json")
     tabview["ctx"]["tabs"][0]["name"] = "龙邱 M1 · 单电机（12 V）"
     widgets = tabview["ctx"]["tabs"][0]["widgets"]
-    limits = [(100, -100), (75, -75), (2.5, -2.5)]
+    limits = [(400, -400), (75, -75), (8, -8)]
     bindings = [[0, 1, 18], [2, 3], [4, 5, 6, 7]]
     for widget, (top, bottom), lines in zip(widgets[1:], limits, bindings):
         assert widget["ctx"]["rbw"]["ctx"]["."]["lines"] == lines
@@ -78,7 +78,7 @@ def main():
             command("当前位置设为零点", "zero", "先停机；将当前磁编角度设为软件零点"),
             command("保持当前位置", "hold", "启动位置闭环，保持点击时的当前位置"),
             command("清除历史告警", "clear", "只清诊断，不会停止正在运行的电机")]
-    for rpm in [10, -10, 30, -30, 60, -60, 0]:
+    for rpm in [10, -10, 30, -30, 60, -60, 150, -150, 300, -300, 0]:
         cmds.append(command(f"速度 {rpm:+d} rpm", f"rpm {rpm}", "启动速度闭环；单次目标持续有效，用 stop 结束"))
     for deg in [1, -1, 5, -5, 10, -10, 30, -30, 60, -60, 0]:
         cmds.append(command(f"位置 {deg:+d}°", f"pos {deg}", "相对于软件零点的绝对目标；到达后保持，用 stop 结束"))

@@ -43,6 +43,18 @@ static uint32_t observer_tick;
 static uint32_t previous_tick, command_ms;
 static bool tracking, commanded;
 
+/* The free-shaft Longqiu needs stronger low-speed damping but less reaction
+   to fast velocity ripple at higher speed. Interpolate on the shaped reference
+   (not noisy measured speed); integral state is preserved across the range. */
+#ifdef FOC_MOTOR_SPEED_HIGH_KP
+static float speed_gain_blend(void)
+{
+    float blend = (fabsf(speed_reference) - FOC_MOTOR_SPEED_GAIN_LOW_RPM) /
+        (FOC_MOTOR_SPEED_GAIN_HIGH_RPM - FOC_MOTOR_SPEED_GAIN_LOW_RPM);
+    return fminf(1.0f, fmaxf(0.0f, blend));
+}
+#endif
+
 float control_iq_ref(void) { return reference; }
 uint32_t control_mode(void) { return mode; }
 uint32_t control_fault(void) { return fault; }
@@ -203,6 +215,15 @@ static float outer_output(float dt)
     speed_reference += change;
     float error = (float)foc.calibration.direction * (speed_reference - speed);
     float kp = mode == CONTROL_POSITION ? FOC_OUTER_POSITION_SPEED_KP : SPEED_KP;
+    float ki = SPEED_KI;
+#ifdef FOC_MOTOR_SPEED_HIGH_KP
+    float blend = speed_gain_blend();
+    if (mode == CONTROL_SPEED) kp += blend * (FOC_MOTOR_SPEED_HIGH_KP - kp);
+#ifdef FOC_MOTOR_POSITION_HIGH_SPEED_KP
+    else kp += blend * (FOC_MOTOR_POSITION_HIGH_SPEED_KP - kp);
+#endif
+    ki += blend * (FOC_MOTOR_SPEED_HIGH_KI - ki);
+#endif
     float wanted = kp * error + integral_speed;
     float limited = wanted;
     if (fabsf(wanted) > FOC_CURRENT_MAX) foc_warn(FOC_CURRENT);
@@ -219,7 +240,7 @@ static float outer_output(float dt)
        direct-current commands and do not add a current threshold lockout. */
     bool pushing_voltage = foc.voltage_scale < 0.999f &&
         error * (wanted - foc.iq) > 0.0f;
-    if (!pushing_voltage) integral_speed += SPEED_KI * error * dt;
+    if (!pushing_voltage) integral_speed += ki * error * dt;
     if (limited != wanted) integral_speed += CONTROL_BANDWIDTH * (limited - wanted);
     if (FOC_PROTECTION_TRIP) {
         if (integral_speed > FOC_CURRENT_MAX) integral_speed = FOC_CURRENT_MAX;
@@ -275,7 +296,11 @@ void control_step(uint32_t sample_us, float mechanical_deg)
        leaves the current loop's angle prediction unchanged. */
     float measured = (velocity_position - last_velocity_position) / (6.0f * dt);
     last_velocity_position = velocity_position;
-    speed += (dt / (FOC_MOTOR_SPEED_FILTER_S + dt)) * (measured - speed);
+    float filter_s = FOC_MOTOR_SPEED_FILTER_S;
+#ifdef FOC_MOTOR_SPEED_HIGH_KP
+    filter_s += speed_gain_blend() * (FOC_MOTOR_SPEED_HIGH_FILTER_S - filter_s);
+#endif
+    speed += (dt / (filter_s + dt)) * (measured - speed);
     if (foc.state != FOC_RUN) { reference = 0.0f; return; }
     if (!commanded) return;
     /* Persistent WARN targets need no keepalive, including a position hold. */

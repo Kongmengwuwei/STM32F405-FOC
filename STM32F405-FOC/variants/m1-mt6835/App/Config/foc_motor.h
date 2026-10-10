@@ -55,7 +55,7 @@
 #elif defined(FOC_MOTOR_L4225_6S420_A)
 /* User-supplied image: Longqiu L4225-6S420-A, operated at 12 V.
  * Winding R/L and phase-current rating are unknown; these controller gains
- * were short-tested on the free shaft on 2026-10-09; no loaded rating is implied. */
+ * were short-tested on the free shaft through 2026-10-10; no loaded rating is implied. */
 #define FOC_MOTOR_ID 3u
 #define FOC_MOTOR_NAME "L4225-6S420-A"
 #define FOC_LOAD_NAME "FREE_SHAFT"
@@ -67,9 +67,9 @@
 #define FOC_MOTOR_DATASHEET_TORQUE_MAX_NM 1.1f
 #define FOC_MOTOR_BUS_MIN 11.1f
 #define FOC_MOTOR_BUS_MAX 24.0f
-#define FOC_MOTOR_CURRENT_MAX 1.0f /* Initial bench threshold, WARN diagnostics. */
-#define FOC_MOTOR_PHASE_TRIP 4.0f /* Short-bench diagnostic, not a continuous rating. */
-#define FOC_MOTOR_SPEED_MAX 200.0f
+#define FOC_MOTOR_CURRENT_MAX 5.0f /* Dynamic-response short-bench diagnostic. */
+#define FOC_MOTOR_PHASE_TRIP 10.0f /* Short-bench diagnostic, not a continuous rating. */
+#define FOC_MOTOR_SPEED_MAX 600.0f
 #define FOC_MOTOR_TORQUE_SPEED_TRIP_RPM 600.0f
 #define FOC_MOTOR_ALIGNMENT_VOLTS 1.50f
 #define FOC_MOTOR_ALIGNMENT_CURRENT_A 3.00f
@@ -78,20 +78,26 @@
 #define FOC_MOTOR_RESISTANCE_OHM 0.0f /* Unknown; not used by the PI controller. */
 #define FOC_MOTOR_INDUCTANCE_H 0.0f /* Disable unmeasured feedforward. */
 #define FOC_MOTOR_FLUX_WB 0.0f
-#define FOC_MOTOR_RUN_VOLTAGE_FRACTION 0.10f /* 1.2 V dq-vector ceiling at 12 V, also in WARN. */
+#define FOC_MOTOR_RUN_VOLTAGE_FRACTION 0.35f /* Dynamic-response voltage margin, also in WARN. */
 #define FOC_MOTOR_CURRENT_KP 0.20f
 #define FOC_MOTOR_CURRENT_KI_PER_S 80.0f
 #define FOC_MOTOR_CURRENT_AW_PER_S 1200.0f
 #define FOC_MOTOR_SPEED_KP 0.08f
-#define FOC_MOTOR_SPEED_KI 0.40f /* Remove the initial low-speed mean error. */
-#define FOC_MOTOR_SPEED_FILTER_S 0.0005f /* Less feedback delay; other models keep 1 ms. */
+#define FOC_MOTOR_SPEED_KI 0.40f
+#define FOC_MOTOR_SPEED_FILTER_S 0.0005f
+#define FOC_MOTOR_SPEED_HIGH_KP 0.04f
+#define FOC_MOTOR_SPEED_HIGH_KI 0.80f
+#define FOC_MOTOR_SPEED_HIGH_FILTER_S 0.002f
+#define FOC_MOTOR_SPEED_GAIN_LOW_RPM 60.0f
+#define FOC_MOTOR_SPEED_GAIN_HIGH_RPM 150.0f
 #define FOC_MOTOR_POSITION_SPEED_KP 0.06f
-#define FOC_MOTOR_OUTER_CURRENT_MAX 2.0f /* Commissioning actuator bound, also in WARN. */
-#define FOC_MOTOR_SPEED_SLEW_RPM_PER_S 300.0f
-#define FOC_MOTOR_POSITION_ACCEL_RPM_PER_S 1200.0f /* React before near-target stick/slip grows. */
-#define FOC_MOTOR_POSITION_BRAKE_RPM_PER_S 960.0f
+#define FOC_MOTOR_POSITION_HIGH_SPEED_KP 0.04f
+#define FOC_MOTOR_OUTER_CURRENT_MAX 6.0f /* Dynamic-response actuator bound, also in WARN. */
+#define FOC_MOTOR_SPEED_SLEW_RPM_PER_S 15000.0f
+#define FOC_MOTOR_POSITION_ACCEL_RPM_PER_S 10000.0f
+#define FOC_MOTOR_POSITION_BRAKE_RPM_PER_S 4800.0f
 #define FOC_MOTOR_POSITION_KP 12.0f
-#define FOC_MOTOR_POSITION_SPEED_MAX 60.0f
+#define FOC_MOTOR_POSITION_SPEED_MAX 240.0f
 #else
 /* Original reference firmware motor: exact model name has not been supplied.
  * Keep its historical tuning separate; do not identify it as ZH3620-1. */

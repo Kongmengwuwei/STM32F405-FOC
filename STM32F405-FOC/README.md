@@ -1,6 +1,6 @@
 # STM32F405 有感 FOC
 
-**本分支默认：M1 / L4225-6S420-A / 原 TLE5012B / 12 V / 安装 2 / FREE_SHAFT / WARN。** 原 SPI3/PA0 接线不变，电流环 10 kHz、USB 总览 2.5 kHz；Debug 输出位于 `build/longqiu/Debug/`。首次小电流运行与重新校准见[龙邱首测说明](docs/longqiu-first-test.md)。以下旧组合描述与负载性能记录保留为历史参考，新电机已完成校准保存、软件复位复用和空载短测，见[龙邱实测记录](docs/longqiu-bring-up-2026-10-09.md)；已继续完成速度和小角度定位短测，见[控制调试](docs/longqiu-control-tuning-2026-10-09.md)；低速纹波和带载性能仍未验收。
+**本分支默认：M1 / L4225-6S420-A / 原 TLE5012B / 12 V / 安装 2 / FREE_SHAFT / WARN。** 原 SPI3/PA0 接线不变，电流环 10 kHz、USB 总览 2.5 kHz；Debug 输出位于 `build/longqiu/Debug/`。首次小电流运行与重新校准见[龙邱首测说明](docs/longqiu-first-test.md)。以下旧组合描述与负载性能记录保留为历史参考，新电机已完成校准保存、软件复位复用和空载短测，见[龙邱实测记录](docs/longqiu-bring-up-2026-10-09.md)；已继续完成速度和小角度定位短测，见[控制调试](docs/longqiu-control-tuning-2026-10-09.md)；2026-10-10 连续反向与定位提速见[动态响应记录](docs/longqiu-dynamic-response-2026-10-10.md)。低速纹波和带载性能仍未验收。
 
 本工程的默认实物组合是 **M0 功率接口 + TLE5012B 编码器 + ZH3620-1 电机 + 塑料臂负载**。M0/M1 只是板上的功率接口，不是电机型号。固件源码在 `variants/m1-mt6835/`；这个目录名沿用参考工程历史，当前所有组合共用其中一套控制程序。
 

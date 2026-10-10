@@ -8,6 +8,7 @@
 |---|---|
 | `test_m0_unified.c` | 默认 M0 组合的校准、命令、三种模式、总览遥测及 WARN 行为 |
 | `test_app_usb.c`、`test_justfloat.c` | 命令解析、帧格式、旧组兼容与异常输入 |
+| `test_longqiu_dynamic.c` | 龙邱真实外环的连续 ±300 rpm 反向、参考斜坡、计时回绕、校准方向、模式切换及 ±6 A 上限（实物响应另测） |
 | `test_control_pid.c`、`test_control_observer.c`、`foc_stub.c` | 外环响应、模式切换、观察器和抗饱和 |
 | `test_current_window.c`、`test_pwm_zero_offset.c` | M0/M1 采样窗口和 PWM 等占空比校零 |
 | `test_foc_recalibration.c`、`test_motor_record.c`、`test_profile_matrix.c` | 校准流程、Flash 身份和配置矩阵 |

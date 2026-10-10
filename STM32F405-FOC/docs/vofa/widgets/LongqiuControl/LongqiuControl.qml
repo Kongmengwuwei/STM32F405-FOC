@@ -15,9 +15,9 @@ ResizableRectangle {
     property string message: "目标只发送一次；结束用停机，断开 USB 不会停机。"
     Timer { interval: 250; running: true; repeat: true; onTriggered: root.nowMs = Date.now() }
     Connections { target: sys_manager; onNeed_update: root.lastDataMs = Date.now() }
-    function valid(input) {
+    function valid(input, limit) {
         return /^[+-]?[0-9]+(\.[0-9]{1,3})?$/.test(input.text)
-            && isFinite(Number(input.text)) && Math.abs(Number(input.text)) <= 60;
+            && isFinite(Number(input.text)) && Math.abs(Number(input.text)) <= limit;
     }
     function send(line) {
         if (!sys_manager.connected) { message = "串口未连接"; return; }
@@ -40,13 +40,13 @@ ResizableRectangle {
             Layout.fillWidth: true
             Text { text: "速度 rpm"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; color: "#155786" }
             TextField { id: speed; text: "10"; Layout.preferredWidth: 210; font.family: "Microsoft YaHei UI"; font.pixelSize: 26; selectByMouse: true; inputMethodHints: Qt.ImhFormattedNumbersOnly }
-            Button { text: "发送速度"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; enabled: root.fresh && root.valid(speed); onClicked: root.send("rpm " + Number(speed.text).toFixed(3)) }
+            Button { text: "发送速度"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; enabled: root.fresh && root.valid(speed, 300); onClicked: root.send("rpm " + Number(speed.text).toFixed(3)) }
             Text { text: "位置 °"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; color: "#155786" }
             TextField { id: position; text: "5"; Layout.preferredWidth: 210; font.family: "Microsoft YaHei UI"; font.pixelSize: 26; selectByMouse: true; inputMethodHints: Qt.ImhFormattedNumbersOnly }
-            Button { text: "发送位置"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; enabled: root.fresh && root.valid(position); onClicked: root.send("pos " + Number(position.text).toFixed(3)) }
+            Button { text: "发送位置"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; enabled: root.fresh && root.valid(position, 60); onClicked: root.send("pos " + Number(position.text).toFixed(3)) }
             Button { text: "回软件零点"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; enabled: root.fresh; onClicked: root.send("pos 0") }
             Item { Layout.fillWidth: true }
-            Text { text: "速度 ±60 rpm / 位置 ±60° · 空载调试"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; color: "#53657a" }
+            Text { text: "速度 ±300 rpm / 位置 ±60° · 空载调试"; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; color: "#53657a" }
         }
         Text { text: root.message; font.family: "Microsoft YaHei UI"; font.pixelSize: 24; color: "#53657a"; Layout.fillWidth: true; elide: Text.ElideRight }
     }

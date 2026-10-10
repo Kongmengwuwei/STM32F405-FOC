@@ -1,5 +1,14 @@
 # tools：电机测试数据系统
 
+`longqiu_dynamic.py` 用于 12 V 空载龙邱的**连续**阶跃反向；每段之间保持闭环。输出 `.npy` 与 JSON，从设备目标变化和时间戳计算 T90，速度使用 20 ms 尾随平均，到位要求误差带内保持 100 ms。每目标 0.5–2 s，独立总时限和退出发送 stop，检查母线、转速、d/q 电流与目标电流边界；结束恢复 `send 6`。先断开 VOFA，示例从 variant 目录运行：
+
+```powershell
+python tools/bench/longqiu_dynamic.py --kind speed --targets 60 300 -300 0 300 -300 --dwell 1.2 --max-rpm 450 --max-current 4 --out build/dynamic
+```
+
+当前参数与全部指标见[2026-10-10 动态响应](../../../../docs/longqiu-dynamic-response-2026-10-10.md)。以下 `longqiu_probe.py`、`longqiu_tune.py` 保留首次小幅测试边界，没有随固件限幅自动放宽。
+
+
 龙邱 M1/TLE5012B / 12 V 空载调试工具：`longqiu_probe.py` 用于待机、校准及小电流检查；`longqiu_tune.py` 用于短时速度/位置对比。依赖 pyserial/numpy，运行前断开 VOFA。每目标最多 5 s、命令限 ±60 rpm/deg，检查母线、电流、速度和位置边界，每段结束及退出发送 stop 并检查 PWM 关闭；不能替代硬件保护。位置测试会在待机发送 zero。示例（从 variant 目录）：
 
 ```powershell
