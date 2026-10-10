@@ -81,7 +81,7 @@ int main(void)
     CHECK(foc.warnings & (1u << FOC_ALIGNMENT));
     CHECK(foc.state == (FOC_PROTECTION_TRIP ? FOC_FAULT : FOC_IDLE));
 
-    foc_calibration_t cal = {0.0f, 1};
+    foc_calibration_t cal = {0.0f, 1, FOC_POLE_PAIRS};
     foc_init(&cal);
     zero_current();
     if (FOC_PROTECTION_TRIP) CHECK(!foc_current(FOC_CURRENT_MAX + 0.1f));

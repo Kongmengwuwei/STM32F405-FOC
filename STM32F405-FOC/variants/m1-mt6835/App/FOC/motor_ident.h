@@ -10,13 +10,13 @@ typedef struct {
 enum { IDENT_IDLE, IDENT_R_LOW, IDENT_R_HIGH, IDENT_LD_LOW, IDENT_LD_HIGH,
        IDENT_LQ_LOW, IDENT_LQ_HIGH, IDENT_READY, IDENT_FAILED, IDENT_CANCELLED };
 enum { IDENT_OK, IDENT_BUS, IDENT_CURRENT, IDENT_MOVING, IDENT_EXCITATION,
-       IDENT_FIT, IDENT_INPUT, IDENT_TIMING };
+       IDENT_FIT, IDENT_INPUT, IDENT_TIMING, IDENT_REPEAT };
 typedef struct {
     float sample_hz, test_current, voltage_limit, bus_min, bus_max, bandwidth_hz;
 } motor_ident_config_t;
 typedef struct {
     volatile uint32_t phase, error;
-    volatile bool valid;
+    volatile bool valid, repeat_valid;
     motor_parameters_t candidate;
 } motor_ident_status_t;
 extern motor_ident_status_t motor_ident;

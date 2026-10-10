@@ -1,6 +1,5 @@
 #include "motor_ident.h"
 #include <math.h>
-#include <string.h>
 #define TAU 6.283185307179586f
 motor_ident_status_t motor_ident;
 static motor_ident_config_t cfg;
@@ -8,6 +7,8 @@ static uint32_t tick, samples;
 static float origin, start_bus, dc, ac, osc_s, osc_c, rot_s, rot_c;
 static float sum_i, sum_u, sum_ii, si, ci, su, cu;
 static float low_i, low_u, impedance[2];
+static unsigned pass;
+static motor_parameters_t first_pass;
 
 bool motor_parameters_valid(const motor_parameters_t *p, float hz)
 {
@@ -52,8 +53,14 @@ bool motor_ident_start(const motor_ident_config_t *config, float angle, float bu
         config->test_current > 3.0f || config->voltage_limit <= 0.0f || config->voltage_limit > 1.5f ||
         config->bus_min <= 0.0f || config->bus_min >= config->bus_max || bus < config->bus_min || bus > config->bus_max ||
         config->bandwidth_hz < 20.0f || config->bandwidth_hz > config->sample_hz/40.0f) return false;
-    cfg=*config; origin=angle; start_bus=bus; dc=ac=low_i=low_u=0.0f;
-    memset(&motor_ident,0,sizeof motor_ident); begin_phase(IDENT_R_LOW); return true;
+    cfg=*config; origin=angle; start_bus=bus; dc=ac=low_i=low_u=0.0f; pass=0;
+    /* Started with IRQs locked: typed stores avoid nano-libc's byte-wise
+     * memset extending the critical section past the PWM update deadline. */
+    volatile motor_ident_status_t *st=&motor_ident;
+    st->phase=st->error=0;st->valid=st->repeat_valid=false;
+    st->candidate.resistance=st->candidate.ld=st->candidate.lq=0;
+    st->candidate.kp_d=st->candidate.kp_q=st->candidate.ki=st->candidate.bandwidth_hz=0;
+    begin_phase(IDENT_R_LOW); return true;
 }
 static bool fail(uint32_t error, float *ud, float *uq)
 {
@@ -62,16 +69,27 @@ static bool fail(uint32_t error, float *ud, float *uq)
 }
 static bool inductance(float *l)
 {
-    float w1=TAU*cfg.sample_hz/40.0f, w2=2.0f*w1;
+    /* Exact zero-order-held RL impedance, rather than a continuous-time
+     * approximation at the ADC rate. |Z|^2 = Rac^2 + B*(1-cos(Omega)),
+     * B=2*Rac^2*a/(1-a)^2, a=exp(-Rac*Ts/L). Magnitudes cancel a fixed
+     * acquisition delay; voltages still MUST come from the active PWM. */
+    const float c1=.9876883406f, c2=.9510565163f;
     float z1=impedance[0],z2=impedance[1],r=motor_ident.candidate.resistance;
-    float l2=(z2*z2-z1*z1)/(w2*w2-w1*w1);
-    if (!isfinite(l2) || l2 <= 0.0f) return false;
-    *l=sqrtf(l2);
-    float rac2=z1*z1-w1*w1*l2;
+    float b=(z2*z2-z1*z1)/(c1-c2);
+    float rac2=z1*z1-b*(1.0f-c1);
+    if (!isfinite(b) || b<=0.0f || rac2<=0.0f) return false;
+    float rac=sqrtf(rac2),m=b/(2.0f*rac2);
+    float a=2.0f*m/(2.0f*m+1.0f+sqrtf(4.0f*m+1.0f));
+    if (!(a>0.0f && a<1.0f)) return false;
+    *l=-rac/(cfg.sample_hz*logf(a));
     /* Reject unresolved reactive response, inverter distortion or motion;
      * never turn a negative radicand into a made-up inductance. */
     return *l >= 2e-6f && *l <= .05f && rac2 > 0.0f &&
-        fabsf(sqrtf(rac2)-r) <= .30f*r && w2*(*l)/z2 >= .15f;
+        fabsf(rac-r) <= .30f*r && TAU*cfg.sample_hz/20.0f*(*l)/z2 >= .15f;
+}
+static bool repeat_agrees(float a,float b,float tolerance)
+{
+    return fabsf(a-b)<=tolerance*.5f*(a+b);
 }
 bool motor_ident_step(float id, float iq, float applied_ud, float applied_uq,
                       float angle, float rpm, float bus, float *ud, float *uq)
@@ -82,9 +100,16 @@ bool motor_ident_step(float id, float iq, float applied_ud, float applied_uq,
         !isfinite(angle)||!isfinite(rpm)||!isfinite(bus)) return fail(IDENT_INPUT,ud,uq);
     if (bus < cfg.bus_min || bus > cfg.bus_max || fabsf(bus-start_bus) > .1f*start_bus) return fail(IDENT_BUS,ud,uq);
     if (hypotf(id,iq) > 1.8f*cfg.test_current) return fail(IDENT_CURRENT,ud,uq);
-    if (fabsf(angle-origin) > .5f || fabsf(rpm) > 20.0f) return fail(IDENT_MOVING,ud,uq);
     uint32_t phase=motor_ident.phase;
     bool is_ac=phase >= IDENT_LD_LOW, q_axis=phase >= IDENT_LQ_LOW;
+    uint32_t settle_ticks=(uint32_t)(cfg.sample_hz*.2f);
+    bool settling=!is_ac && tick<settle_ticks;
+    if(!is_ac && tick==settle_ticks)origin=angle;
+    /* DC steps may shift the held-field equilibrium. Only the existing first
+     * .2 s can settle; collected samples and all AC stages stay within .5 deg.
+     * Settling itself remains bounded and contributes no R fit samples. */
+    if(fabsf(angle-origin)>(settling ? 30.0f : .5f) || fabsf(rpm)>(settling ? 120.0f : 20.0f))
+        return fail(IDENT_MOVING,ud,uq);
     float target=cfg.test_current * (phase==IDENT_R_LOW ? .5f : 1.0f);
     /* Slow voltage integrator bootstraps without unknown current-loop gains.
      * Freeze it during AC collection so injected-frequency plant stays open. */
@@ -112,7 +137,7 @@ bool motor_ident_step(float id, float iq, float applied_ud, float applied_uq,
             float r=(sum_u/(float)samples-low_u)/(mean-low_i);
             if (!isfinite(r)||r<.02f||r>10.0f) return fail(IDENT_FIT,ud,uq);
             motor_ident.candidate.resistance=r;
-            ac=fminf(.2f*r*cfg.test_current,cfg.voltage_limit*.15f);
+            ac=fminf((pass ? .15f : .2f)*r*cfg.test_current,cfg.voltage_limit*.15f);
             if (ac < .01f || dc+ac > cfg.voltage_limit) return fail(IDENT_EXCITATION,ud,uq);
         }
     } else {
@@ -128,10 +153,22 @@ bool motor_ident_step(float id, float iq, float applied_ud, float applied_uq,
     }
     if (phase==IDENT_LQ_HIGH) {
         motor_parameters_t *p=&motor_ident.candidate;
+        if (!pass) {
+            first_pass=*p;pass=1;
+            /* Independent DC and both-axis AC measurements at 75% AC
+             * amplitude expose drift and amplitude-dependent inverter bias.
+             * Both passes retain the same current/voltage/motion bounds. */
+            begin_phase(IDENT_R_LOW);return true;
+        }
+        if (!repeat_agrees(p->resistance,first_pass.resistance,.15f) ||
+            !repeat_agrees(p->ld,first_pass.ld,.20f) ||
+            !repeat_agrees(p->lq,first_pass.lq,.20f)) return fail(IDENT_REPEAT,ud,uq);
+        p->resistance=.5f*(p->resistance+first_pass.resistance);
+        p->ld=.5f*(p->ld+first_pass.ld);p->lq=.5f*(p->lq+first_pass.lq);
         float bw=fminf(cfg.bandwidth_hz,fminf(5000.0f/(TAU*p->resistance),10.0f/(TAU*fmaxf(p->ld,p->lq))));
         p->bandwidth_hz=bw;p->kp_d=TAU*bw*p->ld;p->kp_q=TAU*bw*p->lq;p->ki=TAU*bw*p->resistance;
         if (!motor_parameters_valid(p,cfg.sample_hz)) return fail(IDENT_FIT,ud,uq);
-        motor_ident.valid=true;motor_ident.phase=IDENT_READY;*ud=*uq=0.0f;return false;
+        motor_ident.repeat_valid=motor_ident.valid=true;motor_ident.phase=IDENT_READY;*ud=*uq=0.0f;return false;
     }
     begin_phase(phase+1u);return true;
 }

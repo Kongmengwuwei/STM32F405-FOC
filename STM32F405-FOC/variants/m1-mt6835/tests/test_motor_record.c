@@ -31,6 +31,14 @@ int main(void)
     record.version = 1u; record.poles = 7u;
     record.checksum = checksum(&record);
     assert(!record_valid(&record));
+    record.version=4u;record.poles=(FOC_CALIBRATION_ID<<16)|11u;
+    record.checksum=checksum(&record);assert(record_valid(&record));
+    record.poles=(FOC_CALIBRATION_ID<<16)|65u;
+    record.checksum=checksum(&record);assert(!record_valid(&record));
+    record.poles=(FOC_CALIBRATION_ID<<16);record.checksum=checksum(&record);
+    assert(!record_valid(&record));
+    record.poles=((FOC_CALIBRATION_ID^1u)<<16)|11u;record.checksum=checksum(&record);
+    assert(!record_valid(&record));
     puts("PASS: four-part calibration identity and legacy rejection");
     return 0;
 }

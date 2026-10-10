@@ -19,7 +19,7 @@ static void sample(float angle)
 
 int main(void)
 {
-    foc_calibration_t calibration = {0.0f, 1};
+    foc_calibration_t calibration = {0.0f, 1, FOC_POLE_PAIRS};
     foc_init(&calibration);
     for (unsigned n = 0; n < 6100; ++n) sample(0.0f);
     /* Acquisition continues during coast: accumulate 600 turns, then align. */

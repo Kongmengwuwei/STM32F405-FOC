@@ -18,7 +18,8 @@ enum { FOC_IDLE, FOC_PRECHARGE, FOC_CALIBRATE, FOC_SAVE, FOC_RUN, FOC_FAULT, FOC
 enum { FOC_OK, FOC_SENSOR, FOC_ADC, FOC_TIMING, FOC_WINDOW, FOC_ALIGNMENT,
        FOC_FLASH, FOC_UART, FOC_BUS, FOC_ZERO, FOC_CURRENT, FOC_SPEED,
        FOC_POSITION, FOC_NUMERIC, FOC_VOLTAGE };
-typedef struct { float zero; int32_t direction; } foc_calibration_t;
+/* Runtime calibration. Flash retains the old 8-byte angle ABI separately. */
+typedef struct { float zero; int32_t direction; uint32_t pole_pairs; } foc_calibration_t;
 typedef struct {
     foc_calibration_t calibration;
     float duty[3], ud, uq, command, iq_ref, id, iq, electrical_deg, rpm;
@@ -35,11 +36,15 @@ bool foc_identifying(void);
 bool foc_identify(float test_current, float bus_voltage);
 bool foc_apply_parameters(const motor_parameters_t *parameters); /* Idle, IRQ locked. */
 bool foc_default_parameters(void); /* Idle, IRQ locked; no movement. */
+bool foc_rollback_parameters(void); /* Restore the gains preceding the last apply. */
+bool foc_parameters_can_rollback(void);
 
 void foc_init(const foc_calibration_t *calibration);
 void foc_acquisition_resume(void); /* Gates off; resynchronise one sample after Flash save. */
 bool foc_current(float amps); /* Finite torque target; TRIP applies profile limits. */
 bool foc_calibrate(void);
+bool foc_autocalibrate(float current, float bus_voltage);
+bool foc_apply_calibration(void); /* Idle, IRQ locked; verified candidate only. */
 void foc_stop(void);
 void foc_trip(uint32_t fault);
 void foc_warn(uint32_t warning); /* Sticky bit (1 << code), no state change. */

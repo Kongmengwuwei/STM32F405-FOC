@@ -33,7 +33,7 @@ uint32_t bsp_motor_lock(void) { return 0u; }
 void bsp_motor_unlock(uint32_t key) { (void)key; }
 void bsp_motor_arm(void) {}
 void bsp_motor_off(void) { motor_mode = MOTOR_OFF; }
-bool bsp_motor_load(foc_calibration_t *cal) { *cal = (foc_calibration_t){0.0f, 1}; return true; }
+bool bsp_motor_load(foc_calibration_t *cal) { *cal = (foc_calibration_t){0.0f, 1, FOC_POLE_PAIRS}; return true; }
 bool bsp_motor_save(const foc_calibration_t *cal) { (void)cal; return true; }
 bool bsp_motor_load_parameters(const foc_calibration_t *cal,motor_parameters_t *p) { (void)cal;(void)p;return false; }
 bool bsp_motor_save_parameters(const foc_calibration_t *cal,const motor_parameters_t *p) { (void)cal;(void)p;return true; }
@@ -125,7 +125,7 @@ int main(void)
     const char *bad[] = {"Iq nan\r", "Iq inf\r", "Iq 5.01\r", "Iq -5.01\r",
         "Iq 0.123\r", "Iq 1e0\r", "Iq .5\r", "Iq 1.\r", "Iq 0.2junk\r",
         "Iq 0000000000000000000000000000000000001\r", "Iq 0.\00120\r",
-        "send 8\r", "send -1\r", "send\r", "send 0 extra\r", "send \r",
+        "send 9\r", "send -1\r", "send\r", "send 0 extra\r", "send \r",
         "rpm nan\r", "rpm 9400.01\r", "pos 1000001\r", "position 10\r", "zero 1\r"};
     for (unsigned i = 0; i < sizeof bad / sizeof bad[0]; ++i) {
         unsigned rejected = app_command_rejected;
@@ -218,6 +218,14 @@ int main(void)
     foc.zero_ready = true; foc.rpm = 0.0f; foc.state = FOC_IDLE;
     assert(app_command("zero") && control_position_deg() == 0.0f);
     foc.rpm = 100.0f; assert(!app_command("zero")); foc.rpm = 0.0f;
+    assert(!app_command("autocal nan") && !app_command("autocal 3.01") &&
+           !app_command("autocal 1.500") && !app_command("autocal 0.10") && !app_command("sensor apply"));
+    assert(app_command("send 8"));
+    for(unsigned i=0;i<FOC_USB_DIVIDER;++i){motor_sample_us+=50u;app_sample();}
+    assert(index_word()>>24==8u && channel(2)==0 && channel(3)==0);
+    assert(((unsigned)channel(11)>>8)==FOC_POLE_PAIRS);
+    assert(app_command("autocal 1.00") && foc.state==FOC_PRECHARGE);
+    assert(app_command("stop") && foc.state==FOC_IDLE && !app_command("sensor apply"));
     /* `hello` answers on UART only, so the binary USB stream stays framed. */
     unsigned before = app_command_rejected;
     assert(app_command("hello") && app_command_rejected == before);

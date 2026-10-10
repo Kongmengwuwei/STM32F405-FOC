@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-10",
+  "configuration": {"motor": "L4225-6S420-A", "port": "M1", "encoder": "TLE5012B", "installation": 2},
+  "supply": {"adc_nominal_v": 20.041610717773438, "previous_user_confirmed_v": 12, "physical_voltage_confirmation_pending": true},
+  "sensor_calibration": {
+    "valid": true, "scan_current_a": 3.0, "duration_s": 26,
+    "pole_pairs": 7, "direction": 1, "zero_rad": 2.673419,
+    "forward_estimate": 7.01179934, "reverse_estimate": 6.92649269,
+    "residual_mechanical_deg": 1.11546445, "return_mechanical_deg": -0.0145568848,
+    "previous_zero_rad": 2.67883348,
+    "saved_to_flash": false
+  },
+  "rl_followup": {
+    "valid": false, "phase": 8, "error": 4, "reason": "DC excitation quality rejected",
+    "test_current_a": 1.5, "low_target_a": 0.75,
+    "low_mean_a": 0.749761474609375, "raw_rms_a": 0.14734405401669745,
+    "rms_limit_a": 0.0575, "dc_voltage_v": 0.17375247180461884,
+    "applied": false, "saved": false
+  },
+  "original_flash_words": [
+    "00000003", "13120007", "402B7202", "00000001", "E4036488", "464F4331",
+    "FFFFFFFF", "FFFFFFFF", "FFFFFFFF", "FFFFFFFF", "FFFFFFFF", "FFFFFFFF", "FFFFFFFF", "FFFFFFFF", "FFFFFFFF", "FFFFFFFF",
+    "00000001", "13120007", "402B7202", "00000001", "3DF738E6", "37E3B1AA", "383158A1", "3D0BB617",
+    "3D59A2F4", "4317B195", "43480000", "CB805643", "524C5049", "FFFFFFFF", "FFFFFFFF", "FFFFFFFF"
+  ],
+  "validation": {
+    "host_poles": "1..64, both directions; simulated follow, wraps, slip/stuck/noninteger/return rejection",
+    "firmware": "built and flashed with verify; sensor scan succeeded on current motor",
+    "complete_commissioning_verified": false,
+    "original_flash_128_bytes_unchanged_after_final_flash": true,
+    "original_parameters_loaded_after_final_reset": true,
+    "final_output": "stop; send 6",
+    "raw_sensor_data": "build/longqiu/autocal-20261010/commission_final1_sensor.npy",
+    "raw_rl_data": "build/longqiu/autocal-20261010/commission_final1.npy"
+  }
+}

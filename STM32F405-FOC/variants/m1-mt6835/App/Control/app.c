@@ -8,6 +8,7 @@
 #include "telemetry.h"
 #include "justfloat.h"
 #include "bsp_encoder.h"
+#include "sensor_cal.h"
 #include <math.h>
 #include <float.h>
 #include <stdio.h>
@@ -222,9 +223,20 @@ static void telemetry_usb(void)
         bool applied=motor_ident.valid && foc_parameters_active &&
             memcmp(&foc_parameters,&motor_ident.candidate,sizeof foc_parameters)==0;
         payload[11]=(float)((unsigned)motor_ident.valid | ((unsigned)foc_parameters_active<<1) |
-            (tuning_save_status<<2) | ((unsigned)applied<<4));
+            (tuning_save_status<<2) | ((unsigned)applied<<4) | ((unsigned)motor_ident.repeat_valid<<5) |
+            ((unsigned)foc_parameters_can_rollback()<<6));
         break;
     }
+    case 8: /* Sensor calibration candidates and active runtime mapping. */
+        payload[2]=(float)sensor_cal.phase;payload[3]=(float)sensor_cal.error;
+        payload[4]=(float)sensor_cal.candidate.pole_pairs;
+        payload[5]=sensor_cal.forward_pairs;payload[6]=sensor_cal.reverse_pairs;
+        payload[7]=(float)foc.calibration.direction;payload[8]=foc.calibration.zero;
+        payload[9]=sensor_cal.residual_deg;payload[10]=sensor_cal.return_deg;
+        payload[11]=(float)((unsigned)sensor_cal.valid | ((unsigned)foc.calibrated<<1) |
+            ((unsigned)(sensor_cal.valid && memcmp(&foc.calibration,&sensor_cal.candidate,sizeof foc.calibration)==0)<<2) |
+            (foc.calibration.pole_pairs<<8));
+        break;
     }
     s_usb_frame[FOC_FRAME_CHANNELS] = INFINITY;
     (void)bsp_usb_write(s_usb_frame, (FOC_FRAME_CHANNELS + 1u) * sizeof(float));
@@ -329,7 +341,7 @@ static bool parse_decimal(const char *p, float *value, float limit)
 bool app_command(const char *line)
 {
     enum { STOP, CAL, CLEAR, ZERO, TORQUE, SPEED, POS, HOLD, HELLO, IDENTIFY,
-           TUNE_APPLY, TUNE_DEFAULT, TUNE_SAVE } command;
+           TUNE_APPLY, TUNE_DEFAULT, TUNE_SAVE, TUNE_ROLLBACK, AUTOCAL, SENSOR_APPLY } command;
     float value = 0.0f;
 #ifdef FOC_CAPTURE
     if (!strcmp(line, "quiet 0") || !strcmp(line, "quiet 1")) {
@@ -362,14 +374,18 @@ bool app_command(const char *line)
     else if (!strcmp(line, "hold")) command = HOLD;
     else if (!strcmp(line, "hello")) command = HELLO;
     else if (!strcmp(line,"identify")) { command=IDENTIFY;value=1.5f; }
+    else if (!strcmp(line,"autocal")) { command=AUTOCAL;value=1.5f; }
+    else if (!strcmp(line,"sensor apply")) command=SENSOR_APPLY;
+    else if (!strncmp(line,"autocal ",8u)) { command=AUTOCAL;if(!parse_decimal(line+8,&value,3.0f))return false; }
     else if (!strncmp(line,"identify ",9u)) { command=IDENTIFY;if(!parse_decimal(line+9,&value,3.0f))return false; }
     else if (!strcmp(line,"tune apply")) command=TUNE_APPLY;
     else if (!strcmp(line,"tune default")) command=TUNE_DEFAULT;
+    else if (!strcmp(line,"tune rollback")) command=TUNE_ROLLBACK;
     else if (!strcmp(line,"tune save")) command=TUNE_SAVE;
     else if (!strncmp(line, "Iq ", 3u)) { command = TORQUE; if (!parse_decimal(line + 3, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "rpm ", 4u)) { command = SPEED; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "pos ", 4u)) { command = POS; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
-    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '7' && !line[6]) {
+    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '8' && !line[6]) {
         telemetry_group = (uint8_t)(line[5] - '0');
         return true;
     } else return false;
@@ -391,10 +407,16 @@ bool app_command(const char *line)
     case HOLD: ok = control_hold_position(); break;
     case ZERO: ok = control_zero(); break;
     case CAL: ok = foc_calibrate(); break;
+    case SENSOR_APPLY: ok=foc_apply_calibration();break;
+    case AUTOCAL:
+        ok=bsp_uart_millis()-last_frame<2u && foc_autocalibrate(value,adc_sample.bus_voltage);
+        if(ok)tuning_save_status=0u;
+        break;
     case IDENTIFY:
         ok=bsp_uart_millis()-last_frame<2u && foc_identify(value,adc_sample.bus_voltage);break;
     case TUNE_APPLY: ok=motor_ident.valid && foc_apply_parameters(&motor_ident.candidate);break;
     case TUNE_DEFAULT: ok=foc_default_parameters();break;
+    case TUNE_ROLLBACK: ok=foc_rollback_parameters();break;
     case TUNE_SAVE:
         ok=foc.state==FOC_IDLE && foc.calibrated && foc_parameters_active;
         if(ok){tuning_save_pending=true;tuning_save_status=1u;}

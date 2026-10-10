@@ -1,6 +1,10 @@
 # tools：电机测试数据系统
 
-`autotune.py` 支持当前配置的停机 R/L 自动辨识、PI 计算、应用和保存；默认只读，显式 `--identify --apply --save` 才完成注入和写入。运行前断开 VOFA，退出 stop/send 6。方案、质量检查、命令及 12 V 实测见[自动适配](../../../../docs/motor-autotune.md)。
+`autotune.py` 支持当前配置的双次停机 R/L 辨识、离散模型 PI 计算、阶跃验收和保存；默认只读。`--apply` 自动进行短时正反 0.2 A 电流验收，失败 `tune rollback`；`--save` 也先验收，再写 Flash。`--validate` 只验收现有 PI，会短暂转动自由轴。运行前断开 VOFA，退出 stop/send 6。当前电流验收器用于本分支的 **10 kHz / USB divider=2** 构建。研究方案和实测见[ODrive/VESC 对照与改进](../../../../docs/longqiu-autotune-improvement-2026-10-10.md)。
+
+再次换电机的安装 4 实测：修正为最近 60° 均衡辨识方向后，3 A 扫描 / 1.5 A R/L 的完整流程、保存与复位加载通过；速度外环试验仍被主机边界中止。见[安装 4 记录](../../../../docs/motor-installation4-autotune-2026-10-10.md)。
+
+`--commission` 先执行约 28 s 的极对数/磁编方向/电角度零点扫描并应用到 RAM，再自动完成 R/L 辨识与 PI 应用；加 `--save` 才保存整组结果。磁编固定为当前 TLE5012B，SPI 接口不变。`--cal-current` 独立指定扫描电流，`--current` 指定 R/L 电流，均为 0.2～3 A；不会自动增加陌生电机的电流上限。换回 ZH3620-1 后已在 12 V 空载通过整链路；使用 2 A 扫描与 3 A R/L 注入，仍可能因回程/拟合质量拒绝。详见[ZH3620 实测](../../../../docs/zh3620-autotune-2026-10-10.md)与[极对数/磁编方案](../../../../docs/motor-sensor-autocal.md)。
 
 ```powershell
 python tools/bench/autotune.py --identify --apply --save --out build/autotune

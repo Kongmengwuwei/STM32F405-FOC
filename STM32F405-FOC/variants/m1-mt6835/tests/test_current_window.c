@@ -37,7 +37,7 @@ int main(void)
         float scale = foc_modulate(30.0f*cosf(theta), 30.0f*sinf(theta), 12.0f, duty);
         CHECK(scale > 0.0f && scale < 1.0f && foc_window(duty));
     }
-    foc_calibration_t cal = {0.0f, 1};
+    foc_calibration_t cal = {0.0f, 1, FOC_POLE_PAIRS};
     foc_init(&cal);
     foc.b_offset = foc.c_offset = 1.565f;
     foc.zero_ready = true; foc.state = FOC_RUN;

@@ -1,0 +1,514 @@
+{
+  "date": "2026-10-10",
+  "motor_model": null,
+  "user_confirmed": "12 V, free shaft, encoder magnet follows shaft, current/voltage suitable for test",
+  "profile": {
+    "port": "M1",
+    "encoder": "TLE5012B",
+    "spi": "SPI3",
+    "installation_id": 4,
+    "compiled_limits_and_outer_gains": "ZH3620_1/FREE_SHAFT, not a detected model",
+    "policy": "WARN",
+    "sample_hz": 10000
+  },
+  "firmware": {
+    "elf": "build/commission-next-motor/Debug/STM32F405-FOC.elf",
+    "sha256": "2d14b44c38eaf75ffd9daf4abbfae2aae88f23c7d570654296dfba1d94f18229"
+  },
+  "preflight": {
+    "port": "COM8",
+    "bus_v_mean": 12.016590552989213,
+    "bus_v_min": 11.907252311706543,
+    "bus_v_max": 12.103443145751953,
+    "raw_angle_min_deg": 288.116455078125,
+    "raw_angle_max_deg": 288.160400390625,
+    "rpm_mean": -0.007312265345436662,
+    "warnings": 0,
+    "fault": 0,
+    "command_rejected": 0,
+    "calibrated": false,
+    "active_pole_pairs": 7
+  },
+  "previous_motor_record": {
+    "words_hex": [
+      "00000004",
+      "12130007",
+      "4082E86D",
+      "FFFFFFFF",
+      "E65A413C",
+      "464F4331",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "00000001",
+      "12130007",
+      "4082E86D",
+      "FFFFFFFF",
+      "3E09C378",
+      "37CA9622",
+      "3824B246",
+      "3CF89C6A",
+      "3D4A1CE5",
+      "43290FB2",
+      "43480000",
+      "A4E259F8",
+      "524C5049",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF"
+    ],
+    "angle_version": 4,
+    "tuning_version": 1,
+    "fnv_valid": true,
+    "identity_valid": true,
+    "exact_calibration_binding": true,
+    "parameters_equal_usb": true
+  },
+  "failures_before_balanced_direction": {
+    "commission_2_3.json": {
+      "host_error": "Sensor calibration failed: phase=7, error=5; old mapping retained",
+      "phase": 0,
+      "error": 0,
+      "resistance_ohm": 0.0,
+      "ld_h": 0.0,
+      "lq_h": 0.0,
+      "active": false,
+      "sensor_calibration": {
+        "phase": 7,
+        "error": 5,
+        "forward_estimate": 6.9705352783203125,
+        "reverse_estimate": 6.87705659866333,
+        "residual_deg": 1.589314341545105,
+        "return_deg": 0.0687255859375
+      }
+    },
+    "scan_repeat_2a.json": {
+      "cal_current": 2.0,
+      "b_offset": 1.6730458736419678,
+      "c_offset": 1.6602802276611328,
+      "phase": 7,
+      "error": 5,
+      "forward_estimate": 6.96324348449707,
+      "reverse_estimate": 6.878322601318359,
+      "residual_deg": 1.5768208503723145,
+      "return_deg": -0.032958984375,
+      "ia_peak": 2.604752779006958,
+      "ib_peak": 2.4136364459991455,
+      "ic_peak": 2.286350727081299,
+      "angle_travel_min": -0.3955078125,
+      "angle_travel_max": 151.314697265625,
+      "bus_min": 11.89216136932373,
+      "bus_max": 12.103443145751953
+    },
+    "commission_3_3.json": {
+      "host_error": "Identification failed: phase=8, error=5; old gains retained",
+      "phase": 8,
+      "error": 5,
+      "resistance_ohm": 0.11896507441997528,
+      "ld_h": 2.547870644775685e-05,
+      "lq_h": 5.575158866122365e-05,
+      "active": false,
+      "sensor_calibration": {
+        "phase": 6,
+        "error": 0,
+        "forward_estimate": 6.955276012420654,
+        "reverse_estimate": 6.877796649932861,
+        "residual_deg": 1.0923349857330322,
+        "return_deg": -0.035003662109375
+      }
+    },
+    "rl_2a.json": {
+      "host_error": "Identification failed: phase=8, error=5; old gains retained",
+      "phase": 8,
+      "error": 5,
+      "resistance_ohm": 0.12029757350683212,
+      "ld_h": 2.566609691712074e-05,
+      "lq_h": 6.213455344550312e-05,
+      "active": false
+    },
+    "rl_1p5a.json": {
+      "host_error": "Identification failed: phase=8, error=5; old gains retained",
+      "phase": 8,
+      "error": 5,
+      "resistance_ohm": 0.12243307381868362,
+      "ld_h": 2.5324108719360083e-05,
+      "lq_h": 5.700149267795496e-05,
+      "active": false
+    }
+  },
+  "raw_scan_analysis": {
+    "segments": {
+      "forward": {
+        "samples": 40000,
+        "pole_pair_estimate": 6.96328422543832,
+        "direction": 1,
+        "mechanical_rms_deg": 1.5721459782830585,
+        "stator_d_mean_a": 1.9997121774018647,
+        "stator_q_mean_a": -0.009868969980204555,
+        "current_vector_peak_a": 2.4909669460304786
+      },
+      "reverse": {
+        "samples": 40000,
+        "pole_pair_estimate": 6.878366691722186,
+        "direction": -1,
+        "mechanical_rms_deg": 1.5770906623200538,
+        "stator_d_mean_a": 2.0000318054231228,
+        "stator_q_mean_a": 0.03730834828444727,
+        "current_vector_peak_a": 2.667780325252818
+      }
+    },
+    "fault_peak": 0,
+    "gaps": 0,
+    "note": "Residual includes motor following and encoder/magnet mounting; cannot attribute it to one source from this scan."
+  },
+  "fit_diagnostics": {
+    "before": {
+      "q_impedance_250_500_ohm": [
+        0.2850017547607422,
+        0.32446420192718506
+      ],
+      "frozen_field_rad": 0.4434475898742676,
+      "dc_r_ohm": 0.12243307381868362,
+      "fitted_q_r_ohm": 0.27057160636401556,
+      "fitted_lq_h_invalid_candidate": 5.700149267795496e-05
+    },
+    "after": {
+      "q_impedance_250_500_ohm": [
+        0.1393786370754242,
+        0.1861896514892578
+      ],
+      "frozen_field_rad": 0,
+      "dc_r_ohm": 0.11429194360971451,
+      "fitted_q_r_ohm": 0.11977622286385241
+    },
+    "quality_threshold_unchanged": true,
+    "cause_assessment": "Balanced field direction supports a phase zero-crossing/nonlinear-inverter effect; not an independent dead-time voltage measurement."
+  },
+  "commissioning": {
+    "phase": 7,
+    "error": 0,
+    "resistance_ohm": 0.11429194360971451,
+    "ld_h": 3.049263068533037e-05,
+    "lq_h": 4.5374785258900374e-05,
+    "kp_d": 0.038318172097206116,
+    "kp_q": 0.057019636034965515,
+    "ki_per_s": 143.6234893798828,
+    "bandwidth_hz": 200.0,
+    "candidate_valid": true,
+    "active": true,
+    "save_requested": false,
+    "candidate_applied": true,
+    "save_status": 0,
+    "sensor_calibration": {
+      "pole_pairs": 7,
+      "direction": 1,
+      "zero_rad": 4.410267353057861,
+      "forward_estimate": 6.9537034034729,
+      "reverse_estimate": 6.877299785614014,
+      "residual_deg": 1.092400312423706,
+      "return_deg": -0.018310546875
+    }
+  },
+  "saved": {
+    "phase": 7,
+    "error": 0,
+    "resistance_ohm": 0.11429194360971451,
+    "ld_h": 3.049263068533037e-05,
+    "lq_h": 4.5374785258900374e-05,
+    "kp_d": 0.038318172097206116,
+    "kp_q": 0.057019636034965515,
+    "ki_per_s": 143.6234893798828,
+    "bandwidth_hz": 200.0,
+    "candidate_valid": true,
+    "active": true,
+    "save_requested": true,
+    "candidate_applied": true,
+    "save_status": 2
+  },
+  "reloaded": {
+    "phase": 0,
+    "error": 0,
+    "resistance_ohm": 0.11429194360971451,
+    "ld_h": 3.049263068533037e-05,
+    "lq_h": 4.5374785258900374e-05,
+    "kp_d": 0.038318172097206116,
+    "kp_q": 0.057019636034965515,
+    "ki_per_s": 143.6234893798828,
+    "bandwidth_hz": 200.0,
+    "candidate_valid": false,
+    "active": true,
+    "save_requested": false,
+    "candidate_applied": false,
+    "save_status": 0
+  },
+  "final_stopped_status": {
+    "port": "COM8",
+    "bus_v_mean": 12.018540707154152,
+    "bus_v_min": 11.907252311706543,
+    "bus_v_max": 12.103443145751953,
+    "raw_angle_min_deg": 310.023193359375,
+    "raw_angle_max_deg": 310.067138671875,
+    "rpm_mean": 0.0076722846340484974,
+    "warnings": 0,
+    "fault": 0,
+    "command_rejected": 0,
+    "calibrated": true,
+    "active_pole_pairs": 7,
+    "sensor_zero_rad": 4.410267353057861,
+    "sensor_direction": 1
+  },
+  "flash_audit": {
+    "words_hex": [
+      "00000004",
+      "12140007",
+      "408D20E9",
+      "00000001",
+      "BEC8AA91",
+      "464F4331",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "00000001",
+      "12140007",
+      "408D20E9",
+      "00000001",
+      "3DEA11E5",
+      "37FFCA6D",
+      "383E50CE",
+      "3D1CF384",
+      "3D698D6C",
+      "430F9F9D",
+      "43480000",
+      "8AD53E36",
+      "524C5049",
+      "FFFFFFFF",
+      "FFFFFFFF",
+      "FFFFFFFF"
+    ],
+    "fnv_valid": true,
+    "identity_valid": true,
+    "calibration_binding_valid": true,
+    "parameters_equal_reloaded_usb": true
+  },
+  "closed_loop": {
+    "current_positive": {
+      "frames": 1999,
+      "group": 5,
+      "states": [
+        0,
+        1,
+        4
+      ],
+      "pwm_frames": 1920,
+      "continuity": {
+        "frames": 1999,
+        "group_mismatch": 0,
+        "faults": 0,
+        "max_state": 4,
+        "gaps": 0,
+        "timestamp_jitter": 0,
+        "max_gap_us": 200,
+        "missing": 0,
+        "seq_ok": true,
+        "dt_ok": true
+      },
+      "target_a": 0.1,
+      "iq_mean_a": 0.10010670125484467,
+      "id_mean_a": -0.000246974901529029,
+      "rpm_peak": 1.8340272903442383,
+      "ud_mean_v": 0.001002786448225379,
+      "uq_mean_v": 0.02554992586374283,
+      "voltage_scale_min": 1.0
+    },
+    "current_negative": {
+      "frames": 2033,
+      "group": 5,
+      "states": [
+        0,
+        1,
+        4
+      ],
+      "pwm_frames": 1958,
+      "continuity": {
+        "frames": 2033,
+        "group_mismatch": 0,
+        "faults": 0,
+        "max_state": 4,
+        "gaps": 0,
+        "timestamp_jitter": 0,
+        "max_gap_us": 200,
+        "missing": 0,
+        "seq_ok": true,
+        "dt_ok": true
+      },
+      "target_a": -0.1,
+      "iq_mean_a": -0.10006450861692429,
+      "id_mean_a": 8.004286064533517e-05,
+      "rpm_peak": 1.725395917892456,
+      "ud_mean_v": -0.0014923923881724477,
+      "uq_mean_v": -0.025233497843146324,
+      "voltage_scale_min": 1.0
+    },
+    "stopped": {
+      "frames": 2479,
+      "group": 0,
+      "states": [
+        0
+      ],
+      "pwm_frames": 0,
+      "continuity": {
+        "frames": 2479,
+        "group_mismatch": 0,
+        "faults": 0,
+        "max_state": 0,
+        "gaps": 0,
+        "timestamp_jitter": 0,
+        "max_gap_us": 200,
+        "missing": 0,
+        "seq_ok": true,
+        "dt_ok": true
+      },
+      "bus_mean_v": 12.019285202026367,
+      "angle_min_deg": 296.87255859375,
+      "angle_max_deg": 296.905517578125,
+      "b_offset_v": 1.6732795238494873,
+      "c_offset_v": 1.6602059602737427,
+      "warnings": 0,
+      "rejected": 0
+    },
+    "position": {
+      "response": [
+        {
+          "target": 5.0,
+          "initial": 0.0,
+          "start_s": 0.208,
+          "t90_s": 0.10519999999999999,
+          "rise_10_90_s": 0.0872,
+          "reversal_zero_s": null,
+          "arrival_s": 0.10519999999999999,
+          "band": 0.5,
+          "residence_s": 0.1,
+          "overshoot": 0.020751953125,
+          "final_mean": 5.001536846160889,
+          "final_std": 0.006985507905483246,
+          "final_error": 0.0015368461608886719,
+          "final_peak_to_peak": 0.0439453125,
+          "position_velocity_20ms_mean": -0.0007333997413217624,
+          "position_velocity_20ms_std": 0.0851533634642539,
+          "iq_target_peak_a": 0.593908965587616,
+          "iq_peak_a": 0.6573095321655273,
+          "id_peak_a": 0.15425343811511993,
+          "dq_volts_peak": 0.154545858502388,
+          "voltage_scale_min": 1.0
+        },
+        {
+          "target": -5.0,
+          "initial": 4.998779296875,
+          "start_s": 1.4063999999999999,
+          "t90_s": 0.09760000000000013,
+          "rise_10_90_s": 0.07400000000000007,
+          "reversal_zero_s": 0.04280000000000017,
+          "arrival_s": 0.29279999999999995,
+          "band": 0.5,
+          "residence_s": 0.1,
+          "overshoot": 1.888427734375,
+          "final_mean": -5.002377986907959,
+          "final_std": 0.006966369226574898,
+          "final_error": -0.0023779869079589844,
+          "final_peak_to_peak": 0.032958984375,
+          "position_velocity_20ms_mean": 0.0013463637408088235,
+          "position_velocity_20ms_std": 0.0878575611710923,
+          "iq_target_peak_a": 1.114542841911316,
+          "iq_peak_a": 0.9911887645721436,
+          "id_peak_a": 0.4631187617778778,
+          "dq_volts_peak": 0.20412731170654297,
+          "voltage_scale_min": 1.0
+        },
+        {
+          "target": 5.0,
+          "initial": -4.998779296875,
+          "start_s": 2.6044,
+          "t90_s": 0.07879999999999976,
+          "rise_10_90_s": 0.05799999999999983,
+          "reversal_zero_s": 0.03479999999999972,
+          "arrival_s": 0.13359999999999994,
+          "band": 0.5,
+          "residence_s": 0.1,
+          "overshoot": 0.042724609375,
+          "final_mean": 4.998808860778809,
+          "final_std": 0.008226108737289906,
+          "final_error": -0.0011911392211914062,
+          "final_peak_to_peak": 0.0439453125,
+          "position_velocity_20ms_mean": -0.0037015930340296497,
+          "position_velocity_20ms_std": 0.10231972124749317,
+          "iq_target_peak_a": 1.157771110534668,
+          "iq_peak_a": 1.0319756269454956,
+          "id_peak_a": 0.31108713150024414,
+          "dq_volts_peak": 0.208034947514534,
+          "voltage_scale_min": 1.0
+        }
+      ],
+      "frames": 9482,
+      "warnings": 0,
+      "rejected": 0,
+      "fault_peak": 0,
+      "bus_min": 11.907252311706543,
+      "bus_max": 12.103443145751953,
+      "speed_peak": 73.66700744628906,
+      "seq_gaps": 0,
+      "kind": "position",
+      "targets": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "dwell_s": 1.2
+    },
+    "speed": {
+      "completed": false,
+      "host_error": "Motion bound exceeded: rpm=64.01, ref=-0.30, Iq=-0.20, Id=0.01",
+      "targets_requested_rpm": [
+        10,
+        -10,
+        10
+      ],
+      "rpm_bound": 60,
+      "current_bound_a": 3,
+      "targets_seen_rpm": [
+        10.0
+      ],
+      "frames": 1662,
+      "rpm_peak": 64.01467895507812,
+      "fault_peak": 0,
+      "warnings": 0,
+      "rejected": 0,
+      "stopped_on_exit": true
+    }
+  },
+  "regression": [
+    "9 core C suites",
+    "M0 unified",
+    "M0/M1 ADC windows and PWM zero"
+  ],
+  "limitations": [
+    "Current PI/poles/encoder calibration tuned; outer-loop gains inherited, not auto-tuned.",
+    "Speed test aborted at its telemetry bound; no speed performance acceptance.",
+    "Only 12 V free-shaft tested; current scaling, true bandwidth, loaded/thermal limits not verified.",
+    "A single complete post-fix chain passed; no universal success-rate claim."
+  ],
+  "final_state": "Stopped, gates off, send 6, installation 4 parameters stored and loaded."
+}

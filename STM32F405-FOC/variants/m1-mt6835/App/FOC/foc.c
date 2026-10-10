@@ -1,6 +1,7 @@
 #include "foc.h"
 #include "bsp_motor.h" /* motor_sample_us: the sample-phase timestamp. */
 #include "control.h"
+#include "sensor_cal.h"
 #include <math.h>
 #include <string.h>
 
@@ -19,22 +20,40 @@ static float previous, position, origin, forward, sum_sin, sum_cos, low, high;
 static uint32_t ticks;
 static float integral_d, integral_q, variance_b, variance_c, previous_command;
 static float pwm_offset_sum_b, pwm_offset_sum_c;
-static bool tracking, aligning, identifying, resuming;
+static bool tracking, aligning, identifying, autoaligning, resuming;
 static float identification_current_limit;
+static float autoalignment_current;
+static float identification_theta;
+static bool identification_frame_ready;
+static motor_parameters_t rollback_parameters;
+static bool rollback_available, rollback_active;
 
-bool foc_identifying(void) { return identifying; }
+bool foc_identifying(void) { return identifying || autoaligning; }
+bool foc_parameters_can_rollback(void) { return rollback_available; }
 bool foc_default_parameters(void)
 {
     if (foc.state != FOC_IDLE) return false;
-    foc_parameters_active=false; integral_d=integral_q=0.0f;
+    foc_parameters_active=false; rollback_available=false; integral_d=integral_q=0.0f;
     return true;
 }
 bool foc_apply_parameters(const motor_parameters_t *p)
 {
     if (foc.state != FOC_IDLE || !foc.calibrated || !foc.zero_ready ||
         !motor_parameters_valid(p,(float)FOC_SAMPLE_HZ)) return false;
+    rollback_active=foc_parameters_active;
+    if(rollback_active)rollback_parameters=foc_parameters;
+    rollback_available=true;
     foc_parameters=*p;foc_parameters_active=true;integral_d=integral_q=0.0f;
     return true;
+}
+bool foc_rollback_parameters(void)
+{
+    /* Restoring gains with a latched fault is safe: keep the fault and gates
+     * disabled. Validation failure must not require clearing the fault. */
+    if((foc.state!=FOC_IDLE && foc.state!=FOC_FAULT) || !rollback_available) return false;
+    if(rollback_active)foc_parameters=rollback_parameters;
+    foc_parameters_active=rollback_active;rollback_available=false;
+    integral_d=integral_q=0.0f;return true;
 }
 bool foc_identify(float current, float bus)
 {
@@ -43,7 +62,7 @@ bool foc_identify(float current, float bus)
     motor_ident_config_t config={(float)FOC_SAMPLE_HZ,current,1.5f,FOC_BUS_MIN,FOC_BUS_MAX,
         fminf(200.0f,(float)FOC_SAMPLE_HZ/40.0f)};
     if (!motor_ident_start(&config,position,bus)) return false;
-    control_stop();identifying=true;aligning=false;
+    control_stop();identifying=true;aligning=false;identification_frame_ready=false;
     identification_current_limit=1.8f*current;
     foc.command=foc.iq_ref=0.0f;integral_d=integral_q=0.0f;ticks=0u;
     foc.state=FOC_PRECHARGE;return true;
@@ -112,7 +131,7 @@ bool foc_window(const float duty[3])
 
 void foc_stop(void)
 {
-    motor_ident_cancel();identifying=false;
+    motor_ident_cancel();sensor_cal_cancel();identifying=autoaligning=false;
     foc.command = foc.iq_ref = foc.ud = foc.uq = 0.0f;
     foc.voltage_scale = 0.0f;
     integral_d = integral_q = 0.0f;
@@ -129,6 +148,8 @@ void foc_trip(uint32_t fault)
     /* Priority-0 faults can preempt the estimator. Repeated fault handling
      * also clears a READY candidate published after that preemption. */
     motor_ident.valid=false;
+    sensor_cal.valid=false;
+    if(autoaligning || sensor_cal_active()) { sensor_cal_abort();sensor_cal.error=0x100u+fault; }
     if(identifying || motor_ident_active())motor_ident_abort(fault==FOC_TIMING ? IDENT_TIMING :
         fault==FOC_CURRENT ? IDENT_CURRENT : fault==FOC_BUS ? IDENT_BUS : IDENT_INPUT);
     foc_warn(fault);
@@ -168,7 +189,7 @@ bool foc_calibrate(void)
         foc_warn(FOC_SPEED);
         if (FOC_PROTECTION_TRIP) return false;
     }
-    foc_parameters_active=false;motor_ident.valid=false;
+    foc_parameters_active=false;motor_ident.valid=false;rollback_available=false;
     aligning = true;
     integral_d = integral_q = 0.0f;
     position = previous; /* Keep alignment deltas precise after many revolutions. */
@@ -177,19 +198,44 @@ bool foc_calibrate(void)
     return true;
 }
 
+bool foc_autocalibrate(float current,float bus)
+{
+    if(foc.state!=FOC_IDLE || !foc.zero_ready || fabsf(foc.rpm)>=5.0f ||
+       !isfinite(current) || current<.2f || current>fminf(3.0f,FOC_PHASE_TRIP/2.0f) ||
+       !isfinite(bus) || bus<FOC_BUS_MIN || bus>FOC_BUS_MAX || !sensor_cal_start(FOC_SAMPLE_HZ)) return false;
+    control_stop();autoaligning=aligning=true;identifying=false;
+    autoalignment_current=current; identification_current_limit=1.8f*current;
+    integral_d=integral_q=0;position=previous;ticks=0;
+    foc.command=foc.iq_ref=0;foc.state=FOC_PRECHARGE;return true;
+}
+bool foc_apply_calibration(void)
+{
+    if(foc.state!=FOC_IDLE || !sensor_cal.valid || sensor_cal.phase!=SENSOR_CAL_READY) return false;
+    foc.calibration=sensor_cal.candidate;foc.calibrated=true;
+    foc_parameters_active=false;motor_ident.valid=false;rollback_available=false;
+    integral_d=integral_q=0;return true;
+}
+
 void foc_init(const foc_calibration_t *calibration)
 {
     memset(&foc, 0, sizeof foc);
     memset(&motor_ident,0,sizeof motor_ident);
+    memset(&sensor_cal,0,sizeof sensor_cal);
     memset(&foc_parameters,0,sizeof foc_parameters);
-    foc_parameters_active=identifying=false;
+    foc_parameters_active=identifying=autoaligning=rollback_available=false;
     tracking = false;
     resuming = false;
     aligning = FOC_AUTOCALIBRATE && calibration == NULL;
     ticks = 0u;
     integral_d = integral_q = variance_b = variance_c = 0.0f;
     pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
-    if (calibration) { foc.calibration = *calibration; foc.calibrated = true; }
+    foc.calibration.direction=1;foc.calibration.pole_pairs=FOC_POLE_PAIRS;
+    if (calibration && isfinite(calibration->zero) && calibration->zero>=0 && calibration->zero<TURN &&
+        (calibration->direction==1 || calibration->direction==-1) &&
+        calibration->pole_pairs>=1u && calibration->pole_pairs<=64u) {
+        foc.calibration = *calibration;
+        foc.calibrated = true;
+    }
     foc.state = FOC_OFFSET; /* Gate-off current offsets precede any alignment. */
 }
 
@@ -231,7 +277,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     }
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         if (!isfinite(bus_voltage) || bus_voltage <= 0.0f) { foc_trip(FOC_BUS); return; }
-        if (identifying && (bus_voltage < FOC_BUS_MIN || bus_voltage > FOC_BUS_MAX)) { foc_trip(FOC_BUS);return; }
+        if ((identifying || autoaligning) && (bus_voltage < FOC_BUS_MIN || bus_voltage > FOC_BUS_MAX)) { foc_trip(FOC_BUS);return; }
         if ((bus_voltage < FOC_BUS_MIN || bus_voltage > FOC_BUS_MAX) && foc_check(FOC_BUS)) return;
     }
     /* Noncomputable inputs stop output, but WARN never locks out a later
@@ -289,10 +335,26 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         return;
     }
     if (!foc.zero_ready) { foc.id = foc.iq = 0.0f; return; }
-    float omega = (float)foc.calibration.direction * (float)FOC_POLE_PAIRS * foc.rpm * (TURN / 60.0f);
-    float theta = foc_wrap((float)foc.calibration.direction * (float)FOC_POLE_PAIRS * mechanical_deg * (PI / 180.0f) -
+    float omega = (float)foc.calibration.direction * (float)foc.calibration.pole_pairs * foc.rpm * (TURN / 60.0f);
+    float theta = foc_wrap((float)foc.calibration.direction * (float)foc.calibration.pole_pairs * mechanical_deg * (PI / 180.0f) -
                           foc.calibration.zero - omega * encoder_delay);
     if (!isfinite(omega) || !isfinite(theta)) { foc_trip(FOC_NUMERIC); return; }
+    if(identifying) {
+        /* Hold the probing field: encoder/cogging offset must not make a
+         * nominal d-axis test chase the rotor and continuously produce torque. */
+        if(!identification_frame_ready){
+            /* At multiples of 60 deg all three DC phase currents have at
+             * least half the d bias. Keep the small q injection away from a
+             * phase-current zero crossing, where dead-time distortion can
+             * invalidate the two-frequency RL fit. The existing bounded DC
+             * settling period absorbs at most 30 electrical degrees. */
+            unsigned sector=(unsigned)(theta*(3.0f/PI)+.5f);
+            if(sector==6u)sector=0u;
+            identification_theta=(float)sector*(PI/3.0f);
+            identification_frame_ready=true;
+        }
+        theta=identification_theta;omega=0;
+    }
     foc.electrical_deg = theta * (180.0f / PI);
     sincos_fast(theta, &s, &c);
     float ib = (b_voltage - foc.b_offset) * FOC_CURRENT_A_PER_V, ic = (c_voltage - foc.c_offset) * FOC_CURRENT_A_PER_V;
@@ -302,7 +364,8 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     }
     foc.id = ia * c + beta * s;
     foc.iq = -ia * s + beta * c;
-    if (identifying && hypotf(foc.id,foc.iq) > identification_current_limit) { foc_trip(FOC_CURRENT);return; }
+    if ((identifying || autoaligning) && hypotf(foc.id,foc.iq) > identification_current_limit) { foc_trip(FOC_CURRENT);return; }
+    if(autoaligning && (fabsf(delta)>FOC_MAX_STEP_DEG || fabsf(foc.rpm)>120.0f)) { foc_trip(FOC_SENSOR);return; }
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         float trip = FOC_PHASE_TRIP;
         if ((fabsf(ia) >= trip || fabsf(ib) >= trip || fabsf(ic) >= trip) && foc_check(FOC_CURRENT)) return;
@@ -346,6 +409,25 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         return;
     }
 #endif
+    if (foc.state == FOC_CALIBRATE && autoaligning) {
+        float field;
+        if(!sensor_cal_step(position,&field)) {
+            if(!sensor_cal.valid) foc_warn(FOC_ALIGNMENT);
+            foc_stop(); /* Failed probes leave the old calibration and gains intact. */
+            return;
+        }
+        sincos_fast(foc_wrap(field),&s,&c);
+        float target=autoalignment_current;
+        const unsigned ramp_ticks=FOC_SAMPLE_HZ*SENSOR_CAL_RAMP_MS/1000u;
+        if(sensor_cal.phase==SENSOR_CAL_HOLD && ++ticks<ramp_ticks)
+            target*=(float)ticks/(float)ramp_ticks;
+        /* Conservative bootstrap integrator, independent of unknown R/L. */
+        integral_d+=20.0f*(target-(ia*c+beta*s))/(float)FOC_SAMPLE_HZ;
+        integral_d=fminf(fmaxf(integral_d,0),1.5f);
+        foc.ud=integral_d;foc.uq=0;
+        foc.voltage_scale=foc_modulate(foc.ud*c,foc.ud*s,bus_voltage,foc.duty);
+        return;
+    }
     if (foc.state == FOC_CALIBRATE && identifying) {
         /* Stationary d/q probing; active CCRs describe the period just sampled.
            Common-mode duty cancels in the reconstructed alpha/beta voltage. */
@@ -422,8 +504,8 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             theta = ALIGN_START + TURN * (float)(ticks - ALIGN_HOLD_END) / (float)FOC_CAL_TICKS(FOC_ALIGNMENT_SWEEP_TICKS_20KHZ);
         if (ticks == ALIGN_FORWARD_END) {
             forward = position - origin;
-            if (fabsf(forward) < (360.0f / (float)FOC_POLE_PAIRS) * 0.8f ||
-                fabsf(forward) > (360.0f / (float)FOC_POLE_PAIRS) * 1.2f) {
+            if (fabsf(forward) < (360.0f / (float)foc.calibration.pole_pairs) * 0.8f ||
+                fabsf(forward) > (360.0f / (float)foc.calibration.pole_pairs) * 1.2f) {
                 /* A failed experiment is not a usable calibration record. */
                 if (!foc_check(FOC_ALIGNMENT)) foc_stop();
                 return;
@@ -444,7 +526,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
                 return;
             }
             foc.calibration.direction = forward > 0.0f ? 1 : -1;
-            foc.calibration.zero = foc_wrap((float)foc.calibration.direction * (float)FOC_POLE_PAIRS * atan2f(sum_sin, sum_cos) - ALIGN_START);
+            foc.calibration.zero = foc_wrap((float)foc.calibration.direction * (float)foc.calibration.pole_pairs * atan2f(sum_sin, sum_cos) - ALIGN_START);
             foc_stop();
             foc.state = FOC_SAVE;
             return;

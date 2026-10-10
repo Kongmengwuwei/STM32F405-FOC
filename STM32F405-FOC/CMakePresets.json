@@ -12,7 +12,7 @@
         "FOC_ENCODER": "TLE5012B",
         "FOC_MOTOR": "L4225_6S420_A",
         "FOC_LOAD_PROFILE": "FREE_SHAFT",
-        "FOC_INSTALLATION_ID": "2",
+        "FOC_INSTALLATION_ID": "4",
         "FOC_PROTECTION": "WARN",
         "FOC_USB_DIVIDER": "2"
       }
@@ -25,6 +25,24 @@
       }
     },
     {
+      "name": "Debug-ZH3620-commission",
+      "inherits": "Debug",
+      "binaryDir": "${sourceDir}/build/commission-zh3620/Debug",
+      "cacheVariables": {
+        "FOC_MOTOR": "ZH3620_1",
+        "FOC_INSTALLATION_ID": "3",
+        "FOC_LOAD_PROFILE": "FREE_SHAFT"
+      }
+    },
+    {
+      "name": "Debug-installation4-commission",
+      "inherits": "Debug",
+      "binaryDir": "${sourceDir}/build/commission-next-motor/Debug",
+      "cacheVariables": {
+        "FOC_INSTALLATION_ID": "4"
+      }
+    },
+    {
       "name": "Release",
       "inherits": "default",
       "cacheVariables": {
@@ -33,6 +51,14 @@
     }
   ],
   "buildPresets": [
+    {
+      "name": "Debug-installation4-commission",
+      "configurePreset": "Debug-installation4-commission"
+    },
+    {
+      "name": "Debug-ZH3620-commission",
+      "configurePreset": "Debug-ZH3620-commission"
+    },
     {
       "name": "Debug",
       "configurePreset": "Debug"

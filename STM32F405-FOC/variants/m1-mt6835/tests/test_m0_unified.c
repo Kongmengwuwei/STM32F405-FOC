@@ -125,7 +125,7 @@ int main(void)
     for (unsigned n = 0; n < FOC_USB_DIVIDER * 2u; ++n) { motor_sample_us += 100u; app_sample(); }
     assert(last_frame_size == sizeof last_frame);
     assert(app_command("send 7"));
-    assert(!app_command("send 8"));
+    assert(!app_command("send 9"));
     assert(app_command("send 6"));
     frames = 0u;
     foc.calibrated = true; /* Stand in for a completed, profile-matched record. */

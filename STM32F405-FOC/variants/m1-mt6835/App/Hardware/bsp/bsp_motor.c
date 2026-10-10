@@ -209,7 +209,7 @@ bool bsp_motor_load(foc_calibration_t *calibration)
 {
     const record_t *r = (const record_t *)0x080e0000u;
     if (!record_valid(r)) return false;
-    *calibration = r->cal;
+    *calibration = (foc_calibration_t){r->cal.zero,r->cal.direction,r->poles&0xffffu};
     return true;
 }
 
@@ -222,9 +222,10 @@ bool bsp_motor_load_parameters(const foc_calibration_t *calibration, motor_param
 static bool save_record(const foc_calibration_t *calibration, const motor_parameters_t *parameters)
 {
     if (motor_mode != MOTOR_OFF || (FOC_PWM_TIMER->CR1 & TIM_CR1_CEN)) return false;
-    record_t r = {.version = 3u, .poles = (FOC_CALIBRATION_ID << 16) | FOC_POLE_PAIRS,
-                  .cal = *calibration, .magic = 0x464f4331u};
+    record_t r = {.version = 4u, .poles = (FOC_CALIBRATION_ID << 16) | calibration->pole_pairs,
+                  .cal = {calibration->zero,calibration->direction}, .magic = 0x464f4331u};
     r.checksum = checksum(&r);
+    if(!record_valid(&r))return false;
     FLASH_EraseInitTypeDef erase = {.TypeErase = FLASH_TYPEERASE_SECTORS,
         .VoltageRange = FLASH_VOLTAGE_RANGE_3, .Sector = FLASH_SECTOR_11, .NbSectors = 1u};
     uint32_t failed;
@@ -236,8 +237,8 @@ static bool save_record(const foc_calibration_t *calibration, const motor_parame
         ok = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, 0x080e0000u + i, word) == HAL_OK;
     }
     if (parameters) {
-        tuning_record_t tuning={.version=1u,.profile=(FOC_CALIBRATION_ID<<16)|FOC_POLE_PAIRS,
-            .cal=*calibration,.parameters=*parameters,.magic=0x524c5049u};
+        tuning_record_t tuning={.version=1u,.profile=(FOC_CALIBRATION_ID<<16)|calibration->pole_pairs,
+            .cal={calibration->zero,calibration->direction},.parameters=*parameters,.magic=0x524c5049u};
         tuning.checksum=tuning_checksum(&tuning);
         for(unsigned i=0;ok && i<sizeof tuning;i+=4u) {
             uint32_t word;memcpy(&word,(const uint8_t *)&tuning+i,sizeof word);

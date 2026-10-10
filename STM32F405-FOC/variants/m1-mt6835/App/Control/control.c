@@ -216,6 +216,9 @@ static float outer_output(float dt)
     float error = (float)foc.calibration.direction * (speed_reference - speed);
     float kp = mode == CONTROL_POSITION ? FOC_OUTER_POSITION_SPEED_KP : SPEED_KP;
     float ki = SPEED_KI;
+    /* Current Kp = bandwidth*L is not a bandwidth measurement. A different
+     * inductance must not silently retune the mechanical PI. Outer gains
+     * belong to the motor/load profile and need their own motion acceptance. */
 #ifdef FOC_MOTOR_SPEED_HIGH_KP
     float blend = speed_gain_blend();
     if (mode == CONTROL_SPEED) kp += blend * (FOC_MOTOR_SPEED_HIGH_KP - kp);
