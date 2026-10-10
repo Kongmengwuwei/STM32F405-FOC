@@ -22,5 +22,7 @@ bool bsp_motor_sample_begin(void);
 void bsp_motor_sample_end(void);
 bool bsp_motor_load(foc_calibration_t *calibration);
 bool bsp_motor_save(const foc_calibration_t *calibration); /* Stopped foreground only. */
+bool bsp_motor_load_parameters(const foc_calibration_t *calibration, motor_parameters_t *parameters);
+bool bsp_motor_save_parameters(const foc_calibration_t *calibration, const motor_parameters_t *parameters);
 
 #endif

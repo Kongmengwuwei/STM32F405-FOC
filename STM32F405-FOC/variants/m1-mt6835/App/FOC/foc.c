@@ -13,11 +13,41 @@
 #define ALIGN_SETTLE_END FOC_CAL_TICKS(36000u + 2u * FOC_ALIGNMENT_SWEEP_TICKS_20KHZ)
 #define ALIGN_SAMPLE_END FOC_CAL_TICKS(40000u + 2u * FOC_ALIGNMENT_SWEEP_TICKS_20KHZ)
 foc_t foc;
+motor_parameters_t foc_parameters;
+bool foc_parameters_active;
 static float previous, position, origin, forward, sum_sin, sum_cos, low, high;
 static uint32_t ticks;
 static float integral_d, integral_q, variance_b, variance_c, previous_command;
 static float pwm_offset_sum_b, pwm_offset_sum_c;
-static bool tracking, aligning, resuming;
+static bool tracking, aligning, identifying, resuming;
+static float identification_current_limit;
+
+bool foc_identifying(void) { return identifying; }
+bool foc_default_parameters(void)
+{
+    if (foc.state != FOC_IDLE) return false;
+    foc_parameters_active=false; integral_d=integral_q=0.0f;
+    return true;
+}
+bool foc_apply_parameters(const motor_parameters_t *p)
+{
+    if (foc.state != FOC_IDLE || !foc.calibrated || !foc.zero_ready ||
+        !motor_parameters_valid(p,(float)FOC_SAMPLE_HZ)) return false;
+    foc_parameters=*p;foc_parameters_active=true;integral_d=integral_q=0.0f;
+    return true;
+}
+bool foc_identify(float current, float bus)
+{
+    if (foc.state != FOC_IDLE || !foc.calibrated || !foc.zero_ready || fabsf(foc.rpm)>=5.0f ||
+        current > fminf(3.0f,FOC_PHASE_TRIP/2.0f)) return false;
+    motor_ident_config_t config={(float)FOC_SAMPLE_HZ,current,1.5f,FOC_BUS_MIN,FOC_BUS_MAX,
+        fminf(200.0f,(float)FOC_SAMPLE_HZ/40.0f)};
+    if (!motor_ident_start(&config,position,bus)) return false;
+    control_stop();identifying=true;aligning=false;
+    identification_current_limit=1.8f*current;
+    foc.command=foc.iq_ref=0.0f;integral_d=integral_q=0.0f;ticks=0u;
+    foc.state=FOC_PRECHARGE;return true;
+}
 
 static void sincos_fast(float theta, float *s, float *c)
 {
@@ -82,6 +112,7 @@ bool foc_window(const float duty[3])
 
 void foc_stop(void)
 {
+    motor_ident_cancel();identifying=false;
     foc.command = foc.iq_ref = foc.ud = foc.uq = 0.0f;
     foc.voltage_scale = 0.0f;
     integral_d = integral_q = 0.0f;
@@ -95,6 +126,11 @@ void foc_stop(void)
 
 void foc_trip(uint32_t fault)
 {
+    /* Priority-0 faults can preempt the estimator. Repeated fault handling
+     * also clears a READY candidate published after that preemption. */
+    motor_ident.valid=false;
+    if(identifying || motor_ident_active())motor_ident_abort(fault==FOC_TIMING ? IDENT_TIMING :
+        fault==FOC_CURRENT ? IDENT_CURRENT : fault==FOC_BUS ? IDENT_BUS : IDENT_INPUT);
     foc_warn(fault);
     if (foc.state != FOC_FAULT) foc.fault = fault;
     foc.state = FOC_FAULT;
@@ -132,6 +168,7 @@ bool foc_calibrate(void)
         foc_warn(FOC_SPEED);
         if (FOC_PROTECTION_TRIP) return false;
     }
+    foc_parameters_active=false;motor_ident.valid=false;
     aligning = true;
     integral_d = integral_q = 0.0f;
     position = previous; /* Keep alignment deltas precise after many revolutions. */
@@ -143,6 +180,9 @@ bool foc_calibrate(void)
 void foc_init(const foc_calibration_t *calibration)
 {
     memset(&foc, 0, sizeof foc);
+    memset(&motor_ident,0,sizeof motor_ident);
+    memset(&foc_parameters,0,sizeof foc_parameters);
+    foc_parameters_active=identifying=false;
     tracking = false;
     resuming = false;
     aligning = FOC_AUTOCALIBRATE && calibration == NULL;
@@ -191,6 +231,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     }
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         if (!isfinite(bus_voltage) || bus_voltage <= 0.0f) { foc_trip(FOC_BUS); return; }
+        if (identifying && (bus_voltage < FOC_BUS_MIN || bus_voltage > FOC_BUS_MAX)) { foc_trip(FOC_BUS);return; }
         if ((bus_voltage < FOC_BUS_MIN || bus_voltage > FOC_BUS_MAX) && foc_check(FOC_BUS)) return;
     }
     /* Noncomputable inputs stop output, but WARN never locks out a later
@@ -261,6 +302,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     }
     foc.id = ia * c + beta * s;
     foc.iq = -ia * s + beta * c;
+    if (identifying && hypotf(foc.id,foc.iq) > identification_current_limit) { foc_trip(FOC_CURRENT);return; }
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {
         float trip = FOC_PHASE_TRIP;
         if ((fabsf(ia) >= trip || fabsf(ib) >= trip || fabsf(ic) >= trip) && foc_check(FOC_CURRENT)) return;
@@ -277,7 +319,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             foc.state = FOC_PWM_ZERO;
             return;
         }
-        foc.state = aligning ? FOC_CALIBRATE : FOC_RUN;
+        foc.state = (aligning || identifying) ? FOC_CALIBRATE : FOC_RUN;
     }
 #if FOC_PWM_ZERO_SAMPLES > 0u
     if (foc.state == FOC_PWM_ZERO) {
@@ -299,11 +341,26 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             foc.b_offset = next_b; foc.c_offset = next_c;
             integral_d = integral_q = 0.0f;
             ticks = 0u;
-            foc.state = aligning ? FOC_CALIBRATE : FOC_RUN;
+            foc.state = (aligning || identifying) ? FOC_CALIBRATE : FOC_RUN;
         }
         return;
     }
 #endif
+    if (foc.state == FOC_CALIBRATE && identifying) {
+        /* Stationary d/q probing; active CCRs describe the period just sampled.
+           Common-mode duty cancels in the reconstructed alpha/beta voltage. */
+        float va=bus_voltage*(2.0f*motor_duty[0]-motor_duty[1]-motor_duty[2])/3.0f;
+        float vb=bus_voltage*(motor_duty[1]-motor_duty[2])*0.5773502692f;
+        float ud,uq;
+        if (!motor_ident_step(foc.id,foc.iq,va*c+vb*s,-va*s+vb*c,
+                              position,foc.rpm,bus_voltage,&ud,&uq)) {
+            foc_stop();return;
+        }
+        foc.ud=ud;foc.uq=uq;
+        foc.voltage_scale=foc_modulate(ud*c-uq*s,ud*s+uq*c,bus_voltage,foc.duty);
+        foc.ud*=foc.voltage_scale;foc.uq*=foc.voltage_scale;
+        return;
+    }
     if (foc.state == FOC_RUN) {
         /* Optional command shaping; WARN defaults to direct current steps. */
         float step = foc.command - previous_command;
@@ -323,8 +380,14 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             foc.iq_ref = control_iq_ref();
         /* PI/feedforward and back calculation have independent tuning units. */
         float ed = -foc.id, eq = foc.iq_ref - foc.iq;
-        float ud = FOC_CURRENT_KP * ed + integral_d - omega * FOC_MOTOR_INDUCTANCE_H * foc.iq;
-        float uq = FOC_CURRENT_KP * eq + integral_q + omega * (FOC_MOTOR_INDUCTANCE_H * foc.id + FOC_MOTOR_FLUX_WB);
+        float kpd=foc_parameters_active ? foc_parameters.kp_d : FOC_CURRENT_KP;
+        float kpq=foc_parameters_active ? foc_parameters.kp_q : FOC_CURRENT_KP;
+        float ki_step=foc_parameters_active ? foc_parameters.ki/(float)FOC_SAMPLE_HZ : FOC_CURRENT_KI_STEP;
+        float aw_step=foc_parameters_active ? 6.2831853072f*foc_parameters.bandwidth_hz/(float)FOC_SAMPLE_HZ : FOC_CURRENT_AW_STEP;
+        float ld=foc_parameters_active ? foc_parameters.ld : FOC_MOTOR_INDUCTANCE_H;
+        float lq=foc_parameters_active ? foc_parameters.lq : FOC_MOTOR_INDUCTANCE_H;
+        float ud = kpd * ed + integral_d - omega * lq * foc.iq;
+        float uq = kpq * eq + integral_q + omega * (ld * foc.id + FOC_MOTOR_FLUX_WB);
         /* Linear SVPWM ceiling; modulation also accounts for the ADC window. */
         float fraction = FOC_PROTECTION_TRIP ? FOC_VOLTAGE_FRACTION : 0.5773502692f;
         /* New-motor commissioning ceiling also applies under WARN; the
@@ -347,8 +410,8 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
         foc.voltage_scale *= scale;
         if (scale < 1.0f) foc_warn(FOC_VOLTAGE);
         foc.ud *= scale; foc.uq *= scale;
-        integral_d += FOC_CURRENT_KI_STEP * ed + FOC_CURRENT_AW_STEP * (foc.ud - ud);
-        integral_q += FOC_CURRENT_KI_STEP * eq + FOC_CURRENT_AW_STEP * (foc.uq - uq);
+        integral_d += ki_step * ed + aw_step * (foc.ud - ud);
+        integral_q += ki_step * eq + aw_step * (foc.uq - uq);
     } else if (foc.state == FOC_CALIBRATE) {
         ++ticks;
         float theta = ALIGN_START, ud = FOC_ALIGNMENT_VOLTS;

@@ -4,6 +4,12 @@
 #include <math.h>
 
 foc_t foc;
+motor_parameters_t foc_parameters;
+bool foc_parameters_active;
+bool foc_identifying(void) { return false; }
+bool foc_identify(float amps,float bus) { (void)amps;(void)bus;return false; }
+bool foc_apply_parameters(const motor_parameters_t *p) { (void)p;return false; }
+bool foc_default_parameters(void) { return false; }
 
 void foc_warn(uint32_t warning) { foc.warnings |= 1u << warning; }
 

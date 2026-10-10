@@ -213,7 +213,13 @@ bool bsp_motor_load(foc_calibration_t *calibration)
     return true;
 }
 
-bool bsp_motor_save(const foc_calibration_t *calibration)
+bool bsp_motor_load_parameters(const foc_calibration_t *calibration, motor_parameters_t *parameters)
+{
+    const tuning_record_t *r=(const tuning_record_t *)0x080e0040u;
+    if (!tuning_record_valid(r,calibration)) return false;
+    *parameters=r->parameters;return true;
+}
+static bool save_record(const foc_calibration_t *calibration, const motor_parameters_t *parameters)
 {
     if (motor_mode != MOTOR_OFF || (FOC_PWM_TIMER->CR1 & TIM_CR1_CEN)) return false;
     record_t r = {.version = 3u, .poles = (FOC_CALIBRATION_ID << 16) | FOC_POLE_PAIRS,
@@ -229,7 +235,26 @@ bool bsp_motor_save(const foc_calibration_t *calibration)
         memcpy(&word, (const uint8_t *)&r + i, sizeof word);
         ok = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, 0x080e0000u + i, word) == HAL_OK;
     }
+    if (parameters) {
+        tuning_record_t tuning={.version=1u,.profile=(FOC_CALIBRATION_ID<<16)|FOC_POLE_PAIRS,
+            .cal=*calibration,.parameters=*parameters,.magic=0x524c5049u};
+        tuning.checksum=tuning_checksum(&tuning);
+        for(unsigned i=0;ok && i<sizeof tuning;i+=4u) {
+            uint32_t word;memcpy(&word,(const uint8_t *)&tuning+i,sizeof word);
+            ok=HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD,0x080e0040u+i,word)==HAL_OK;
+        }
+    }
     HAL_FLASH_Lock();
     foc_calibration_t readback;
-    return ok && bsp_motor_load(&readback) && memcmp(&readback, calibration, sizeof readback) == 0;
+    ok=ok && bsp_motor_load(&readback) && memcmp(&readback,calibration,sizeof readback)==0;
+    if (ok && parameters) {
+        motor_parameters_t read_parameters;
+        ok=bsp_motor_load_parameters(calibration,&read_parameters) && memcmp(&read_parameters,parameters,sizeof *parameters)==0;
+    }
+    return ok;
+}
+bool bsp_motor_save(const foc_calibration_t *calibration) { return save_record(calibration,NULL); }
+bool bsp_motor_save_parameters(const foc_calibration_t *calibration,const motor_parameters_t *parameters)
+{
+    return motor_parameters_valid(parameters,(float)FOC_SAMPLE_HZ) && save_record(calibration,parameters);
 }

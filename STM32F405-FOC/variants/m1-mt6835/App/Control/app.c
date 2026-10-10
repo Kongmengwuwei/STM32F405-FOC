@@ -27,6 +27,8 @@ static volatile uint32_t last_frame;
 static volatile uint8_t divider;
 static uint32_t sequence;
 static uint16_t usb_divider;
+static volatile bool tuning_save_pending;
+static volatile unsigned tuning_save_status; /* 0 none, 1 pending, 2 verified, 3 failed. */
 /* Group 5 integrates every control sample before decimation. Reset at a
  * reference/state edge so a displayed point never averages two commands. */
 static struct {
@@ -53,13 +55,16 @@ bool app_init(void)
     if (!bsp_uart_init() || !bsp_can_init()) return false;
     if (!bsp_encoder_init()) { app_fault(FOC_SENSOR); return false; }
     foc_calibration_t calibration;
-    foc_init(bsp_motor_load(&calibration) ? &calibration : NULL);
+    bool calibrated=bsp_motor_load(&calibration);
+    foc_init(calibrated ? &calibration : NULL);
+    if (calibrated && bsp_motor_load_parameters(&calibration,&foc_parameters)) foc_parameters_active=true;
     bsp_adc_start();
     return true;
 }
 
 void app_fault(uint32_t fault)
 {
+    if (foc_identifying()) { app_abort(fault);return; }
     if (!FOC_PROTECTION_TRIP && (fault == FOC_TIMING || fault == FOC_UART)) {
         foc_warn(fault);
         return; /* A missed deadline holds the last coherent PWM period. */
@@ -207,6 +212,19 @@ static void telemetry_usb(void)
         payload[11] = current_log.bus * inv;
         break;
     }
+    case 7: { /* Identification results; legacy 12-float JustFloat framing. */
+        const motor_parameters_t *p=(motor_ident.phase==IDENT_IDLE && foc_parameters_active) ? &foc_parameters : &motor_ident.candidate;
+        payload[2]=(float)motor_ident.phase;payload[3]=(float)motor_ident.error;
+        payload[4]=p->resistance;payload[5]=p->ld;
+        payload[6]=p->lq;payload[7]=p->kp_d;
+        payload[8]=p->kp_q;payload[9]=p->ki;
+        payload[10]=p->bandwidth_hz;
+        bool applied=motor_ident.valid && foc_parameters_active &&
+            memcmp(&foc_parameters,&motor_ident.candidate,sizeof foc_parameters)==0;
+        payload[11]=(float)((unsigned)motor_ident.valid | ((unsigned)foc_parameters_active<<1) |
+            (tuning_save_status<<2) | ((unsigned)applied<<4));
+        break;
+    }
     }
     s_usb_frame[FOC_FRAME_CHANNELS] = INFINITY;
     (void)bsp_usb_write(s_usb_frame, (FOC_FRAME_CHANNELS + 1u) * sizeof(float));
@@ -310,7 +328,8 @@ static bool parse_decimal(const char *p, float *value, float limit)
 /* Foreground parser; only state changes use the short critical section. */
 bool app_command(const char *line)
 {
-    enum { STOP, CAL, CLEAR, ZERO, TORQUE, SPEED, POS, HOLD, HELLO } command;
+    enum { STOP, CAL, CLEAR, ZERO, TORQUE, SPEED, POS, HOLD, HELLO, IDENTIFY,
+           TUNE_APPLY, TUNE_DEFAULT, TUNE_SAVE } command;
     float value = 0.0f;
 #ifdef FOC_CAPTURE
     if (!strcmp(line, "quiet 0") || !strcmp(line, "quiet 1")) {
@@ -342,14 +361,20 @@ bool app_command(const char *line)
     else if (!strcmp(line, "zero")) command = ZERO;
     else if (!strcmp(line, "hold")) command = HOLD;
     else if (!strcmp(line, "hello")) command = HELLO;
+    else if (!strcmp(line,"identify")) { command=IDENTIFY;value=1.5f; }
+    else if (!strncmp(line,"identify ",9u)) { command=IDENTIFY;if(!parse_decimal(line+9,&value,3.0f))return false; }
+    else if (!strcmp(line,"tune apply")) command=TUNE_APPLY;
+    else if (!strcmp(line,"tune default")) command=TUNE_DEFAULT;
+    else if (!strcmp(line,"tune save")) command=TUNE_SAVE;
     else if (!strncmp(line, "Iq ", 3u)) { command = TORQUE; if (!parse_decimal(line + 3, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "rpm ", 4u)) { command = SPEED; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
     else if (!strncmp(line, "pos ", 4u)) { command = POS; if (!parse_decimal(line + 4, &value, FLT_MAX)) return false; }
-    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '6' && !line[6]) {
+    else if (!strncmp(line, "send ", 5u) && line[5] >= '0' && line[5] <= '7' && !line[6]) {
         telemetry_group = (uint8_t)(line[5] - '0');
         return true;
     } else return false;
     uint32_t key = bsp_motor_lock();
+    if (tuning_save_pending && command!=STOP) { bsp_motor_unlock(key);return false; }
     bool ok = true;
     switch (command) {
     case STOP:
@@ -357,6 +382,8 @@ bool app_command(const char *line)
         capturing = capture_low = quiet = false;
 #endif
         bsp_motor_off(); foc_stop();
+        if(tuning_save_pending)tuning_save_status=0u;
+        tuning_save_pending=false;
         break;
     case TORQUE: ok = control_torque(value); break;
     case SPEED: ok = control_speed(value); break;
@@ -364,6 +391,14 @@ bool app_command(const char *line)
     case HOLD: ok = control_hold_position(); break;
     case ZERO: ok = control_zero(); break;
     case CAL: ok = foc_calibrate(); break;
+    case IDENTIFY:
+        ok=bsp_uart_millis()-last_frame<2u && foc_identify(value,adc_sample.bus_voltage);break;
+    case TUNE_APPLY: ok=motor_ident.valid && foc_apply_parameters(&motor_ident.candidate);break;
+    case TUNE_DEFAULT: ok=foc_default_parameters();break;
+    case TUNE_SAVE:
+        ok=foc.state==FOC_IDLE && foc.calibrated && foc_parameters_active;
+        if(ok){tuning_save_pending=true;tuning_save_status=1u;}
+        break;
     case HELLO: break; /* No state change; the caller prints the banner. */
     case CLEAR:
         if (!FOC_PROTECTION_TRIP && foc.state != FOC_FAULT) {
@@ -472,12 +507,15 @@ void app_poll(void)
         }
     }
 #endif
-    if (foc.state == FOC_SAVE && divider == 0u) {
+    if ((foc.state == FOC_SAVE || (tuning_save_pending && foc.state==FOC_IDLE)) && divider == 0u) {
+        bool saving_tuning=tuning_save_pending;
         uint32_t key = bsp_motor_lock();
         bsp_adc_stop();
         bsp_encoder_stop();
         bsp_motor_unlock(key);
-        bool ok = bsp_motor_save(&foc.calibration);
+        bool ok = saving_tuning ? bsp_motor_save_parameters(&foc.calibration,&foc_parameters) : bsp_motor_save(&foc.calibration);
+        if(saving_tuning)tuning_save_status=ok ? 2u : 3u;
+        tuning_save_pending=false;
         if (ok) { foc.calibrated = true; foc.state = FOC_IDLE; }
         else if (FOC_PROTECTION_TRIP) app_fault(FOC_FLASH);
         else {

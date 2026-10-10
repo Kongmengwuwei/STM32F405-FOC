@@ -100,6 +100,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Control/app.c
     App/Control/control.c
     App/FOC/foc.c
+    App/FOC/motor_ident.c
     App/Hardware/bsp/bsp_motor.c
     ${FOC_ADC_SOURCE}
     App/Hardware/bsp/bsp_can.c
@@ -134,7 +135,7 @@ set_source_files_properties(
     DIRECTORY cmake/stm32cubemx PROPERTIES COMPILE_OPTIONS "-O3")
 # Keep the 20 kHz path optimized in Debug too; -O0 misses PWM deadlines.
 set_source_files_properties(
-    App/FOC/foc.c App/Hardware/bsp/bsp_motor.c
+    App/FOC/foc.c App/FOC/motor_ident.c App/Hardware/bsp/bsp_motor.c
     App/Control/app.c App/Control/control.c ${FOC_ADC_SOURCE} App/Hardware/bsp/bsp_uart.c
     ${FOC_ENCODER_SOURCE}
     PROPERTIES COMPILE_OPTIONS "-O3")

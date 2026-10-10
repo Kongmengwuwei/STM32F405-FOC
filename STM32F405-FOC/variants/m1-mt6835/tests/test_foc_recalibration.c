@@ -6,6 +6,7 @@
 
 /* foc.c stamps the outer-loop scheduler from the sample-phase timestamp. */
 volatile uint32_t motor_sample_us;
+volatile float motor_duty[3];
 static uint32_t s_millis;
 uint32_t bsp_uart_millis(void) { return s_millis; }
 

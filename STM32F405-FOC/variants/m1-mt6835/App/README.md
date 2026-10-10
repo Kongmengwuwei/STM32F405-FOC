@@ -4,6 +4,8 @@
 
 这套 `App/` 源码服务所有功率接口、编码器和电机组合。顶层 CMake 默认选择 `M0 + TLE5012B + ZH3620_1 + PLASTIC_ARM + WARN`；M1/MT6835 和参考电机使用同一应用和控制算法，但单独选择驱动与参数。项目总入口见[根目录说明](../../../README.md)，各项配置和校准见[统一固件指南](../../../docs/unified-firmware.md)。
 
+新增 R/L 和电流环自整定见[自动适配方案](../../../docs/motor-autotune.md)。`identify` 自动测量并计算候选，`tune apply` 待机应用，`tune save` 保存；启动加载有效参数，不自动注入。
+
 ## 数据怎样走
 
 1. `Core/Src/main.c` 初始化板级外设后调用 `app_init()`。M0 的 ADC 中断、M1 的 ADC DMA 回调在固定 PWM 相位取得 B/C 电流，随后读取编码器和母线。
@@ -22,6 +24,7 @@
 | `Control/app.c`、`telemetry.h` | 命令、采样调度、USB/UART 遥测与告警发布 |
 | `Control/control.c` | 模式切换、速度/位置外环与轨迹 |
 | `FOC/foc.c`、`sine_table.inc` | 零偏、校准、坐标变换、电流 PI、SVPWM、状态机 |
+| `FOC/motor_ident.c`、`motor_ident.h` | 双电流水平 R、双频 Ld/Lq、质量检查和 SI 单位 PI 计算 |
 | `Hardware/bsp/bsp_adc_m0.c`、`bsp_adc.c` | M0 顺序/可选同步采样、M1 双 ADC DMA |
 | `Hardware/bsp/bsp_motor.c`、`bsp_motor_record.h` | PWM 提交与关断、Flash 校准记录 |
 | `Hardware/encoder/`、`Hardware/tle5012b/`、`Hardware/mt6835/` | 编码器统一接口、芯片协议与 SPI 读数 |

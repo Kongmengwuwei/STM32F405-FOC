@@ -1,5 +1,11 @@
 # tools：电机测试数据系统
 
+`autotune.py` 支持当前配置的停机 R/L 自动辨识、PI 计算、应用和保存；默认只读，显式 `--identify --apply --save` 才完成注入和写入。运行前断开 VOFA，退出 stop/send 6。方案、质量检查、命令及 12 V 实测见[自动适配](../../../../docs/motor-autotune.md)。
+
+```powershell
+python tools/bench/autotune.py --identify --apply --save --out build/autotune
+```
+
 `longqiu_dynamic.py` 用于 12 V 空载龙邱的**连续**阶跃反向；每段之间保持闭环。输出 `.npy` 与 JSON，从设备目标变化和时间戳计算 T90，速度使用 20 ms 尾随平均，到位要求误差带内保持 100 ms。每目标 0.5–2 s，独立总时限和退出发送 stop，检查母线、转速、d/q 电流与目标电流边界；结束恢复 `send 6`。先断开 VOFA，示例从 variant 目录运行：
 
 ```powershell

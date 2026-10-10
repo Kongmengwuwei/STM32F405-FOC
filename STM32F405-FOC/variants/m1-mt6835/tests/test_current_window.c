@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "%d: %s\n", __LINE__, #x); exit(1); } } while (0)
 volatile uint32_t motor_sample_us;
+volatile float motor_duty[3];
 uint32_t bsp_uart_millis(void) { return motor_sample_us / 1000u; }
 
 int main(void)

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "foc_profile.h"
+#include "motor_ident.h"
 
 /* Nominal timing, pending scope validation of ADC/driver/analog delays. */
 #define FOC_APERTURE_TICKS FOC_PORT_ADC_APERTURE_TICKS
@@ -28,6 +29,12 @@ typedef struct {
     float voltage_scale; /* Applied/requested voltage ratio; zero when stopped. */
 } foc_t;
 extern foc_t foc; /* ISR-owned; foreground changes require a short IRQ critical section. */
+extern motor_parameters_t foc_parameters;
+extern bool foc_parameters_active;
+bool foc_identifying(void);
+bool foc_identify(float test_current, float bus_voltage);
+bool foc_apply_parameters(const motor_parameters_t *parameters); /* Idle, IRQ locked. */
+bool foc_default_parameters(void); /* Idle, IRQ locked; no movement. */
 
 void foc_init(const foc_calibration_t *calibration);
 void foc_acquisition_resume(void); /* Gates off; resynchronise one sample after Flash save. */

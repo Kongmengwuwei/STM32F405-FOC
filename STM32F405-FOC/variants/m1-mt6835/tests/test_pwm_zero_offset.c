@@ -7,6 +7,7 @@
 /* A stationary motor and equal PWM duties have no line-to-line command.
    Verify that the current zero follows a repeatable PWM-on amplifier shift. */
 volatile uint32_t motor_sample_us;
+volatile float motor_duty[3];
 uint32_t bsp_uart_millis(void) { return motor_sample_us / 1000u; }
 
 static void sample(float b, float c)
