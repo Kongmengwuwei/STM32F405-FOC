@@ -34,6 +34,9 @@
 #include "bsp_usb.h"
 #include "bsp_motor.h"
 #include "foc_profile.h"
+#ifdef FOC_DUAL
+#include "dual.h"
+#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,9 +99,13 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+#ifdef FOC_DUAL
+  dual_hw_safe_pins();
+#else
   bsp_motor_safe_pins();
+#endif
   MX_DMA_Init();
-#ifdef FOC_PORT_M1
+#if defined(FOC_PORT_M1) && !defined(FOC_DUAL)
   MX_TIM8_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
@@ -109,7 +116,11 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
   if (!app_init()) {
+#ifdef FOC_DUAL
+    app_abort(FOC_SENSOR);
+#else
     app_abort(foc.fault ? foc.fault : FOC_TIMING);
+#endif
     /* Keep USB enumerable, but never start acquisition or accept motor commands. */
     while (1) { bsp_usb_poll(); __WFI(); }
   }

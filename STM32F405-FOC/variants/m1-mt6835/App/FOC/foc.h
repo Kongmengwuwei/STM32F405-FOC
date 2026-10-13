@@ -44,6 +44,9 @@ void foc_init(const foc_calibration_t *calibration);
 void foc_acquisition_resume(void); /* Gates off; resynchronise one sample after Flash save. */
 bool foc_current(float amps); /* Finite torque target; TRIP applies profile limits. */
 bool foc_calibrate(void);
+#ifdef FOC_DUAL_LEG
+bool foc_leg_calibrate(float current);
+#endif
 bool foc_autocalibrate(float current, float bus_voltage);
 bool foc_apply_calibration(void); /* Idle, IRQ locked; verified candidate only. */
 void foc_stop(void);

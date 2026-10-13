@@ -1,5 +1,7 @@
 # STM32F405 有感 FOC 工程导航
 
+本次轮腿实测已使用 **M0 + M1 / 两台 L4225 / TLE5012B / 7:1 减速箱 / TRIP**，构建选 `Debug-dual-leg`，详见[双路轮腿使用与实测](docs/dual-leg.md)。两路校准与小行程联动已通过；关节目标临时限制 ±2.5°，默认位置电流上限 5 A，可设置到 9 A。
+
 当前默认为 **M1 / L4225-6S420-A / TLE5012B / 安装 4 / FREE_SHAFT / WARN**，12 V 空载。SPI3/PA0 接线不变。唯一共用源码在 `variants/m1-mt6835/`；目录名沿用参考工程历史，接口、编码器、电机和负载可独立选择。
 
 ## 构建与测试
@@ -27,6 +29,6 @@ python variants/m1-mt6835/tests/run_tests.py --cc gcc
 | 运行主机回归和实机工具 | [测试](variants/m1-mt6835/tests/README.md)、[台架工具](variants/m1-mt6835/tools/bench/README.md) |
 | 查清理范围与后续优化 | [整理记录](docs/code-cleanup-2026-10-10.md) |
 
-当前电流环 10 kHz、速度/位置外环 1 kHz、USB `send 6` 总览 2.5 kHz。VOFA 选 JustFloat、实际 COM 口、1000000、8N1、DTR。上电只进行静止电流零偏估计，加载有效 Flash 校准/电流参数；抗齿槽表恢复后保持关闭，需要 `cog on` 开启。首次新安装须校准和验收，日常运行结束发送 `stop`。WARN 下断开 USB 不会自动停机；抗齿槽采集和自动辨识仍有独立硬中止。
+单路默认配置的电流环 10 kHz、速度/位置外环 1 kHz、USB `send 6` 总览 2.5 kHz。VOFA 选 JustFloat、实际 COM 口、1000000、8N1、DTR。上电只进行静止电流零偏估计，加载有效 Flash 校准/电流参数；抗齿槽表恢复后保持关闭，需要 `cog on` 开启。首次新安装须校准和验收，日常运行结束发送 `stop`。WARN 下断开 USB 不会自动停机；抗齿槽采集和自动辨识仍有独立硬中止。
 
 按日期保存的 ZH3620-1、塑料臂和旧安装记录仍可用于对照，不能代表当前电机的带载表现。HAL/CMSIS、USB 中间件和 CubeMX `.ioc` 保留；手写初始化与 `.ioc` 不完全等价。

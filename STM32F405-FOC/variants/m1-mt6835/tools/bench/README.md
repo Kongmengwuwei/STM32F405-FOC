@@ -228,3 +228,5 @@ python tools/bench/selftest.py
 归档往返与工况限值校验。
 
 抗齿槽采集与开关对比使用 `anticogging.py`，完整方案、采集边界和 VOFA 命令见[抗齿槽说明](../../../../docs/anticogging.md)。
+
+双路轮腿使用 `dual_leg.py`，支持只读预检、受限校准、成对关节目标、连续序列和失联验收。协议、减速比和临时运动范围见[双路轮腿指南](../../../../docs/dual-leg.md)，使用前断开 VOFA 串口并支撑机构。

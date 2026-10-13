@@ -3,6 +3,9 @@
 #include "bsp_uart.h"
 #include "foc.h"
 #include <math.h>
+#ifdef FOC_DUAL_LEG
+#include "leg_guard.h"
+#endif
 
 /* Basic cascade: position P -> speed PI -> Iq_ref, above the selected port's
    current loop. TRIP limits match the manual current command range; WARN
@@ -39,6 +42,9 @@
 static uint32_t mode, fault;
 static float position, reference, speed, speed_target, position_target;
 static float integral_speed, last_deg, speed_reference;
+#ifdef FOC_DUAL_LEG
+static float leg_position_reference, leg_previous_error;
+#endif
 static float velocity_position, last_velocity_position;
 static float absolute_deg;
 static float position_origin;
@@ -140,6 +146,11 @@ static bool start(uint32_t wanted, float target)
         integral_speed = 0.0f;
         reference = 0.0f; /* Never reuse an old mode's outer-loop output. */
         speed_reference = speed;
+#ifdef FOC_DUAL_LEG
+        leg_position_reference = position;
+        leg_previous_error = 0;
+        speed_reference = 0;
+#endif
     }
     go();
     mode = wanted;
@@ -149,6 +160,9 @@ static bool start(uint32_t wanted, float target)
 
 bool control_torque(float amps)
 {
+#ifdef FOC_DUAL_LEG
+    (void)amps;return false;
+#endif
     if(cog_learning)return false;
     if (!isfinite(amps)) return false;
     if (fabsf(amps) > FOC_CURRENT_MAX) {
@@ -163,6 +177,9 @@ bool control_torque(float amps)
 
 bool control_speed(float rpm)
 {
+#ifdef FOC_DUAL_LEG
+    (void)rpm;return false;
+#endif
     if(cog_learning)return false;
     if (!isfinite(rpm)) return false;
     if (fabsf(rpm) > FOC_SPEED_MAX) {
@@ -176,6 +193,9 @@ bool control_speed(float rpm)
 
 bool control_position(float deg)
 {
+#ifdef FOC_DUAL_LEG
+    if(!leg_target_valid(FOC_LEG_AXIS,deg,position))return false;
+#endif
     if (!isfinite(deg)) return false;
     if (fabsf(deg) > 1e6f) {
         foc_warn(FOC_POSITION);
@@ -188,6 +208,9 @@ bool control_position(float deg)
 
 bool control_hold_position(void)
 {
+#ifdef FOC_DUAL_LEG
+    return control_position(position);
+#endif
     if (!start(CONTROL_POSITION, 0.0f)) return false;
     position_target = position; /* Stop where we are, but keep holding it. */
     return true;
@@ -222,7 +245,11 @@ static float outer_output(float dt)
     float acceleration = mode == CONTROL_POSITION ?
         FOC_MOTOR_POSITION_ACCEL_RPM_PER_S : FOC_MOTOR_SPEED_SLEW_RPM_PER_S;
     if (mode == CONTROL_POSITION) {
+#ifdef FOC_DUAL_LEG
+        float distance = position_target - leg_position_reference;
+#else
         float distance = position_target - position;
+#endif
         float omega = POSITION_KP * distance;
         float ceiling = FOC_POSITION_SPEED_MAX;
         /* Degrees = 3 * RPM^2 / acceleration(RPM/s). Approach fast while
@@ -244,6 +271,23 @@ static float outer_output(float dt)
     if (change > slew) change = slew;
     if (change < -slew) change = -slew;
     speed_reference += change;
+#ifdef FOC_DUAL_LEG
+    float distance=position_target-leg_position_reference;
+    float next=leg_position_reference+6.0f*speed_reference*dt;
+    if(distance*(position_target-next)<=0){next=position_target;speed_reference=0;}
+    leg_position_reference=next;
+    /* Limited joint workspace: position stiffness supplies breakaway torque
+     * without a long speed-integrator buildup. Measured motor velocity adds
+     * damping; the reference trajectory remains bounded in motor units. */
+    float error=(float)foc.calibration.direction*(leg_position_reference-position);
+    /* Release stored breakaway effort after crossing the reference. Keeping
+     * the full integral here pushes a low-friction axis beyond its target. */
+    if(error*leg_previous_error<0) integral_speed*=.5f;
+    leg_previous_error=error;
+    float ki=FOC_LEG_POSITION_CURRENT_KI;
+    float wanted=FOC_LEG_POSITION_CURRENT_KP*error-
+        FOC_LEG_POSITION_DAMPING_A_RPM*(float)foc.calibration.direction*speed+integral_speed;
+#else
     float error = (float)foc.calibration.direction * (speed_reference - speed);
     float kp = mode == CONTROL_POSITION ? FOC_OUTER_POSITION_SPEED_KP : SPEED_KP;
     float ki = SPEED_KI;
@@ -264,6 +308,7 @@ static float outer_output(float dt)
     float compensation_rpm=fmaxf(fabsf(speed_target),
         fmaxf(fabsf(speed_reference),fabsf(speed)));
     float wanted = kp * error + integral_speed + cog_output(absolute_deg, compensation_rpm, dt);
+#endif
     float limited = wanted;
     if (fabsf(wanted) > FOC_CURRENT_MAX) foc_warn(FOC_CURRENT);
     if (FOC_PROTECTION_TRIP) {
@@ -275,6 +320,9 @@ static float outer_output(float dt)
     if (limited > FOC_MOTOR_OUTER_CURRENT_MAX) limited = FOC_MOTOR_OUTER_CURRENT_MAX;
     if (limited < -FOC_MOTOR_OUTER_CURRENT_MAX) limited = -FOC_MOTOR_OUTER_CURRENT_MAX;
 #endif
+    #ifdef FOC_DUAL_LEG
+    limited=fminf(leg_current_limit(),fmaxf(-leg_current_limit(),limited));
+    #endif
     /* Do not wind up against unavailable inverter voltage. Preserve WARN's
        direct-current commands and do not add a current threshold lockout. */
     bool pushing_voltage = foc.voltage_scale < 0.999f &&

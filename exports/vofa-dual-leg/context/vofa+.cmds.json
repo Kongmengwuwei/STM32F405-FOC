@@ -1,0 +1,70 @@
+{
+  "type": "cmds",
+  "vnumber": 100,
+  "ctx": {
+    "name": "轮腿双路控制",
+    "intro_on": true,
+    "intro": "用控制面板持续刷新位置；200 ms 失联会关断两路。",
+    "hex_on": false,
+    "loop_on": true,
+    "loop_ms": 100,
+    "loop_count": 1,
+    "cmd_hex": "",
+    "is_group": true,
+    "down": true,
+    "subCmds": [
+      {
+        "name": "停机 · 关闭两路",
+        "intro_on": true,
+        "intro": "关闭两路 PWM；停机需支撑机械腿",
+        "hex_on": false,
+        "loop_on": true,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "73 74 6F 70 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "双路总览",
+        "intro_on": true,
+        "intro": "24 通道双路总览，不启动电机",
+        "hex_on": false,
+        "loop_on": true,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "73 65 6E 64 20 30 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "清除故障",
+        "intro_on": true,
+        "intro": "确认姿态后清除故障；不自动恢复驱动",
+        "hex_on": false,
+        "loop_on": true,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "63 6C 65 61 72 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "默认上限 5 A",
+        "intro_on": true,
+        "intro": "只在两路停机时修改；最大 9 A",
+        "hex_on": false,
+        "loop_on": true,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "6C 69 6D 69 74 20 35 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      }
+    ]
+  }
+}

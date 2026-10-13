@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 project(405_FOC C ASM)
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/foc-defaults.cmake)
+option(FOC_DUAL_LEG "Two Longqiu limited-travel leg motors" OFF)
+if(FOC_DUAL_LEG)
+    if(NOT FOC_PORT STREQUAL "M0" OR NOT FOC_ENCODER STREQUAL "TLE5012B" OR NOT FOC_MOTOR STREQUAL "L4225_6S420_A" OR NOT FOC_PROTECTION STREQUAL "TRIP")
+        message(FATAL_ERROR "Dual legs require M0 timing, TLE5012B, Longqiu and TRIP")
+    endif()
+endif()
 set(FOC_M0_ADC_MODE "SEQUENTIAL" CACHE STRING "M0 current acquisition: SEQUENTIAL or DUAL")
 set_property(CACHE FOC_M0_ADC_MODE PROPERTY STRINGS SEQUENTIAL DUAL)
 if(FOC_M0_ADC_MODE STREQUAL "DUAL")
@@ -11,7 +17,14 @@ else()
     message(FATAL_ERROR "FOC_M0_ADC_MODE must be SEQUENTIAL or DUAL")
 endif()
 set(FOC_M0_TRIGGER_TICKS "" CACHE STRING "Optional M0 ADC trigger override for sampling experiments")
-if(NOT FOC_M0_TRIGGER_TICKS STREQUAL "")
+if(FOC_DUAL_LEG)
+    if(FOC_INSTALLATION_ID GREATER 14)
+        message(FATAL_ERROR "Dual leg installation uses base and base+1: select 1..14")
+    endif()
+    if(NOT FOC_M0_TRIGGER_TICKS STREQUAL "" AND NOT FOC_M0_TRIGGER_TICKS STREQUAL "4000")
+        message(FATAL_ERROR "Dual legs require the validated 4000-tick ADC trigger")
+    endif()
+elseif(NOT FOC_M0_TRIGGER_TICKS STREQUAL "")
     if(NOT FOC_M0_TRIGGER_TICKS MATCHES "^[0-9]+$" OR
        FOC_M0_TRIGGER_TICKS LESS 7000 OR FOC_M0_TRIGGER_TICKS GREATER 8350)
         message(FATAL_ERROR "FOC_M0_TRIGGER_TICKS must be empty or in 7000..8350")
@@ -89,7 +102,17 @@ if(DEFINED FOC_OUTPUT_NAME)
         OUTPUT_NAME "${FOC_OUTPUT_NAME}"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif()
+if(FOC_DUAL_LEG)
+ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE FOC_DUAL FOC_DUAL_LEG)
+ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE dual)
+endif()
 add_subdirectory(cmake/stm32cubemx)
+if(FOC_DUAL_LEG)
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE dual/app.c dual/hardware.c dual/record.c dual/leg_guard.c
+    dual/foc0.c dual/foc1.c dual/control0.c dual/control1.c dual/ident0.c dual/ident1.c
+    dual/sensor0.c dual/sensor1.c dual/cog0.c dual/cog1.c App/Hardware/bsp/bsp_can.c
+    App/Hardware/bsp/bsp_uart.c App/Hardware/bsp/bsp_usb.c App/Hardware/tle5012b/tle5012b_protocol.c)
+else()
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Control/app.c
     App/Control/control.c
@@ -104,6 +127,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Hardware/bsp/bsp_usb.c
     ${FOC_ENCODER_SOURCE}
 )
+endif()
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/Control
     App/FOC
@@ -141,3 +165,7 @@ add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
     VERBATIM
 )
+
+if(FOC_DUAL_LEG)
+ set_source_files_properties(dual/app.c dual/hardware.c dual/record.c dual/leg_guard.c dual/foc0.c dual/foc1.c dual/control0.c dual/control1.c dual/ident0.c dual/ident1.c dual/sensor0.c dual/sensor1.c dual/cog0.c dual/cog1.c PROPERTIES COMPILE_OPTIONS "-O3")
+endif()

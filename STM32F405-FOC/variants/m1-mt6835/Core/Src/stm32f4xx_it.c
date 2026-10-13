@@ -28,6 +28,9 @@
 #include "bsp_encoder.h"
 #include "foc_profile.h"
 #include "bsp_uart.h"
+#ifdef FOC_DUAL
+#include "dual.h"
+#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -80,7 +83,11 @@ extern UART_HandleTypeDef huart2;
 void NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
+#ifdef FOC_DUAL
+  dual_hw_off_all();
+#else
   bsp_motor_off();
+#endif
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
@@ -96,7 +103,11 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
+#ifdef FOC_DUAL
+  dual_hw_off_all();
+#else
   bsp_motor_off();
+#endif
 
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
@@ -112,7 +123,11 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
+#ifdef FOC_DUAL
+  dual_hw_off_all();
+#else
   bsp_motor_off();
+#endif
 
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
@@ -128,7 +143,11 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
+#ifdef FOC_DUAL
+  dual_hw_off_all();
+#else
   bsp_motor_off();
+#endif
 
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
@@ -144,7 +163,11 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
+#ifdef FOC_DUAL
+  dual_hw_off_all();
+#else
   bsp_motor_off();
+#endif
 
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
@@ -234,6 +257,11 @@ void DMA1_Stream6_IRQHandler(void)
 void ADC_IRQHandler(void)
 {
   /* USER CODE BEGIN ADC_IRQn 0 */
+#ifdef FOC_DUAL
+  if (!(ADC1->SR & ADC_SR_JEOC)) { app_fault(FOC_ADC); return; }
+  dual_app_sample();
+  return;
+#else
 #ifdef FOC_PORT_M0
   uint32_t flags = ADC1->SR;
   if ((flags | ADC2->SR) & ADC_SR_OVR) { app_fault(FOC_ADC); (void)bsp_adc_read(); return; }
@@ -251,6 +279,7 @@ void ADC_IRQHandler(void)
   (void)bsp_adc_read();
 #endif
   return;
+#endif
   /* USER CODE END ADC_IRQn 0 */
   HAL_ADC_IRQHandler(&hadc1);
   HAL_ADC_IRQHandler(&hadc2);
@@ -318,7 +347,7 @@ void OTG_FS_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-#ifdef FOC_PORT_M1
+#if defined(FOC_PORT_M1) && !defined(FOC_DUAL)
 void DMA2_Stream0_IRQHandler(void)
 {
     /* First pair ready: overlap encoder SPI with the second (bus) ADC rank. */
@@ -346,7 +375,12 @@ void DMA1_Stream0_IRQHandler(void)
 }
 #endif
 
-#ifdef FOC_PORT_M1
+#ifdef FOC_DUAL
+void TIM8_UP_TIM13_IRQHandler(void)
+{
+    if (!dual_hw_update(1u)) app_fault(FOC_TIMING);
+}
+#elif defined(FOC_PORT_M1)
 void TIM8_UP_TIM13_IRQHandler(void)
 {
     if (!bsp_motor_update()) app_fault(FOC_TIMING);
@@ -355,7 +389,11 @@ void TIM8_UP_TIM13_IRQHandler(void)
 #ifdef FOC_PORT_M0
 void TIM1_UP_TIM10_IRQHandler(void)
 {
+#ifdef FOC_DUAL
+    if (!dual_hw_update(0u)) app_fault(FOC_TIMING);
+#else
     if (!bsp_motor_update()) app_fault(FOC_TIMING);
+#endif
 }
 #endif
 

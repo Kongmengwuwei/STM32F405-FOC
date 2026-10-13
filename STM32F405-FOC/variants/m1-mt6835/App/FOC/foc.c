@@ -29,6 +29,20 @@ static float identification_theta;
 static bool identification_frame_ready;
 static motor_parameters_t rollback_parameters;
 static bool rollback_available, rollback_active;
+#ifdef FOC_DUAL_LEG
+static bool leg_aligning;
+static float leg_alignment_current;
+static float leg_alignment_mean[5], leg_alignment_m2[5];
+static unsigned leg_alignment_count[5];
+bool foc_leg_calibrate(float current)
+{
+ if(foc.state!=FOC_IDLE||!foc.zero_ready||fabsf(foc.rpm)>=2||!isfinite(current)||current<.2f||current>FOC_CURRENT_MAX)return false;
+ control_stop();leg_aligning=aligning=true;identifying=autoaligning=false;
+ leg_alignment_current=current;memset(leg_alignment_mean,0,sizeof leg_alignment_mean);
+ memset(leg_alignment_m2,0,sizeof leg_alignment_m2);memset(leg_alignment_count,0,sizeof leg_alignment_count);
+ integral_d=integral_q=0;ticks=0;foc.command=foc.iq_ref=0;foc.state=FOC_PRECHARGE;return true;
+}
+#endif
 
 /* Coefficients change only with a parameter transaction, not at sample rate.
  * Keep SI parameters for persistence/telemetry; cache discrete ISR factors. */
@@ -166,6 +180,9 @@ void foc_stop(void)
     integral_d = integral_q = 0.0f;
     pwm_offset_sum_b = pwm_offset_sum_c = 0.0f;
     aligning = false;
+#ifdef FOC_DUAL_LEG
+    leg_aligning=false;
+#endif
     previous_command = 0.0f; /* Cancel any in-flight command ramp. */
     foc.duty[0] = foc.duty[1] = foc.duty[2] = 0.0f;
     control_stop();
@@ -259,6 +276,9 @@ void foc_init(const foc_calibration_t *calibration)
     identifying=autoaligning=rollback_available=false;
     select_parameters(false);
     tracking = false;
+#ifdef FOC_DUAL_LEG
+    leg_aligning=false;
+#endif
     mechanical_turns=0;
     resuming = false;
     aligning = FOC_AUTOCALIBRATE && calibration == NULL;
@@ -452,6 +472,55 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
             foc.state = (aligning || identifying) ? FOC_CALIBRATE : FOC_RUN;
         }
         return;
+    }
+#endif
+#ifdef FOC_DUAL_LEG
+    if(foc.state==FOC_CALIBRATE && leg_aligning){
+        /* Known 7-pole-pair motor: +/-60 electrical degrees = +/-8.57 motor degrees.
+         * The initial nearest-pole alignment can still move up to ~25.7 degrees;
+         * the independent joint-side guard remains active throughout (7:1 gearbox). */
+        const unsigned first=FOC_SAMPLE_HZ*4u, duration=FOC_SAMPLE_HZ*2u;
+        unsigned stage=ticks<first?0u:1u+(ticks-first)/duration;
+        if(stage>=5u){
+            float expected=120.0f/(float)FOC_POLE_PAIRS;
+            float span=leg_alignment_mean[1]-leg_alignment_mean[3];
+            bool good=fabsf(span)>=.8f*expected && fabsf(span)<=1.2f*expected;
+            for(unsigned n=0;n<5;++n)good=good && leg_alignment_count[n]>100u &&
+              leg_alignment_m2[n]/(float)leg_alignment_count[n]<.04f;
+            /* Bound zero uncertainty in electrical degrees. The midpoint of the two
+             * opposite-direction returns cancels symmetric gearbox friction;
+             * the initial hold has no known approach direction. */
+            float center_low=fminf(leg_alignment_mean[0],fminf(leg_alignment_mean[2],leg_alignment_mean[4]));
+            float center_high=fmaxf(leg_alignment_mean[0],fmaxf(leg_alignment_mean[2],leg_alignment_mean[4]));
+            good=good && (center_high-center_low)*(float)FOC_POLE_PAIRS<=7.0f;
+            float positive=leg_alignment_mean[1]-leg_alignment_mean[2];
+            float negative=leg_alignment_mean[2]-leg_alignment_mean[3];
+            good=good && positive*negative>0 && fabsf(positive-negative)<.25f*expected;
+            if(!good){foc_trip(FOC_ALIGNMENT);return;}
+            int direction=span>0?1:-1;
+            float zero=foc_wrap((float)direction*(float)FOC_POLE_PAIRS*
+              ((leg_alignment_mean[2]+leg_alignment_mean[4])/2.0f)*(PI/180.0f)
+              -(FOC_LEG_AXIS==1?PI/2.0f:0.0f));
+            foc_stop();foc.calibration=(foc_calibration_t){zero,direction,FOC_POLE_PAIRS};
+            foc.state=FOC_SAVE;return;
+        }
+        unsigned elapsed=stage==0?ticks:(ticks-first)%duration;
+        if(elapsed>=(stage==0?first:duration)-FOC_SAMPLE_HZ/4u){
+            unsigned count=++leg_alignment_count[stage];float e=position-leg_alignment_mean[stage];
+            leg_alignment_mean[stage]+=e/(float)count;
+            leg_alignment_m2[stage]+=e*(position-leg_alignment_mean[stage]);
+        }
+        float destination=stage==1?PI/3.0f:stage==3?-PI/3.0f:0;
+        float source=stage==2?PI/3.0f:stage==4?-PI/3.0f:0;
+        float field=(FOC_LEG_AXIS==1?PI/2.0f:0.0f)+source+(destination-source)*fminf(1.0f,(float)elapsed/(float)(FOC_SAMPLE_HZ/2u));
+        sincos_fast(foc_wrap(field),&s,&c);
+        float target=leg_alignment_current*fminf(1.0f,(float)ticks/(2.0f*(float)FOC_SAMPLE_HZ));
+        if(foc.id*foc.id+foc.iq*foc.iq>fminf(4.0f*leg_alignment_current*leg_alignment_current,FOC_PHASE_TRIP*FOC_PHASE_TRIP)){foc_trip(FOC_CURRENT);return;}
+        integral_d+=20.0f*(target-(ia*c+beta*s))/(float)FOC_SAMPLE_HZ;
+        integral_d=fminf(1.5f,fmaxf(0,integral_d));
+        foc.ud=integral_d;foc.uq=0;
+        foc.voltage_scale=foc_modulate(foc.ud*c,foc.ud*s,bus_voltage,foc.duty);
+        ++ticks;return;
     }
 #endif
     if (foc.state == FOC_CALIBRATE && autoaligning) {

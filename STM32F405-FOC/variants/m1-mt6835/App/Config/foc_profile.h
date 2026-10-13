@@ -60,6 +60,10 @@ _Static_assert(FOC_SAMPLE_HZ % FOC_USB_DIVIDER == 0u, "USB divider must divide t
 #define FOC_OFFSET_WAIT_SAMPLES (FOC_SAMPLE_HZ / 5u)
 #define FOC_CAL_TICKS(at_20khz) ((at_20khz) * FOC_SAMPLE_HZ / 20000u)
 
+#ifdef FOC_DUAL_LEG
+#include "leg_config.h"
+#endif
+
 #if FOC_PWM_ARR <= FOC_TRIGGER_TICKS || FOC_SAMPLE_HZ < 10000u
 #error Invalid PWM/ADC timing profile
 #endif

@@ -72,6 +72,15 @@ def main():
         add(f'window_m0_dual{dual}_{cycles}',
             M0 + [f'FOC_M0_DUAL_ADC={dual}', f'FOC_M0_CURRENT_SAMPLE_CYCLES={cycles}'],
             ['tests/test_current_window.c'] + FOC)
+    add('dual_leg', ['FOC_DUAL', 'FOC_DUAL_LEG', 'FOC_PORT_M0', 'FOC_ENCODER_TLE5012B',
+                    'FOC_MOTOR_L4225_6S420_A', 'FOC_LOAD_FREE_SHAFT', 'FOC_INSTALLATION_ID=5',
+                    'FOC_PROTECTION_TRIP=1'],
+        ['tests/test_dual_leg.c', 'dual/app.c', 'dual/leg_guard.c'] +
+        [f'dual/{unit}{i}.c' for unit in ['foc', 'control', 'ident', 'sensor', 'cog'] for i in [0, 1]],
+        ['dual', 'tests/dual_stubs'])
+    add('tle5012b_response', LONGQIU,
+        ['tests/test_tle5012b_response.c', 'App/Hardware/tle5012b/tle5012b_protocol.c'],
+        ['App/Hardware/tle5012b'])
     add('justfloat', LONGQIU, ['tests/test_justfloat.c'])
     add('mt6835_crc', LONGQIU, ['tests/test_mt6835_crc.c', 'App/Hardware/mt6835/mt6835.c'])
     add('usb_queue', LONGQIU, ['tests/test_usb_queue.c'], ['tests/usb_stubs'])

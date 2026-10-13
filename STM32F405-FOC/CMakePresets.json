@@ -48,6 +48,22 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "Debug-dual-leg",
+      "inherits": "Debug",
+      "binaryDir": "${sourceDir}/build/dual-leg/Debug",
+      "cacheVariables": {
+        "FOC_DUAL_LEG": "ON",
+        "FOC_PORT": "M0",
+        "FOC_PROTECTION": "TRIP",
+        "FOC_INSTALLATION_ID": "5",
+        "FOC_ENCODER": "TLE5012B",
+        "FOC_MOTOR": "L4225_6S420_A",
+        "FOC_LOAD_PROFILE": "FREE_SHAFT",
+        "FOC_USB_DIVIDER": "10",
+        "FOC_M0_ADC_MODE": "DUAL"
+      }
     }
   ],
   "buildPresets": [
@@ -66,6 +82,10 @@
     {
       "name": "Release",
       "configurePreset": "Release"
+    },
+    {
+      "name": "Debug-dual-leg",
+      "configurePreset": "Debug-dual-leg"
     }
   ]
 }

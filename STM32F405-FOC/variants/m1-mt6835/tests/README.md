@@ -8,7 +8,7 @@ python variants/m1-mt6835/tests/run_tests.py --cc gcc
 python variants/m1-mt6835/tests/run_tests.py --cc C:/mingw64/bin/gcc.exe
 ```
 
-需要主机 GCC（不能用 ARM GCC 运行这些测试）、Python、numpy、pyserial。输出在工程根目录 `build/host-tests/`；覆盖 40 个 C 配置、5 个 Python 套件，以及构建入口/预设默认值的一致性。每个子进程有超时，失败立即退出。
+需要主机 GCC（不能用 ARM GCC 运行这些测试）、Python、numpy、pyserial。输出在工程根目录 `build/host-tests/`；覆盖 42 个 C 配置、5 个 Python 套件，以及构建入口/预设默认值的一致性。每个子进程有超时，失败立即退出。
 
 龙邱分支新增 `test_longqiu.c`：使用真实 `foc.c` 和 `control.c`，检查新电机校准身份、正反方向扫描、失败扫描、15° 起始角扣除、WARN/TRIP 电压饱和、外环限流、Flash 保存恢复采样和 stop。编译选择 `FOC_PORT_M1`、`FOC_ENCODER_TLE5012B`、`FOC_MOTOR_L4225_6S420_A`、`FOC_LOAD_FREE_SHAFT`、`FOC_INSTALLATION_ID=4`，分别设置 `FOC_PROTECTION_TRIP=0/1`；包含目录用 App/Config、App/FOC、App/Control、App/Hardware/bsp。硬件 ADC/SPI 时序仍需上板测试。
 
@@ -50,3 +50,5 @@ python tools/bench/selftest.py
 ```
 
 `test_m0_unified.c` 的 `FOC_LOAD_PLASTIC_ARM` 为默认参数；显式加 `-DFOC_LOAD_FREE_SHAFT` 可以检查裸轴配置。完整固件编译用项目根目录的 `cmake --build --preset Debug-local`。台架采集和响应分析命令见[bench 工具说明](../tools/bench/README.md)。
+
+双路轮腿增加 `test_dual_leg.c` 和 `test_tle5012b_response.c`：链接两份真实 FOC/控制状态，用独立 R/L、惯量、摩擦模型验证两方向校准、7:1 关节换算、位置轨迹、矢量过流、被动轴越界时两路关断、坐标清零不扩大限位、9 A 命令边界和 200 ms 失联。`dual_stubs/` 仅提供主机 HAL 接口。实车限位和负载仍需独立验证，见[本次实测](../../../docs/dual-leg.md)。
