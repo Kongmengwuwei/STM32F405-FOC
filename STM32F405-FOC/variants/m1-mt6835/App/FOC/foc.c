@@ -1,4 +1,7 @@
 #include "foc.h"
+#ifdef FOC_DUAL_LEG
+#include "leg_guard.h"
+#endif
 #include "anticogging.h"
 #include "bsp_motor.h" /* motor_sample_us: the sample-phase timestamp. */
 #include "control.h"
@@ -360,7 +363,14 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     if (delta > 180.0f) { delta -= 360.0f; --next_turns; }
     if (delta < -180.0f) { delta += 360.0f; ++next_turns; }
     if (!tracking) { delta = 0.0f; next_turns=0; tracking = true; }
-    else if (!resuming && fabsf(delta) > FOC_MAX_STEP_DEG && foc_check(FOC_SENSOR)) return;
+    else {
+        float max_step=FOC_MAX_STEP_DEG;
+#ifdef FOC_DUAL_LEG
+        if (foc.state==FOC_IDLE || foc.state==FOC_OFFSET || foc.state==FOC_FAULT)
+            max_step=LEG_PASSIVE_STEP_DEG;
+#endif
+        if (!resuming && fabsf(delta)>max_step && foc_check(FOC_SENSOR)) return;
+    }
     previous = mechanical_deg;
     mechanical_turns=next_turns;
     /* Reconstruct rather than accumulate tiny encoder deltas into a large

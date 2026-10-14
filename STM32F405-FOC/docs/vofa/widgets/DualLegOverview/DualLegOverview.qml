@@ -11,7 +11,7 @@ ResizableRectangle {
     height: 570
     minimumWidth: 1000
     minimumHeight: 300
-    property var names: ["M0 目标关节转速 rpm", "M0 实际关节转速 rpm", "M0 目标关节角度 °", "M0 实际关节角度 °", "M0 目标 Iq A", "M0 实际 Iq A", "M0 实际 Id A", "M0 母线电压 V", "M0 控制模式", "M0 运行状态", "M0 故障编号", "M0 告警位掩码", "M1 目标关节转速 rpm", "M1 实际关节转速 rpm", "M1 目标关节角度 °", "M1 实际关节角度 °", "M1 目标 Iq A", "M1 实际 Iq A", "M1 实际 Id A", "M1 母线电压 V", "M1 控制模式", "M1 运行状态", "M1 故障编号", "M1 告警位掩码"]
+    property var names: ["M0 目标关节转速 rpm", "M0 实际关节转速 rpm", "M0 目标关节角度 °", "M0 实际关节角度 °", "M0 目标 Iq A", "M0 实际 Iq A", "M0 实际 Id A", "M0 母线电压 V", "M0 控制模式", "M0 运行状态", "M0 故障编号", "M0 基准 / 告警", "M1 目标关节转速 rpm", "M1 实际关节转速 rpm", "M1 目标关节角度 °", "M1 实际关节角度 °", "M1 目标 Iq A", "M1 实际 Iq A", "M1 实际 Id A", "M1 母线电压 V", "M1 控制模式", "M1 运行状态", "M1 故障编号", "M1 基准 / 告警"]
     property var decimals: [2,2,3,3,3,3,3,2,0,0,0,0,2,2,3,3,3,3,3,2,0,0,0,0]
     function format(index, obj) {
         if (!obj || !sys_manager.connected) return "—";
@@ -19,6 +19,11 @@ ResizableRectangle {
         if (!isFinite(v)) return "无效";
         if (index === 8 || index === 20) return ["电流", "速度", "位置"][Math.round(v)] || String(v);
         if (index === 9 || index === 21) return ["待机", "预充电", "校准", "保存", "运行", "故障", "校零", "PWM校零"][Math.round(v)] || String(v);
+        if (index === 11 || index === 23) {
+            var flags = Math.round(Number(v));
+            return ((flags & 4194304) ? "已回零" : "未回零")
+                + ((flags & ~4194304) ? " / 告警 " + (flags & ~4194304) : "");
+        }
         return Number(v).toFixed(root.decimals[index]);
     }
     GridLayout {
@@ -58,7 +63,7 @@ ResizableRectangle {
                     x: 16; y: parent.height * 0.43
                     width: parent.width - 32
                     text: root.format(index, channel.bind_obj)
-                    color: ((index === 10 || index === 11 || index === 22 || index === 23) && channel.bind_obj && channel.bind_obj.value !== 0) ? "#c93939" : "#155786"
+                    color: ((index === 10 || index === 11 || index === 22 || index === 23) && channel.bind_obj && (Math.round(channel.bind_obj.value) & ~4194304) !== 0) ? "#c93939" : "#155786"
                     font.family: "Cascadia Mono"
                     font.pixelSize: 32
                     font.bold: true

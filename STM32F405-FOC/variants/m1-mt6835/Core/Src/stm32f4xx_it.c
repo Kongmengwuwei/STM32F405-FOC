@@ -259,7 +259,10 @@ void ADC_IRQHandler(void)
   /* USER CODE BEGIN ADC_IRQn 0 */
 #ifdef FOC_DUAL
   if (!(ADC1->SR & ADC_SR_JEOC)) { app_fault(FOC_ADC); return; }
+  uint32_t started=DWT->CYCCNT;
   dual_app_sample();
+  uint32_t cost=DWT->CYCCNT-started;
+  if(cost>dual_irq_cycles_max)dual_irq_cycles_max=cost;
   return;
 #else
 #ifdef FOC_PORT_M0

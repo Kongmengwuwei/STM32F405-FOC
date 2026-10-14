@@ -56,6 +56,8 @@ volatile uint32_t dual_first_bad_pb_idr, dual_first_bad_pb_moder,
 volatile uint32_t dual_first_bad_spi1_cr1, dual_first_bad_spi1_sr;
 volatile uint32_t motor_sample_us_0, motor_sample_us_1;
 volatile uint32_t dual_sequence, dual_fault;
+volatile uint32_t dual_irq_cycles_max, dual_adc_fault_reason, dual_adc_gap_cycles;
+volatile uint32_t dual_adc_fault_flags[2];
 volatile uint32_t dual_timing_site, dual_timing_counter, dual_timing_direction;
 volatile uint32_t dual_timing_reason, dual_timing_ready, dual_timing_mode;
 volatile uint32_t dual_timing_pending, dual_timing_foc_state[2],
@@ -571,8 +573,12 @@ void dual_hw_halt(void) {
 
 bool dual_hw_read_adc(dual_adc_t *m0, dual_adc_t *m1) {
   if (((ADC1->SR | ADC2->SR) & ADC_SR_OVR) || !(ADC1->SR & ADC_SR_JEOC) ||
-      !(ADC2->SR & ADC_SR_JEOC))
+      !(ADC2->SR & ADC_SR_JEOC)) {
+    dual_adc_fault_reason = 1;
+    dual_adc_fault_flags[0]=ADC1->SR;
+    dual_adc_fault_flags[1]=ADC2->SR;
     return false;
+  }
   uint16_t b0 = ADC1->JDR1, b1 = ADC1->JDR2;
   uint16_t c0 = ADC2->JDR1, c1 = ADC2->JDR2;
   ADC1->SR = ~(ADC_SR_JEOC | ADC_SR_JSTRT);
@@ -580,8 +586,11 @@ bool dual_hw_read_adc(dual_adc_t *m0, dual_adc_t *m1) {
   ADC2->CR2 |= ADC_CR2_SWSTART;
   motor_sample_us_0 = motor_sample_us_1 = TIM5->CNT & 0xffffffu;
   uint32_t now = DWT->CYCCNT;
-  if (last_sample && (now - last_sample < 16000u || now - last_sample > 17600u))
+  if (last_sample && (now - last_sample < 16000u || now - last_sample > 17600u)) {
+    dual_adc_fault_reason = 2;
+    dual_adc_gap_cycles = now-last_sample;
     return false;
+  }
   last_sample = now;
   m0->b = (float)b0 * ADC_SCALE;
   m0->c = (float)c0 * ADC_SCALE;
@@ -591,8 +600,11 @@ bool dual_hw_read_adc(dual_adc_t *m0, dual_adc_t *m1) {
 }
 
 bool dual_hw_read_bus(float *voltage) {
-  if (!(ADC2->SR & ADC_SR_EOC) || (ADC2->SR & ADC_SR_OVR))
+  if (!(ADC2->SR & ADC_SR_EOC) || (ADC2->SR & ADC_SR_OVR)) {
+    dual_adc_fault_reason = 3;
+    dual_adc_fault_flags[1]=ADC2->SR;
     return false;
+  }
   *voltage = (float)(uint16_t)ADC2->DR * (ADC_SCALE * (41.2f / 2.2f));
   return true;
 }

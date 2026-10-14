@@ -218,11 +218,15 @@
                 },
                 {
                   "hex_on": false,
-                  "cmd": "limit 5"
+                  "cmd": "limit 10"
                 },
                 {
                   "hex_on": false,
-                  "cmd": "leg pos 0 0"
+                  "cmd": "leg home"
+                },
+                {
+                  "hex_on": false,
+                  "cmd": "leg hold"
                 }
               ]
             },
@@ -463,7 +467,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M0 告警位掩码"
+                  "name": "M0 基准 / 告警"
                 },
                 {
                   "is_draw": false,
@@ -583,7 +587,7 @@
                   "xoffset": 0,
                   "decimal": 0,
                   "value": 0,
-                  "name": "M1 告警位掩码"
+                  "name": "M1 基准 / 告警"
                 }
               ],
               "selected_line": -1,

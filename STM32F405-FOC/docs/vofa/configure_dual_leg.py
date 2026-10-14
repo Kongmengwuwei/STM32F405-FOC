@@ -38,7 +38,7 @@ def main():
     tx["append_combo"]["currentIndex"] = 1
     tx["send_record_model"]["ctx"] = [
         dict(hex_on=False, cmd=c)
-        for c in ["stop", "send 0", "clear", "limit 5", "leg pos 0 0"]
+        for c in ["stop", "send 0", "clear", "limit 10", "leg home", "leg hold"]
     ]
     channels = wave["settingsPanel"]["ctx"]["."]["settings_ctx"]
     names = read(docs / "vofa-dual-leg.channels.json")["channels"]
@@ -62,7 +62,7 @@ def main():
     for widget, lines, limits in zip(
         tab["widgets"][1:],
         [[0, 1, 12, 13], [2, 3, 14, 15], [4, 5, 6, 16, 17, 18]],
-        [(9, -9), (4, -4), (10, -10)],
+        [(30, -30), (115, -5), (11, -11)],
     ):
         widget["ctx"]["rbw"]["ctx"]["."]["lines"] = lines
         widget["ctx"]["axis_y_wave"]["ctx"]["."].update(
@@ -80,12 +80,13 @@ def main():
         command("停机 · 关闭两路", "stop", "关闭两路 PWM；停机需支撑机械腿"),
         command("双路总览", "send 0", "24 通道双路总览，不启动电机"),
         command("清除故障", "clear", "确认姿态后清除故障；不自动恢复驱动"),
-        command("默认上限 5 A", "limit 5", "只在两路停机时修改；最大 9 A"),
+        command("已在可靠边界 → 回零", "leg home", "先将两路都放到可靠机械边界；回零后不自动启动"),
+        command("上限 10 A", "limit 10", "只在两路停机时修改；最大 10 A，硬过流11 A"),
     ]
     root = dict(
         name="轮腿双路控制",
         intro_on=True,
-        intro="用控制面板持续刷新位置；200 ms 失联会关断两路。",
+        intro="用控制面板持续刷新位置；先在可靠边界回零；同步目标0～110°；500 ms失联关闭两路。",
         hex_on=False,
         loop_on=True,
         loop_ms=100,

@@ -47,5 +47,6 @@ bool dual_record_load(unsigned, foc_calibration_t *);
 bool dual_record_save(unsigned, const foc_calibration_t *);
 unsigned dual_hw_mode(unsigned);
 extern volatile uint32_t dual_write_counter_min[2];
+extern volatile uint32_t dual_irq_cycles_max;
 void dual_app_sample(void);
 #endif

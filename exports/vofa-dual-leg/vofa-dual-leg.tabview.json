@@ -145,8 +145,8 @@
               "axis_y_wave": {
                 "ctx": {
                   ".": {
-                    "top_value": 9,
-                    "bottom_value": -9,
+                    "top_value": 30,
+                    "bottom_value": -30,
                     "bar_index": 5,
                     "decimal": 2
                   }
@@ -368,8 +368,8 @@
               "axis_y_wave": {
                 "ctx": {
                   ".": {
-                    "top_value": 4,
-                    "bottom_value": -4,
+                    "top_value": 115,
+                    "bottom_value": -5,
                     "bar_index": 5,
                     "decimal": 2
                   }
@@ -591,8 +591,8 @@
               "axis_y_wave": {
                 "ctx": {
                   ".": {
-                    "top_value": 10,
-                    "bottom_value": -10,
+                    "top_value": 11,
+                    "bottom_value": -11,
                     "bar_index": 5,
                     "decimal": 2
                   }

@@ -38,12 +38,16 @@
 #define CONTROL_BANDWIDTH 0.1f  /* Integrator back-calculation gain. */
 #define CONTROL_PERIOD_US 1000u /* Outer-loop period; runs once per millisecond. */
 #define CONTROL_JUMP_US 4000u   /* Gap above this is a discontinuity, not a dt. */
-#define CONTROL_COMMAND_MS 200u /* TRIP only: require refreshed host targets. */
+#ifdef FOC_DUAL_LEG
+#define CONTROL_COMMAND_MS 500u
+#else
+#define CONTROL_COMMAND_MS 200u
+#endif
 static uint32_t mode, fault;
 static float position, reference, speed, speed_target, position_target;
 static float integral_speed, last_deg, speed_reference;
 #ifdef FOC_DUAL_LEG
-static float leg_position_reference, leg_previous_error;
+static float leg_position_reference;
 #endif
 static float velocity_position, last_velocity_position;
 static float absolute_deg;
@@ -148,7 +152,7 @@ static bool start(uint32_t wanted, float target)
         speed_reference = speed;
 #ifdef FOC_DUAL_LEG
         leg_position_reference = position;
-        leg_previous_error = 0;
+
         speed_reference = 0;
 #endif
     }
@@ -252,6 +256,9 @@ static float outer_output(float dt)
 #endif
         float omega = POSITION_KP * distance;
         float ceiling = FOC_POSITION_SPEED_MAX;
+#ifdef FOC_DUAL_LEG
+        ceiling = fminf(ceiling, leg_motion_rate());
+#endif
         /* Degrees = 3 * RPM^2 / acceleration(RPM/s). Approach fast while
            distant; reserve enough remaining distance to brake. The linear P
            branch takes over near the target instead of a sharp sqrt cusp. */
@@ -280,13 +287,19 @@ static float outer_output(float dt)
      * without a long speed-integrator buildup. Measured motor velocity adds
      * damping; the reference trajectory remains bounded in motor units. */
     float error=(float)foc.calibration.direction*(leg_position_reference-position);
-    /* Release stored breakaway effort after crossing the reference. Keeping
-     * the full integral here pushes a low-friction axis beyond its target. */
-    if(error*leg_previous_error<0) integral_speed*=.5f;
-    leg_previous_error=error;
     float ki=FOC_LEG_POSITION_CURRENT_KI;
-    float wanted=FOC_LEG_POSITION_CURRENT_KP*error-
-        FOC_LEG_POSITION_DAMPING_A_RPM*(float)foc.calibration.direction*speed+integral_speed;
+    /* Extra stiffness outside 0.3 joint degrees provides correction through
+     * static gear friction; the quiet near-target slope remains unchanged. */
+    float correction=copysignf(fmaxf(0, fabsf(error)-
+        FOC_LEG_BREAKAWAY_DEADBAND_MOTOR_DEG),error);
+    bool moving=fabsf(speed_reference)>10 || fabsf(speed)>15;
+    float damping=moving ? FOC_LEG_MOVING_DAMPING_A_RPM : FOC_LEG_POSITION_DAMPING_A_RPM;
+    float extra_speed=copysignf(fmaxf(0, fabsf(speed)-leg_motion_rate()-
+        FOC_LEG_SPEED_MARGIN_RPM),speed);
+    float wanted=FOC_LEG_POSITION_CURRENT_KP*error+
+        FOC_LEG_BREAKAWAY_KP*correction-
+        damping*(float)foc.calibration.direction*(speed-speed_reference)+integral_speed-
+        FOC_LEG_SPEED_BRAKE_A_RPM*(float)foc.calibration.direction*extra_speed;
 #else
     float error = (float)foc.calibration.direction * (speed_reference - speed);
     float kp = mode == CONTROL_POSITION ? FOC_OUTER_POSITION_SPEED_KP : SPEED_KP;
@@ -322,13 +335,27 @@ static float outer_output(float dt)
 #endif
     #ifdef FOC_DUAL_LEG
     limited=fminf(leg_current_limit(),fmaxf(-leg_current_limit(),limited));
+    float actuator_limited=limited;
+    float change_limit=(moving ? FOC_LEG_MOVING_EFFORT_SLEW_A_S : FOC_LEG_EFFORT_SLEW_A_S)*dt;
+    limited=reference+fminf(change_limit,fmaxf(-change_limit,limited-reference));
+    limited=leg_limit_effort(FOC_LEG_AXIS,limited,foc.calibration.direction);
     #endif
     /* Do not wind up against unavailable inverter voltage. Preserve WARN's
        direct-current commands and do not add a current threshold lockout. */
     bool pushing_voltage = foc.voltage_scale < 0.999f &&
         error * (wanted - foc.iq) > 0.0f;
+#ifdef FOC_DUAL_LEG
+    /* Velocity-driven saturation must not create an opposite gravity bias.
+     * Integrate only when the error unwinds a limit, or no limit is active. */
+    if (!pushing_voltage && (fabsf(wanted-actuator_limited)<.001f || error*(wanted-actuator_limited)<=0))
+        integral_speed += ki*copysignf(
+            fmaxf(0, fabsf(error)-FOC_LEG_INTEGRAL_DEADBAND_MOTOR_DEG), error)*dt;
+    float bias_limit=fminf(FOC_LEG_INTEGRAL_MAX_A,leg_current_limit());
+    integral_speed=fminf(bias_limit,fmaxf(-bias_limit,integral_speed));
+#else
     if (!pushing_voltage) integral_speed += ki * error * dt;
     if (limited != wanted) integral_speed += CONTROL_BANDWIDTH * (limited - wanted);
+#endif
     if (FOC_PROTECTION_TRIP) {
         if (integral_speed > FOC_CURRENT_MAX) integral_speed = FOC_CURRENT_MAX;
         if (integral_speed < -FOC_CURRENT_MAX) integral_speed = -FOC_CURRENT_MAX;
@@ -349,6 +376,11 @@ void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float enc
         last_deg = velocity_position = last_velocity_position = mechanical_deg;
         position_origin=mechanical_deg-position;
         previous_tick = observer_tick = sample_us;
+#if defined(FOC_DUAL_LEG) && FOC_LEG_AXIS == 1
+        /* Half-period phase offset spreads the two 1 kHz math bursts; both
+         * observers and current loops still consume every 10 kHz sample. */
+        previous_tick = (sample_us-500u)&0xffffffu;
+#endif
         speed = 0.0f;
         tracking = true;
         return;
@@ -382,6 +414,11 @@ void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float enc
             reference=cog_hold_output(dt,mechanical_deg-position_origin,cog_velocity);
         }
     }
+#ifdef FOC_DUAL_LEG
+    /* Target conversion uses the latest leg observation at 10 kHz. Publish
+     * position at the same cadence to avoid adding stale 1 kHz position to it. */
+    position = mechanical_deg-position_origin;
+#endif
     uint32_t elapsed = (sample_us - previous_tick) & 0xffffffu;
     if (elapsed < CONTROL_PERIOD_US) return;
     /* At the 9400 RPM limit, one millisecond moves less than 57 degrees. */
@@ -389,6 +426,9 @@ void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float enc
     position = mechanical_deg-position_origin;
     if (elapsed > CONTROL_JUMP_US) {
         previous_tick = sample_us; /* Resynchronise without integrating the gap. */
+#if defined(FOC_DUAL_LEG) && FOC_LEG_AXIS == 1
+        previous_tick = (sample_us-500u)&0xffffffu;
+#endif
         last_velocity_position = velocity_position;
         speed = 0.0f;
         return;
@@ -401,6 +441,10 @@ void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float enc
     float measured = (velocity_position - last_velocity_position) / (6.0f * dt);
     last_velocity_position = velocity_position;
     float filter_s = FOC_MOTOR_SPEED_FILTER_S;
+#ifdef FOC_DUAL_LEG
+    if(fabsf(speed_reference)>10 || fabsf(speed)>15)
+        filter_s=FOC_LEG_MOVING_FILTER_S;
+#endif
 #ifdef FOC_MOTOR_SPEED_HIGH_KP
     filter_s += speed_gain_blend() * (FOC_MOTOR_SPEED_HIGH_FILTER_S - filter_s);
 #endif

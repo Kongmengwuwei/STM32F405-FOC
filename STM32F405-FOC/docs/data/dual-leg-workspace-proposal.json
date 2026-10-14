@@ -1,0 +1,44 @@
+{
+  "status": "user_approved_for_staged_tests",
+  "joint_reference": "reliable stop captured in leg-boundaries-20261014.json; explicit home required each boot",
+  "command_joint_range_deg": [
+    0,
+    110
+  ],
+  "staged_native_test_targets_deg": [
+    2,
+    5,
+    10,
+    20,
+    40,
+    60,
+    80,
+    100,
+    108
+  ],
+  "trajectory_motor_rpm": 30,
+  "trajectory_joint_deg_per_s": 25.714285714285715,
+  "absolute_motor_speed_trip_rpm": 120,
+  "command_watchdog_ms": 500,
+  "default_current_limit_A": 5,
+  "max_command_current_A": 9,
+  "hard_phase_and_vector_current_trip_A": 9.5,
+  "bus_bounds": "unchanged from current motor/port profile",
+  "stall_saturated_current_fraction": 0.9,
+  "stall_position_error_joint_deg": 2,
+  "stall_min_progress_joint_deg": 0.2,
+  "stall_timeout_s": 2,
+  "soft_actual_position_bounds_joint_deg": [
+    -1,
+    111
+  ],
+  "soft_actual_excursion_delay_ms": 20,
+  "hard_actual_position_bounds_joint_deg": [
+    -2,
+    112
+  ],
+  "outward_effort_at_0_and_110": "blocked",
+  "fault_policy": "both bridges off; keep valid angle acquisition; no automatic restart",
+  "joint_path": "q0=q1 only, user confirmed whole path mechanically feasible and supported",
+  "user_confirmation": "同意，按上述阈值分阶段测试"
+}

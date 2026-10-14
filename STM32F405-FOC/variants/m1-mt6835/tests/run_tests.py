@@ -34,6 +34,7 @@ def check_defaults():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cc', default='gcc', help='host GCC executable or absolute path')
+    parser.add_argument('--case', help='run one named C regression during development')
     args = parser.parse_args()
     cc = shutil.which(args.cc)
     if not cc:
@@ -74,16 +75,23 @@ def main():
             ['tests/test_current_window.c'] + FOC)
     add('dual_leg', ['FOC_DUAL', 'FOC_DUAL_LEG', 'FOC_PORT_M0', 'FOC_ENCODER_TLE5012B',
                     'FOC_MOTOR_L4225_6S420_A', 'FOC_LOAD_FREE_SHAFT', 'FOC_INSTALLATION_ID=5',
-                    'FOC_PROTECTION_TRIP=1'],
+                    'FOC_PROTECTION_TRIP=1', 'LEG_REFERENCE_RAW_M0=18.0f', 'LEG_REFERENCE_RAW_M1=350.0f'],
         ['tests/test_dual_leg.c', 'dual/app.c', 'dual/leg_guard.c'] +
         [f'dual/{unit}{i}.c' for unit in ['foc', 'control', 'ident', 'sensor', 'cog'] for i in [0, 1]],
         ['dual', 'tests/dual_stubs'])
+    add('leg_workspace', ['FOC_DUAL_LEG', 'FOC_PORT_M0', 'FOC_ENCODER_TLE5012B',
+                          'FOC_MOTOR_L4225_6S420_A', 'FOC_LOAD_FREE_SHAFT', 'FOC_INSTALLATION_ID=5',
+                          'FOC_PROTECTION_TRIP=1', 'LEG_REFERENCE_RAW_M0=18.0f', 'LEG_REFERENCE_RAW_M1=350.0f'],
+        ['tests/test_leg_workspace.c','dual/leg_guard.c'],['dual'])
     add('tle5012b_response', LONGQIU,
         ['tests/test_tle5012b_response.c', 'App/Hardware/tle5012b/tle5012b_protocol.c'],
         ['App/Hardware/tle5012b'])
     add('justfloat', LONGQIU, ['tests/test_justfloat.c'])
     add('mt6835_crc', LONGQIU, ['tests/test_mt6835_crc.c', 'App/Hardware/mt6835/mt6835.c'])
     add('usb_queue', LONGQIU, ['tests/test_usb_queue.c'], ['tests/usb_stubs'])
+    if args.case:
+        cases = [c for c in cases if c[0] == args.case]
+        if not cases: parser.error('Unknown case')
     for name, definitions, sources, extra_includes in cases:
         print(f'[{name}]', flush=True)
         exe = output / (name + ('.exe' if sys.platform == 'win32' else ''))
@@ -92,7 +100,7 @@ def main():
                    *(f'-D{d}' for d in definitions), *sources, '-lm', '-o', str(exe)]
         subprocess.run(command, cwd=ROOT, check=True, timeout=60)
         subprocess.run([str(exe)], cwd=ROOT, check=True, timeout=60)
-    scripts = sorted(ROOT.glob('tests/test_*.py')) + [ROOT / 'tools/bench/selftest.py']
+    scripts = [] if args.case else sorted(ROOT.glob('tests/test_*.py')) + [ROOT / 'tools/bench/selftest.py']
     for script in scripts:
         print(f'[{script.name}]', flush=True)
         subprocess.run([sys.executable, str(script)], cwd=ROOT, check=True, timeout=60)

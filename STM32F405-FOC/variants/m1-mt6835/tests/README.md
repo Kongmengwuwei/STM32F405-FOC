@@ -51,4 +51,7 @@ python tools/bench/selftest.py
 
 `test_m0_unified.c` 的 `FOC_LOAD_PLASTIC_ARM` 为默认参数；显式加 `-DFOC_LOAD_FREE_SHAFT` 可以检查裸轴配置。完整固件编译用项目根目录的 `cmake --build --preset Debug-local`。台架采集和响应分析命令见[bench 工具说明](../tools/bench/README.md)。
 
-双路轮腿增加 `test_dual_leg.c` 和 `test_tle5012b_response.c`：链接两份真实 FOC/控制状态，用独立 R/L、惯量、摩擦模型验证两方向校准、7:1 关节换算、位置轨迹、矢量过流、被动轴越界时两路关断、坐标清零不扩大限位、9 A 命令边界和 200 ms 失联。`dual_stubs/` 仅提供主机 HAL 接口。实车限位和负载仍需独立验证，见[本次实测](../../../docs/dual-leg.md)。
+双路轮腿增加 `test_dual_leg.c` 和 `test_tle5012b_response.c`：链接两份真实 FOC/控制状态，用独立 R/L、惯量、摩擦模型验证两方向校准、7:1 关节换算、位置轨迹、矢量过流、被动轴越界时两路关断、坐标清零不扩大限位、10 A 命令边界和 500 ms 失联。`dual_stubs/` 仅提供主机 HAL 接口。实车限位和负载仍需独立验证，见[本次实测](../../../docs/dual-leg.md)。
+
+
+双路新版增加 `leg_workspace`：显式回零、770°连续电机角度、镜像方向、端点向外电流抑制和20 ms越界容忍。`dual_leg` 验证100°正反向模型、写Flash后基准失效、500 ms超时后持续读取、2 s堵转和相/向量过流。完整矩阵现为43个C配置与6个Python套件；离线VOFA逻辑验证独立运行 `docs/vofa/validate_dual_leg.py`。

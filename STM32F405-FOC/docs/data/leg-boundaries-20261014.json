@@ -1,0 +1,273 @@
+{
+  "status": "workspace_control_implemented_synchronous_2_to_108_native_verified",
+  "pose": "both proximal rods vertically downward",
+  "gear_ratio": 7,
+  "timestamp": "2026-10-14T11:57:44.270026+08:00",
+  "encoder_deg_mean": [
+    48.64679010064752,
+    213.92913543426238
+  ],
+  "encoder_deg_min": [
+    48.62548828125,
+    213.914794921875
+  ],
+  "encoder_deg_max": [
+    48.658447265625,
+    213.94775390625
+  ],
+  "frames": 999,
+  "first": [
+    0.0,
+    0.0,
+    5.0,
+    11.766214370727539,
+    48.6474609375,
+    213.936767578125,
+    1538914.0,
+    15330.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    1.0,
+    1.546359896659851,
+    1.552262783050537,
+    1.5872881412506104,
+    1.574921727180481,
+    5788.0,
+    4294967296.0,
+    4294967296.0,
+    0.0,
+    -1.0,
+    0.0,
+    1.0
+  ],
+  "last": [
+    0.0015694753965362906,
+    -0.0015694753965362906,
+    5.0,
+    11.909356117248535,
+    48.658447265625,
+    213.92578125,
+    2536914.0,
+    25310.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    1.0,
+    1.546359896659851,
+    1.552262783050537,
+    1.5872881412506104,
+    1.574921727180481,
+    5788.0,
+    4294967296.0,
+    4294967296.0,
+    0.0,
+    -1.0,
+    0.0,
+    1.0
+  ],
+  "boundary_B": {
+    "timestamp": "2026-10-14T12:06:51.809340+08:00",
+    "signed_joint_deg_from_A": [
+      -113.59921412145074,
+      115.64848295442022
+    ],
+    "motor_unwrapped_deg": [
+      -746.5470379126552,
+      1023.4651619309416
+    ],
+    "encoder_deg": [
+      333.452966632037,
+      303.4651532982677
+    ],
+    "joint_travel_deg": [
+      113.59921412145074,
+      115.64848295442022
+    ],
+    "encoder_sign_toward_B": [
+      -1,
+      1
+    ],
+    "candidate_joint_interval_positive_toward_B_deg": [
+      [
+        2,
+        111.59921412145074
+      ],
+      [
+        2,
+        113.64848295442022
+      ]
+    ],
+    "margin_deg_each_end": 2,
+    "requires_range_confirmation": false,
+    "limits_enabled_for_drive": false,
+    "angles_assume_confirmed_gear_ratio": 7,
+    "physical_clockwise_direction": "not defined until viewing side is specified",
+    "frames": 1019,
+    "confirmation": {
+      "source": "user",
+      "timestamp": "2026-10-14T12:09:07.798561+08:00",
+      "both_are_opposite_mechanical_stops": true,
+      "gear_ratio": 7
+    }
+  },
+  "teach": {
+    "timestamp": "2026-10-14T12:03:32.205053+08:00",
+    "motor_anchor_deg": [
+      48.6474609375,
+      213.92578125
+    ],
+    "raw_motor_deg_mean": [
+      48.646006864662695,
+      213.93124210132797
+    ],
+    "joint_delta_deg_mean": [
+      -0.00020772468483568553,
+      0.0007801215941606857
+    ],
+    "frames": 1020,
+    "power_cycle_invalidates_multi_turn_session": true,
+    "drive_interlock": "latched gate-off; no exit except MCU restart"
+  },
+  "joint_coordinate": "q_i = encoder_sign_positive_joint[i] * (unwrapped_motor_deg_i - control_reference.motor_unwrapped_deg_in_teach_session[i]) / 7; q=0 at reliable B; bounds 0..110 degrees",
+  "axis_mapping": {
+    "M0": "SPI1 / CS PA1",
+    "M1": "SPI3 / CS PA0"
+  },
+  "electrical_calibration_unchanged": true,
+  "native_teach_interlock": {
+    "frames": 1023,
+    "rejected_commands": 8,
+    "both_bridges_off": true,
+    "teach_valid": true,
+    "fault": 0,
+    "references": [
+      48.6474609375,
+      213.92578125
+    ],
+    "max_abs_joint_drift_deg": [
+      0.0031389507930725813,
+      0.0031389507930725813
+    ],
+    "last": [
+      0.0,
+      0.0,
+      5.0,
+      11.852099418640137,
+      48.6474609375,
+      213.92578125,
+      15734269.0,
+      619330.0,
+      8.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      48.6474609375,
+      213.92578125,
+      7.0,
+      1.0,
+      5791.0,
+      4294967296.0,
+      4294967296.0,
+      0.0,
+      -1.0,
+      1.0,
+      2.0
+    ]
+  },
+  "firmware_elf_sha256": "235ec6e359091f5ec488bcf40f8f782156f443ae88216959c8c7a99331e2d640",
+  "limitations": [
+    "Motor-mounted single-turn encoders do not retain multi-turn joint position through power loss or MCU reset. Re-establish a known mechanical reference before using joint coordinates after restart.",
+    "The individual endpoints do not define the collision-free or nonsingular workspace of the coupled five-bar mechanism.",
+    "This JSON records mechanical travel; it does not automatically enable full-stroke powered control."
+  ],
+  "control_reference": {
+    "source": "user selected the current B as the more reliable stop; other side is 110 joint degrees back from it",
+    "timestamp": "2026-10-14T12:10:11.349049+08:00",
+    "label": "reliable_current_stop",
+    "joint_zero_deg": [
+      0,
+      0
+    ],
+    "motor_encoder_deg": [
+      333.49760195925893,
+      303.69262096341737
+    ],
+    "motor_unwrapped_deg_in_teach_session": [
+      -746.502395098296,
+      1023.6926251936474
+    ],
+    "encoder_sign_positive_joint": [
+      1,
+      -1
+    ],
+    "joint_limits_deg": [
+      [
+        0,
+        110
+      ],
+      [
+        0,
+        110
+      ]
+    ],
+    "other_boundary_type": "computed virtual limit, not the previously measured vertical stop",
+    "other_boundary_joint_deg": [
+      110,
+      110
+    ],
+    "other_boundary_motor_unwrapped_deg_in_teach_session": [
+      23.497604901703994,
+      253.69262519364736
+    ],
+    "other_boundary_motor_encoder_deg": [
+      23.497604901703994,
+      253.69262519364736
+    ],
+    "candidate_operating_interval_with_2deg_margin": [
+      [
+        2,
+        108
+      ],
+      [
+        2,
+        108
+      ]
+    ],
+    "powered_drive_limits_enabled": true,
+    "reference_sample_frames": 1019,
+    "firmware_workspace_control_implemented": true,
+    "requires_explicit_home_after_boot": true,
+    "native_validated_goal_range_deg": [
+      2,
+      108
+    ],
+    "runtime_drive_enabled_at_end_of_test": false,
+    "home_raw_tolerance_motor_deg": 14,
+    "home_match_nominal_encoder_deg": [
+      343.657836914,
+      303.692620963
+    ],
+    "home_match_motor_tolerance_deg": 14,
+    "confirmed_stop_variation_20261014": {
+      "user_confirmation": "Both rods firmly at the same reliable stop, magnets/installations unchanged",
+      "M0_motor_deg_samples": [
+        330.5126953125,
+        353.704833984375,
+        356.802978515625
+      ],
+      "nominal_midpoint_motor_deg": 343.657836914,
+      "sample_span_joint_deg": 3.7557547433035716,
+      "note": "Nominal is solely a gate-off operator-home plausibility center, not an automatic joint zero. Actual home still uses the freshly confirmed mechanical stop. Gearbox/load-side backlash not independently measured."
+    },
+    "recommended_motion_motor_rpm": 45
+  },
+  "boundary_A_role": "historical vertical-down observation; superseded as active control reference",
+  "boundary_B_role": "reliable physical stop selected as active q=0 reference",
+  "active_control_firmware_sha256": "7011ac95784932931e0116241ca1da6d49eda6565fccf44a6661f43fb2874502",
+  "latest_native_small_trial": "docs/data/dual-leg-workspace-quiet-20261014.json",
+  "latest_native_full_trial": "docs/data/dual-leg-fast-20261014.json"
+}
