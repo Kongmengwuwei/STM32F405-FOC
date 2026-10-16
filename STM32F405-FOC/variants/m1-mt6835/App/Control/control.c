@@ -1,8 +1,16 @@
+#if defined(FOC_DUAL_LEG) && (defined(__arm__) || defined(__thumb__))
+#define FOC_REALTIME __attribute__((section(".RamFunc")))
+#else
+#define FOC_REALTIME
+#endif
 #include "control.h"
 #include "anticogging.h"
 #include "bsp_uart.h"
 #include "foc.h"
 #include <math.h>
+#ifdef FOC_DUAL_LEG
+#include "finite_math.h"
+#endif
 #ifdef FOC_DUAL_LEG
 #include "leg_guard.h"
 #endif
@@ -14,6 +22,7 @@
    Tuning order: speed Kp first until it tracks without oscillating, then speed
    Ki to remove the steady-state error, then position Kp. */
 #ifndef FOC_OUTER_SPEED_KP
+
 #define FOC_OUTER_SPEED_KP FOC_SPEED_KP
 #endif
 #ifndef FOC_OUTER_SPEED_KI
@@ -47,7 +56,8 @@ static uint32_t mode, fault;
 static float position, reference, speed, speed_target, position_target;
 static float integral_speed, last_deg, speed_reference;
 #ifdef FOC_DUAL_LEG
-static float leg_position_reference;
+static float leg_position_reference, leg_reference_speed;
+static bool leg_reference_external;
 #endif
 static float velocity_position, last_velocity_position;
 static float absolute_deg;
@@ -57,7 +67,7 @@ static uint32_t previous_tick, command_ms;
 static bool tracking, commanded;
 static volatile bool cog_learning;
 static float cog_velocity, cog_velocity_position;
-bool control_cog_learning(void) { return cog_learning; }
+bool FOC_REALTIME control_cog_learning(void) { return cog_learning; }
 bool control_cog_learn(void)
 {
     if(foc.state!=FOC_IDLE || !foc.calibrated || !foc.zero_ready || (cog_flags()&6u))return false;
@@ -77,18 +87,18 @@ static float speed_gain_blend(void)
 }
 #endif
 
-float control_iq_ref(void) { return reference; }
-uint32_t control_mode(void) { return mode; }
-uint32_t control_fault(void) { return fault; }
-float control_speed_rpm(void) { return speed; }
-float control_speed_target(void) { return speed_target; }
-float control_speed_reference(void) { return speed_reference; }
-float control_position_deg(void) { return position; }
-float control_position_target(void) { return position_target; }
-float control_absolute_deg(void) { return absolute_deg; }
+float FOC_REALTIME control_iq_ref(void) { return reference; }
+uint32_t FOC_REALTIME control_mode(void) { return mode; }
+uint32_t FOC_REALTIME control_fault(void) { return fault; }
+float FOC_REALTIME control_speed_rpm(void) { return speed; }
+float FOC_REALTIME control_speed_target(void) { return speed_target; }
+float FOC_REALTIME control_speed_reference(void) { return speed_reference; }
+float FOC_REALTIME control_position_deg(void) { return position; }
+float FOC_REALTIME control_position_target(void) { return position_target; }
+float FOC_REALTIME control_absolute_deg(void) { return absolute_deg; }
 
 /* WARN holds a target until the next command or explicit stop. */
-bool control_scheduled(void)
+bool FOC_REALTIME control_scheduled(void)
 {
     return commanded && (!FOC_PROTECTION_TRIP ||
         (uint32_t)(bsp_uart_millis() - command_ms) < CONTROL_COMMAND_MS);
@@ -105,9 +115,12 @@ void control_stop(void)
     reference = speed_target = position_target = 0.0f;
     integral_speed = 0.0f;
     speed_reference = 0.0f;
+#ifdef FOC_DUAL_LEG
+    leg_reference_external=false;leg_reference_speed=0;
+#endif
 }
 
-static void accept(void)
+static void FOC_REALTIME accept(void)
 {
     command_ms = bsp_uart_millis();
     commanded = true;
@@ -134,13 +147,13 @@ static void go(void)
 
 /* A resend must not disturb the loops. WARN also treats a new target after
    silence as a continuous run; only a new run or mode drops integrators. */
-static bool continuous(uint32_t wanted)
+static bool FOC_REALTIME continuous(uint32_t wanted)
 {
     return commanded && mode == wanted && (!FOC_PROTECTION_TRIP ||
         (uint32_t)(bsp_uart_millis() - command_ms) < CONTROL_COMMAND_MS);
 }
 
-static bool start(uint32_t wanted, float target)
+static bool FOC_REALTIME start(uint32_t wanted, float target)
 {
     if (!arm(wanted, target)) return false;
     if (!foc.calibrated || !foc.zero_ready) return false;
@@ -195,7 +208,7 @@ bool control_speed(float rpm)
     return true;
 }
 
-bool control_position(float deg)
+bool FOC_REALTIME control_position(float deg)
 {
 #ifdef FOC_DUAL_LEG
     if(!leg_target_valid(FOC_LEG_AXIS,deg,position))return false;
@@ -207,8 +220,29 @@ bool control_position(float deg)
     }
     if (!start(CONTROL_POSITION, deg)) return false;
     position_target = deg;
+#ifdef FOC_DUAL_LEG
+    leg_reference_external = false;
+#endif
     return true;
 }
+
+#ifdef FOC_DUAL_LEG
+bool FOC_REALTIME control_position_tracking(float deg, float rpm)
+{
+    if(!isfinite(rpm)||fabsf(rpm)>leg_motion_rate()||!isfinite(deg)||
+       fabsf(deg)>1e6f||!leg_target_valid(FOC_LEG_AXIS,deg,position))return false;
+    uint32_t now=bsp_uart_millis();
+    if(mode==CONTROL_POSITION&&commanded&&!fault&&foc.state==FOC_RUN&&
+       (uint32_t)(now-command_ms)<CONTROL_COMMAND_MS) {
+        /* Continuous preflighted references need no enable/mode transition.
+         * Retain range and expiry checks, refresh once, preserve integrators. */
+        position_target=deg;command_ms=now;
+    } else if(!control_position(deg))return false;
+    leg_reference_speed=rpm;
+    leg_reference_external=true;
+    return true;
+}
+#endif
 
 bool control_hold_position(void)
 {
@@ -244,10 +278,22 @@ static float cog_hold_output(float dt, float live_position, float velocity)
     return limited;
 }
 /* Position P -> speed trajectory -> speed PI using the outer velocity estimate. */
-static float outer_output(float dt)
+static FOC_REALTIME float outer_output(float dt)
 {
     float acceleration = mode == CONTROL_POSITION ?
         FOC_MOTOR_POSITION_ACCEL_RPM_PER_S : FOC_MOTOR_SPEED_SLEW_RPM_PER_S;
+#ifdef FOC_DUAL_LEG
+    if(mode==CONTROL_POSITION) acceleration=fminf(150,leg_motion_acceleration());
+#endif
+#ifdef FOC_DUAL_LEG
+    if (mode==CONTROL_POSITION && leg_reference_external) {
+        /* The foot planner already supplies a bounded C2 trajectory. Avoid
+         * shaping it a second time; use its mechanical velocity as damping
+         * feed-forward. Current, range, effort slew and timeout stay active. */
+        leg_position_reference=position_target;
+        speed_reference=speed_target=leg_reference_speed;
+    } else {
+#endif
     if (mode == CONTROL_POSITION) {
 #ifdef FOC_DUAL_LEG
         float distance = position_target - leg_position_reference;
@@ -257,12 +303,16 @@ static float outer_output(float dt)
         float omega = POSITION_KP * distance;
         float ceiling = FOC_POSITION_SPEED_MAX;
 #ifdef FOC_DUAL_LEG
-        ceiling = fminf(ceiling, leg_motion_rate());
+        ceiling = fminf(ceiling, fminf(45,leg_motion_rate()));
 #endif
         /* Degrees = 3 * RPM^2 / acceleration(RPM/s). Approach fast while
            distant; reserve enough remaining distance to brake. The linear P
            branch takes over near the target instead of a sharp sqrt cusp. */
+#ifdef FOC_DUAL_LEG
+        float brake_speed = sqrtf(fminf(150,leg_motion_acceleration()) * fabsf(distance) / 3.0f);
+#else
         float brake_speed = sqrtf(FOC_MOTOR_POSITION_BRAKE_RPM_PER_S * fabsf(distance) / 3.0f);
+#endif
         if (brake_speed < ceiling) ceiling = brake_speed;
         /* Position approach speed is a trajectory parameter, not a fault or
            target rejection. Always approach a distant target at this speed. */
@@ -283,6 +333,7 @@ static float outer_output(float dt)
     float next=leg_position_reference+6.0f*speed_reference*dt;
     if(distance*(position_target-next)<=0){next=position_target;speed_reference=0;}
     leg_position_reference=next;
+    }
     /* Limited joint workspace: position stiffness supplies breakaway torque
      * without a long speed-integrator buildup. Measured motor velocity adds
      * damping; the reference trajectory remains bounded in motor units. */
@@ -292,14 +343,23 @@ static float outer_output(float dt)
      * static gear friction; the quiet near-target slope remains unchanged. */
     float correction=copysignf(fmaxf(0, fabsf(error)-
         FOC_LEG_BREAKAWAY_DEADBAND_MOTOR_DEG),error);
-    bool moving=fabsf(speed_reference)>10 || fabsf(speed)>15;
-    float damping=moving ? FOC_LEG_MOVING_DAMPING_A_RPM : FOC_LEG_POSITION_DAMPING_A_RPM;
-    float extra_speed=copysignf(fmaxf(0, fabsf(speed)-leg_motion_rate()-
-        FOC_LEG_SPEED_MARGIN_RPM),speed);
-    float wanted=FOC_LEG_POSITION_CURRENT_KP*error+
-        FOC_LEG_BREAKAWAY_KP*correction-
-        damping*(float)foc.calibration.direction*(speed-speed_reference)+integral_speed-
-        FOC_LEG_SPEED_BRAKE_A_RPM*(float)foc.calibration.direction*extra_speed;
+    /* Schedule from the smooth trajectory, never from measured velocity.
+     * A hard moving/quiet switch can toggle during mechanical ringing. */
+    float motion_blend=fminf(1, fmaxf(0, (fabsf(speed_reference)-5)/15));
+    float damping=FOC_LEG_POSITION_DAMPING_A_RPM+motion_blend*
+        (FOC_LEG_MOVING_DAMPING_A_RPM-FOC_LEG_POSITION_DAMPING_A_RPM);
+    float position_effort=FOC_LEG_POSITION_CURRENT_KP*error+
+        FOC_LEG_BREAKAWAY_KP*correction;
+    float catchup_effort=damping*FOC_LEG_POSITION_CATCHUP_RPM;
+    position_effort=fminf(catchup_effort,fmaxf(-catchup_effort,position_effort));
+    float wanted=position_effort-
+        damping*(float)foc.calibration.direction*(speed-speed_reference)+integral_speed;
+    bool speed_braking;
+    /* Use the same fast mechanical observer as the damping term. The FOC
+     * angle-prediction RPM has a separate 5 ms filter; that delay can keep
+     * applying a brake after a geared joint has already reversed. */
+    wanted=leg_speed_effort(wanted,speed,speed_reference,
+        foc.calibration.direction,&speed_braking);
 #else
     float error = (float)foc.calibration.direction * (speed_reference - speed);
     float kp = mode == CONTROL_POSITION ? FOC_OUTER_POSITION_SPEED_KP : SPEED_KP;
@@ -336,7 +396,8 @@ static float outer_output(float dt)
     #ifdef FOC_DUAL_LEG
     limited=fminf(leg_current_limit(),fmaxf(-leg_current_limit(),limited));
     float actuator_limited=limited;
-    float change_limit=(moving ? FOC_LEG_MOVING_EFFORT_SLEW_A_S : FOC_LEG_EFFORT_SLEW_A_S)*dt;
+    float change_limit=(FOC_LEG_EFFORT_SLEW_A_S+motion_blend*
+        (FOC_LEG_MOVING_EFFORT_SLEW_A_S-FOC_LEG_EFFORT_SLEW_A_S))*dt;
     limited=reference+fminf(change_limit,fmaxf(-change_limit,limited-reference));
     limited=leg_limit_effort(FOC_LEG_AXIS,limited,foc.calibration.direction);
     #endif
@@ -347,7 +408,9 @@ static float outer_output(float dt)
 #ifdef FOC_DUAL_LEG
     /* Velocity-driven saturation must not create an opposite gravity bias.
      * Integrate only when the error unwinds a limit, or no limit is active. */
-    if (!pushing_voltage && (fabsf(wanted-actuator_limited)<.001f || error*(wanted-actuator_limited)<=0))
+    bool integral_brakes=error*(float)foc.calibration.direction*speed<=0;
+    if (!pushing_voltage && (!speed_braking || integral_brakes) &&
+        (fabsf(wanted-actuator_limited)<.001f || error*(wanted-actuator_limited)<=0))
         integral_speed += ki*copysignf(
             fmaxf(0, fabsf(error)-FOC_LEG_INTEGRAL_DEADBAND_MOTOR_DEG), error)*dt;
     float bias_limit=fminf(FOC_LEG_INTEGRAL_MAX_A,leg_current_limit());
@@ -367,7 +430,7 @@ static float outer_output(float dt)
     return limited;
 }
 
-void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float encoder_deg)
+FOC_REALTIME void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float encoder_deg)
 {
     if (foc.fault && !fault) fault = foc.fault; /* A trip latches this loop too. */
     if (!isfinite(mechanical_deg) || !isfinite(encoder_deg)) return;
@@ -442,8 +505,8 @@ void control_step_with_angle(uint32_t sample_us, float mechanical_deg, float enc
     last_velocity_position = velocity_position;
     float filter_s = FOC_MOTOR_SPEED_FILTER_S;
 #ifdef FOC_DUAL_LEG
-    if(fabsf(speed_reference)>10 || fabsf(speed)>15)
-        filter_s=FOC_LEG_MOVING_FILTER_S;
+    float motion_blend=fminf(1, fmaxf(0, (fabsf(speed_reference)-5)/15));
+    filter_s+=motion_blend*(FOC_LEG_MOVING_FILTER_S-filter_s);
 #endif
 #ifdef FOC_MOTOR_SPEED_HIGH_KP
     filter_s += speed_gain_blend() * (FOC_MOTOR_SPEED_HIGH_FILTER_S - filter_s);

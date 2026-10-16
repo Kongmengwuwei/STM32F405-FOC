@@ -23,6 +23,7 @@
 #define control_iq_ref control_iq_ref_1
 #define control_mode control_mode_1
 #define control_position control_position_1
+#define control_position_tracking control_position_tracking_1
 #define control_position_deg control_position_deg_1
 #define control_position_target control_position_target_1
 #define control_scheduled control_scheduled_1

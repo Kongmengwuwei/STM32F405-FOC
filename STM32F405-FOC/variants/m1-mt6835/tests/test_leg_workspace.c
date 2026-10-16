@@ -22,7 +22,107 @@ static void move(float wanted) {
   q = wanted;
   observe(q);
 }
+static void restore_tests(void) {
+  const float samples[] = {-1.5f, 0,     .1f, 3,  5,     12,
+                           20,    25.7f, 26,  36, 39.9f, 40};
+  for (unsigned k = 0; k < sizeof samples / sizeof samples[0]; ++k) {
+    leg_teach_begin();
+    observe(samples[k]); /* Cold-start single turn, no prior motor turns. */
+    leg_restore_t plan;
+    assert(!leg_restore_prepare(&plan) && leg_restore_apply(&plan));
+    assert(fabsf(leg_joint(0) - samples[k]) < .0001f &&
+           fabsf(leg_joint(1) - samples[k]) < .0001f);
+    assert(!leg_restore_apply(&plan)); /* Cannot reinterpret valid tracking. */
+    q = samples[k];
+    move(60); /* Subsequent wrap tracking crosses the recovery interval. */
+    assert(fabsf(leg_joint(0) - 60) < .001f &&
+           fabsf(leg_joint(1) - 60) < .001f);
+  }
+  for (unsigned k = 0; k < 2; ++k) {
+    leg_teach_begin();
+    observe(k ? -3 : 45);
+    leg_restore_t plan = {{123, 456}};
+    assert(leg_restore_prepare(&plan) == (LEG_HOME_M0 | LEG_HOME_M1));
+    assert(plan.motor_zero[0] == 123 && plan.motor_zero[1] == 456 &&
+           !leg_homed());
+  }
+  leg_teach_begin();
+  observe(5);
+  leg_teach_invalidate();
+  leg_restore_t plan;
+  assert(leg_restore_prepare(&plan) == LEG_HOME_TRACKING);
+  assert(!leg_restore_apply(NULL));
+  leg_teach_begin();
+  observe(0);
+  assert(leg_home());
+  q = 0;
+  leg_unhome();
+}
+static void speed_brake_tests(void) {
+  assert(leg_set_motion_rate(120));
+  for (int direction = -1; direction <= 1; direction += 2) {
+    for (int sign = -1; sign <= 1; sign += 2) {
+      bool braking;
+      float effort = leg_speed_effort(10 * sign * direction, 150 * sign,
+                                      96 * sign, direction, &braking);
+      assert(braking && fabsf(effort - direction * sign * 9.32f) < .001f);
+      effort = leg_speed_effort(-8 * sign * direction, 150 * sign, -96 * sign,
+                                direction, &braking);
+      assert(braking && fabsf(effort + 8.68f * sign * direction)<.001f);
+      effort = leg_speed_effort(4 * sign * direction, 100 * sign, 96 * sign,
+                                direction, &braking);
+      assert(!braking && effort == 4 * sign * direction);
+      effort = leg_speed_effort(10 * sign * direction, 35 * sign, 0, direction,
+                                &braking);
+      assert(braking && fabsf(effort - direction * sign * 9.7f) < .001f);
+      /* A load-supporting bias must not jump when velocity crosses the
+       * soft threshold. Test all electrical/shaft direction combinations. */
+      float at=leg_speed_effort(2*sign*direction,20*sign,0,direction,&braking);
+      float above=leg_speed_effort(2*sign*direction,20.01f*sign,0,direction,&braking);
+      assert(fabsf(at-above)<.001f);
+    }
+  }
+  bool braking;
+  assert(leg_speed_effort(1, NAN, 0, 1, &braking) == 0 && braking);
+  assert(leg_set_motion_rate(30));
+}
+static void speed_noise_tests(void) {
+  /* Alternating 0.08 degree angle noise yields 267 RPM raw differences at
+   * 100 us, despite zero net rotation. A motor-speed trip must not square
+   * those differences before estimating mechanical velocity. */
+  leg_teach_begin();
+  observe(0);
+  assert(leg_home());
+  for (unsigned n = 0; n < 400; ++n) {
+    observe((n & 1u ? .08f : -.08f) / LEG_GEAR_RATIO);
+    assert(!leg_motion_fault(true));
+  }
+  assert(leg_speed_rms(0) < 5 && leg_speed_rms(1) < 5);
+  /* Real overspeed still trips in either shaft direction within 20 ms;
+   * the test remains far from the joint and per-sample jump limits. */
+  for (int sign = -1; sign <= 1; sign += 2) {
+    leg_teach_begin();
+    observe(10);
+    leg_restore_t plan;
+    assert(!leg_restore_prepare(&plan) && leg_restore_apply(&plan));
+    bool tripped = false;
+    for (unsigned n = 1; n <= 200; ++n) {
+      observe(10 + sign * 220.0f * 6 * .0001f * n / LEG_GEAR_RATIO);
+      if (leg_motion_fault(true) == FOC_SPEED) {
+        tripped = true;
+        assert(leg_speed_rms(0) > LEG_SPEED_TRIP_MOTOR_RPM);
+        break;
+      }
+    }
+    assert(tripped);
+  }
+  leg_teach_begin();
+  observe(0);
+}
 int main(void) {
+  speed_noise_tests();
+  speed_brake_tests();
+  restore_tests();
   observe(0);
   assert(!leg_homed() && !leg_target_valid(0, 0, 0));
   /* Explicit operator home tolerates gear slack, but rejects readings outside

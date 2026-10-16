@@ -7,7 +7,16 @@
 #include "control.h"
 #include "sensor_cal.h"
 #include <math.h>
+#ifdef FOC_DUAL_LEG
+#include "finite_math.h"
+#endif
 #include <string.h>
+
+#if defined(FOC_DUAL_LEG) && (defined(__arm__) || defined(__thumb__))
+#define FOC_REALTIME __attribute__((section(".RamFunc")))
+#else
+#define FOC_REALTIME
+#endif
 
 #define PI 3.14159265358979323846f
 #define TURN (2.0f * PI)
@@ -114,9 +123,13 @@ bool foc_identify(float current, float bus)
     foc.state=FOC_PRECHARGE;return true;
 }
 
-static void sincos_fast(float theta, float *s, float *c)
+static FOC_REALTIME void sincos_fast(float theta, float *s, float *c)
 {
+#if defined(FOC_DUAL_LEG) && (defined(__arm__) || defined(__thumb__))
+    static float table[513] __attribute__((section(".data.foc_lut"))) = {
+#else
     static const float table[513] = {
+#endif
 #include "sine_table.inc"
     };
     float x = theta * (512.0f / TURN);
@@ -127,8 +140,17 @@ static void sincos_fast(float theta, float *s, float *c)
     *c = table[j] + fraction * (table[j + 1u] - table[j]);
 }
 
-float foc_wrap(float radians)
+FOC_REALTIME float foc_wrap(float radians)
 {
+#ifdef FOC_DUAL_LEG
+    if(isfinite(radians)&&fabsf(radians)<1000000.0f) {
+        int turns=(int)(radians/TURN);
+        float wrapped=radians-(float)turns*TURN;
+        if(wrapped<0)wrapped+=TURN;
+        if(wrapped>=TURN)wrapped-=TURN;
+        return wrapped;
+    }
+#endif
     return radians - floorf(radians / TURN) * TURN;
 }
 
@@ -138,7 +160,7 @@ void foc_integrators(float *d, float *q)
     *q = integral_q;
 }
 
-float foc_modulate(float a, float beta, float bus_voltage, float duty[3])
+FOC_REALTIME float foc_modulate(float a, float beta, float bus_voltage, float duty[3])
 {
     float b = -0.5f * a + 0.8660254038f * beta;
     float c = -0.5f * a - 0.8660254038f * beta;
@@ -162,7 +184,7 @@ float foc_modulate(float a, float beta, float bus_voltage, float duty[3])
     return scale;
 }
 
-bool foc_window(const float duty[3])
+FOC_REALTIME bool foc_window(const float duty[3])
 {
     /* All phases must be quiet across the aperture, B/C low sides conducting.
        Include quantized CCR rounding and the provisional trigger allowance. */
@@ -325,7 +347,7 @@ bool foc_current(float amps)
     return true;
 }
 
-void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_voltage, float encoder_delay)
+FOC_REALTIME void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_voltage, float encoder_delay)
 {
     if (!isfinite(mechanical_deg)) { foc_trip(FOC_SENSOR); return; }
     if (!isfinite(b_voltage) || !isfinite(c_voltage)) { foc_trip(FOC_ADC); return; }
@@ -669,7 +691,7 @@ void foc_step(float mechanical_deg, float bus_voltage, float b_voltage, float c_
     }
 }
 
-void foc_outer_step(void)
+FOC_REALTIME void foc_outer_step(void)
 {
     /* Track mechanical position while stopped too; only control_step's RUN
        branch produces torque. Holding starts from the actual shaft position. */

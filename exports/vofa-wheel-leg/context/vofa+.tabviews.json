@@ -1,0 +1,58 @@
+{
+  "type": "tabviews",
+  "vnumber": 100,
+  "ctx": [
+    {
+      "tabs": [
+        {
+          "name": "轮腿 · 直观控制",
+          "widgets": [
+            {
+              "path": "WheelLegControl",
+              "type": "outside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 10,
+                      "y": 10,
+                      "width": 1400,
+                      "height": 780
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "file_url": "",
+          "bg": {
+            ".": {
+              "bgType": 0,
+              "bgOnTop": true,
+              "bgOpacity": 1,
+              "bgRatio": 1,
+              "bgFillMode": 1,
+              "bgLR": 0,
+              "bgLRMargin": 0,
+              "bgTB": 0,
+              "bgTBMargin": 0,
+              "bgSource": "",
+              "bgColor": "#ffffff",
+              "bgColorOpacity": 0.6,
+              "bgSourceFollowed": false,
+              "bgColorFollowed": true
+            }
+          }
+        }
+      ],
+      "is_top": true,
+      "x": 0,
+      "y": 0,
+      "width": 3840,
+      "height": 2064,
+      "currentIndex": 0,
+      "lastIndex": 0,
+      "file_url": ""
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-10-14T20:13:41.224109+08:00",
+  "operator_confirmation": "Both rods at original reliable upper mechanical stop; magnet, reducer and rods unchanged.",
+  "raw_mean_deg": [
+    11.220408073533768,
+    302.91088520068126
+  ],
+  "raw_min_deg": [
+    11.2060546875,
+    302.89306640625
+  ],
+  "raw_max_deg": [
+    11.239013671875,
+    302.926025390625
+  ],
+  "old_reference_deg": [
+    343.657836914,
+    303.692620963
+  ],
+  "gear_ratio": 7,
+  "frames": 1999,
+  "fault": 0,
+  "bridge_modes": [
+    0,
+    0
+  ],
+  "joint_limits_deg": [
+    0,
+    110
+  ],
+  "calibration_valid": [
+    true,
+    true
+  ],
+  "deployment_verification": {
+    "timestamp": "2026-10-14T20:46:45.399511+08:00",
+    "elf_sha256": "0a0b3afd8600a2685d03c94a5864d56b1ca43b9702a577f4a21cc64b7a0075eb",
+    "programmer_download_verified": true,
+    "home_command_result": 0.0,
+    "homed": true,
+    "idle_frames": 20039,
+    "all_idle_fault_free": true,
+    "motion_commands_sent": false,
+    "position_drift_max_abs_joint_deg": [
+      0.004708426538854837,
+      0.004708426538854837
+    ]
+  }
+}

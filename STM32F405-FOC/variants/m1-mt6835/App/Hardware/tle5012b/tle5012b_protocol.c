@@ -1,22 +1,25 @@
 #include "tle5012b_protocol.h"
+#ifdef FOC_DUAL_LEG
+#include "realtime.h"
+#else
+#define DUAL_REALTIME
+#endif
 
-uint8_t tle5012b_crc8(uint16_t command, uint16_t data)
+/* Polynomial 0x1d, init/xor-out 0xff. Two nibble steps per byte avoid
+ * 32 data-dependent branches in each 10 kHz encoder sample. */
+uint8_t DUAL_REALTIME tle5012b_crc8(uint16_t command, uint16_t data)
 {
-  const uint8_t bytes[4] = {
-      (uint8_t)(command >> 8), (uint8_t)command,
-      (uint8_t)(data >> 8), (uint8_t)data};
-  uint8_t crc = 0xFFu;
-  for (unsigned int byte_index = 0u; byte_index < 4u; ++byte_index)
-  {
-    crc ^= bytes[byte_index];
-    for (unsigned int bit_index = 0u; bit_index < 8u; ++bit_index)
-    {
-      crc = (uint8_t)((crc & 0x80u) != 0u
-          ? (uint8_t)((crc << 1) ^ 0x1Du)
-          : (uint8_t)(crc << 1));
-    }
+  static const uint8_t table[16]={0x00,0x1d,0x3a,0x27,0x74,0x69,0x4e,0x53,
+                                 0xe8,0xf5,0xd2,0xcf,0x9c,0x81,0xa6,0xbb};
+  const uint8_t bytes[4]={(uint8_t)(command>>8),(uint8_t)command,
+                         (uint8_t)(data>>8),(uint8_t)data};
+  uint8_t crc=0xff;
+  for(unsigned n=0;n<4;n++) {
+    crc^=bytes[n];
+    crc=(uint8_t)((crc<<4)^table[crc>>4]);
+    crc=(uint8_t)((crc<<4)^table[crc>>4]);
   }
-  return (uint8_t)(crc ^ 0xFFu);
+  return crc^0xff;
 }
 
 bool tle5012b_safety_crc_ok(uint16_t command, uint16_t data,
@@ -63,7 +66,7 @@ unsigned tle5012b_safety_sensor_number(uint16_t safety)
   return 4u;
 }
 
-bool tle5012b_angle_sample_valid_sensor(uint16_t command, uint16_t data,
+bool DUAL_REALTIME tle5012b_angle_sample_valid_sensor(uint16_t command, uint16_t data,
                                         uint16_t safety, unsigned sensor_number)
 {
   return tle5012b_safety_crc_ok(command, data, safety) &&

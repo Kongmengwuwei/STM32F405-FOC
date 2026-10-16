@@ -1,0 +1,362 @@
+{
+  "firmware_sha256": "02ddaa5b8a8cd37d53fe7a0c23f98a9644a2d185995f36931f23ba23d8ac1ad1",
+  "dual_adc_fault_flags": [
+    0,
+    0
+  ],
+  "dual_adc_fault_reason": [
+    0
+  ],
+  "dual_adc_gap_cycles": [
+    0
+  ],
+  "dual_after_probe_crc": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "dual_angle_data": [
+    60488,
+    36915
+  ],
+  "dual_angle_safety": [
+    65202,
+    65219
+  ],
+  "dual_angle_sample_valid": [
+    3
+  ],
+  "dual_angle_spi_valid": [
+    3
+  ],
+  "dual_critical_cycles_max": [
+    173
+  ],
+  "dual_critical_site": [
+    610
+  ],
+  "dual_encoder_cycles_max": [
+    5865
+  ],
+  "dual_fault": [
+    11
+  ],
+  "dual_first_active_bad_captured": [
+    0
+  ],
+  "dual_first_active_bad_data": [
+    0,
+    0
+  ],
+  "dual_first_active_bad_mode": [
+    0,
+    0
+  ],
+  "dual_first_active_bad_safety": [
+    0,
+    0
+  ],
+  "dual_first_active_bad_spi": [
+    0
+  ],
+  "dual_first_active_bad_state": [
+    0,
+    0
+  ],
+  "dual_first_bad_pa_idr": [
+    0
+  ],
+  "dual_first_bad_pa_moder": [
+    0
+  ],
+  "dual_first_bad_pa_odr": [
+    0
+  ],
+  "dual_first_bad_pb_afrl": [
+    0
+  ],
+  "dual_first_bad_pb_idr": [
+    0
+  ],
+  "dual_first_bad_pb_moder": [
+    0
+  ],
+  "dual_first_bad_spi1_cr1": [
+    0
+  ],
+  "dual_first_bad_spi1_sr": [
+    0
+  ],
+  "dual_init_attempts": [
+    3
+  ],
+  "dual_init_crc_valid": [
+    3
+  ],
+  "dual_init_first_crc_valid": [
+    3
+  ],
+  "dual_init_safety": [
+    65066,
+    65066
+  ],
+  "dual_init_spi_valid": [
+    3
+  ],
+  "dual_init_status": [
+    32768,
+    32768
+  ],
+  "dual_irq_cycles_max": [
+    14991
+  ],
+  "dual_probe_crc_valid": [
+    9
+  ],
+  "dual_probe_safety": [
+    65251,
+    65535,
+    65535,
+    65066
+  ],
+  "dual_probe_spi_valid": [
+    15
+  ],
+  "dual_probe_status": [
+    0,
+    65535,
+    65535,
+    32768
+  ],
+  "dual_sample_stage_cycles": [
+    219,
+    6574,
+    8549,
+    6798,
+    11491,
+    13011,
+    13069
+  ],
+  "dual_sample_stage_peak": [
+    219,
+    6574,
+    8567,
+    10358,
+    11501,
+    13046,
+    14860
+  ],
+  "dual_sensor_error_mode": [
+    0,
+    0
+  ],
+  "dual_sensor_error_state": [
+    0,
+    0
+  ],
+  "dual_sensor_error_time_us": [
+    0,
+    0
+  ],
+  "dual_sensor_error_timer": [
+    0,
+    0
+  ],
+  "dual_sensor_number": [
+    0,
+    0
+  ],
+  "dual_sensor_status": [
+    0,
+    0
+  ],
+  "dual_sensor_status_captured": [
+    0
+  ],
+  "dual_sensor_status_safety": [
+    0,
+    0
+  ],
+  "dual_sequence": [
+    1349053
+  ],
+  "dual_timing_counter": [
+    0
+  ],
+  "dual_timing_direction": [
+    0
+  ],
+  "dual_timing_foc_state": [
+    0,
+    0
+  ],
+  "dual_timing_mode": [
+    0
+  ],
+  "dual_timing_pending": [
+    0
+  ],
+  "dual_timing_ready": [
+    0
+  ],
+  "dual_timing_reason": [
+    0
+  ],
+  "dual_timing_sequence": [
+    0
+  ],
+  "dual_timing_site": [
+    0
+  ],
+  "dual_update_counter_max": [
+    429,
+    95
+  ],
+  "dual_write_counter_min": [
+    3423,
+    1625
+  ],
+  "foot_plan_ms_last": [
+    25
+  ],
+  "foot_plan_ms_max": [
+    49
+  ],
+  "frame_bank": [
+    4294967295
+  ],
+  "homed": true,
+  "home_motor": [
+    -708.7796020507812,
+    1022.910888671875
+  ],
+  "axes": [
+    {
+      "ready": 1,
+      "boot_raw": 66.005859375,
+      "last_raw": 45.54931640625,
+      "travel": -105.77950286865234,
+      "speed_squared": 305.06365966796875,
+      "turns": -2,
+      "last_tick": 761319,
+      "joint_deg": 4.904131208147321
+    },
+    {
+      "ready": 1,
+      "boot_raw": 214.60693359375,
+      "last_raw": 304.530029296875,
+      "travel": 115.70330047607422,
+      "speed_squared": 261.663818359375,
+      "turns": 2,
+      "last_tick": 761719,
+      "joint_deg": -0.23130580357142858
+    }
+  ],
+  "foc_0": {
+    "fields": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.1590299755334854,
+      0.510680615901947,
+      303.8204040527344,
+      164.15696716308594,
+      1.546473503112793
+    ],
+    "state": 5,
+    "fault": 11
+  },
+  "foc_1": {
+    "fields": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.04359849542379379,
+      -0.015956396237015724,
+      278.3833923339844,
+      -99.41019439697266,
+      1.5874770879745483
+    ],
+    "state": 5,
+    "fault": 11
+  },
+  "ui_frames": [
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      null,
+      null,
+      null,
+      null,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1311.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      24.75171661376953,
+      -196.93719482421875,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      null,
+      null,
+      null,
+      null,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1311.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      24.75171661376953,
+      -196.93719482421875,
+      0.0
+    ]
+  ],
+  "evidence_quality": {
+    "bulk_live_swd": "unverified: scattered word errors observed during running-core SWD reads; do not use individual words as fault-time measurements",
+    "firmware_sha256": "symbol source artifact; not a verified hash of running flash",
+    "confirmed_independently": {
+      "fault": 11,
+      "adc_fault_reason": 0,
+      "adc_gap_cycles": 0,
+      "irq_cycles_max": 14991
+    },
+    "authoritative_serial_capture": "fast-fault-serial-20261016.json",
+    "pretrip_speed_available": false
+  }
+}

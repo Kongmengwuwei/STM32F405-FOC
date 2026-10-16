@@ -1,0 +1,39 @@
+{
+  "group": 3,
+  "channels": [
+    "目标足端x mm",
+    "目标足端y mm",
+    "轨迹足端x mm",
+    "轨迹足端y mm",
+    "估算足端x mm",
+    "估算足端y mm",
+    "轨迹M0关节角 °",
+    "轨迹M1关节角 °",
+    "实际M0关节角 °",
+    "实际M1关节角 °",
+    "解算状态编号",
+    "有效1/标定2/足端控制4",
+    "电流上限 A",
+    "电机轨迹上限 rpm",
+    "母线电压 V",
+    "M0 Iq A",
+    "M1 Iq A",
+    "M0运行状态",
+    "M1运行状态",
+    "M0故障编号",
+    "M1故障编号",
+    "最小奇异裕量sin",
+    "已回零1",
+    "组编号3"
+  ],
+  "sample_hz": 50,
+  "geometry_update_hz": 50,
+  "frame_bytes": 100,
+  "coordinate": "body x right / y down, mm",
+  "foot_flags": {
+    "1": "valid model estimate",
+    "2": "rod zero calibrated",
+    "4": "Cartesian control owner"
+  },
+  "joint_reference_hz": 200
+}

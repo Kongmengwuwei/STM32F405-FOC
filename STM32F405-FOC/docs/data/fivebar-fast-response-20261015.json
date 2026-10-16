@@ -1,0 +1,397 @@
+{
+  "date": "2026-10-15",
+  "firmware_sha256": "48613aa5add9ee5ce2a244b3e2f7fd6f58011ca4b6d3aa66d121dce0d7dc8e29",
+  "voltage_nominal_V": 12,
+  "current_command_ceiling_A": 10,
+  "hard_current_A": 11,
+  "overspeed_motor_RPM": 180,
+  "path": "Synchronous q0=q1 only, physical drive window0..110deg; tested2.5..107deg",
+  "success": true,
+  "stop_verified": true,
+  "frames": 4202,
+  "segments": 24,
+  "user_feedback": "没有明显异常",
+  "stable_joint_error_max_deg": 0.6113967895507812,
+  "stable_joint_std_max_deg": 0.047967166745016186,
+  "peak_iq_A": [
+    4.0153632164001465,
+    3.83661150932312
+  ],
+  "observed_irq_peak_us": 89.04761904761905,
+  "critical_body_peak_us": 4.2023809523809526,
+  "critical_site": 967,
+  "planning_peak_ms": 49,
+  "adc_reason": 0,
+  "fault": 0,
+  "foc_hz": 10000,
+  "outer_hz": 1000,
+  "reference_hz": 200,
+  "model_hz": 50,
+  "telemetry_hz": 50,
+  "active_calibration_records_unchanged": true,
+  "timing_method": "Device sample sequence at10000Hz from first target echo; 50Hz reporting resolution ~20ms, excludes host transport and pre-echo planning. Sustained ±1deg means both axes stay in band until next command/stop. Stable statistics use last0.5s of each3..5s hold, not a0.4s final settling claim.",
+  "events": [
+    {
+      "segment": 0,
+      "start_row": 70,
+      "q": 2.5,
+      "mode": "joint",
+      "rpm": 10,
+      "end_row": 224,
+      "start_q": [
+        0.0,
+        0.0015694753965362906
+      ],
+      "duration_device_s": 3.0601,
+      "first_within_1deg_s": 0.38,
+      "sustained_within_1deg_s": 0.38
+    },
+    {
+      "segment": 1,
+      "start_row": 224,
+      "q": 5,
+      "mode": "joint",
+      "rpm": 10,
+      "end_row": 380,
+      "start_q": [
+        2.398158550262451,
+        2.3746163845062256
+      ],
+      "duration_device_s": 3.1017,
+      "first_within_1deg_s": 0.42,
+      "sustained_within_1deg_s": 0.42
+    },
+    {
+      "segment": 2,
+      "start_row": 380,
+      "q": 10,
+      "mode": "joint",
+      "rpm": 10,
+      "end_row": 584,
+      "start_q": [
+        5.3079657554626465,
+        4.954833984375
+      ],
+      "duration_device_s": 4.0598,
+      "first_within_1deg_s": 1.0,
+      "sustained_within_1deg_s": 1.0
+    },
+    {
+      "segment": 3,
+      "start_row": 584,
+      "q": 20,
+      "mode": "joint",
+      "rpm": 10,
+      "end_row": 844,
+      "start_q": [
+        9.842180252075195,
+        10.242396354675293
+      ],
+      "duration_device_s": 5.1823,
+      "first_within_1deg_s": 2.1201,
+      "sustained_within_1deg_s": 2.1201
+    },
+    {
+      "segment": 4,
+      "start_row": 844,
+      "q": 30,
+      "mode": "joint",
+      "rpm": 45,
+      "end_row": 1003,
+      "start_q": [
+        20.078298568725586,
+        20.230539321899414
+      ],
+      "duration_device_s": 3.1637,
+      "first_within_1deg_s": 0.64,
+      "sustained_within_1deg_s": 0.64
+    },
+    {
+      "segment": 5,
+      "start_row": 1003,
+      "q": 50,
+      "mode": "joint",
+      "rpm": 45,
+      "end_row": 1157,
+      "start_q": [
+        30.08841323852539,
+        30.471364974975586
+      ],
+      "duration_device_s": 3.06,
+      "first_within_1deg_s": 1.0,
+      "sustained_within_1deg_s": 1.0
+    },
+    {
+      "segment": 6,
+      "start_row": 1157,
+      "q": 30,
+      "mode": "joint",
+      "rpm": 45,
+      "end_row": 1317,
+      "start_q": [
+        50.21379852294922,
+        50.18868637084961
+      ],
+      "duration_device_s": 3.1829,
+      "first_within_1deg_s": 1.1,
+      "sustained_within_1deg_s": 1.1
+    },
+    {
+      "segment": 7,
+      "start_row": 1317,
+      "q": 50,
+      "mode": "joint",
+      "rpm": 60,
+      "end_row": 1472,
+      "start_q": [
+        30.40230941772461,
+        30.463518142700195
+      ],
+      "duration_device_s": 3.0808,
+      "first_within_1deg_s": 0.78,
+      "sustained_within_1deg_s": 0.78
+    },
+    {
+      "segment": 8,
+      "start_row": 1472,
+      "q": 30,
+      "mode": "joint",
+      "rpm": 60,
+      "end_row": 1632,
+      "start_q": [
+        49.70528793334961,
+        50.04900360107422
+      ],
+      "duration_device_s": 3.18,
+      "first_within_1deg_s": 0.8,
+      "sustained_within_1deg_s": 0.8
+    },
+    {
+      "segment": 9,
+      "start_row": 1632,
+      "q": 50,
+      "mode": "joint",
+      "rpm": 90,
+      "end_row": 1787,
+      "start_q": [
+        30.348947525024414,
+        30.40701675415039
+      ],
+      "duration_device_s": 3.0809,
+      "first_within_1deg_s": 0.5395,
+      "sustained_within_1deg_s": 0.5395
+    },
+    {
+      "segment": 10,
+      "start_row": 1787,
+      "q": 30,
+      "mode": "joint",
+      "rpm": 90,
+      "end_row": 1945,
+      "start_q": [
+        49.669189453125,
+        49.69586944580078
+      ],
+      "duration_device_s": 3.14,
+      "first_within_1deg_s": 0.52,
+      "sustained_within_1deg_s": 0.52
+    },
+    {
+      "segment": 11,
+      "start_row": 1945,
+      "q": 50,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 2100,
+      "start_q": [
+        30.333251953125,
+        30.38504409790039
+      ],
+      "duration_device_s": 3.08,
+      "first_within_1deg_s": 0.4,
+      "sustained_within_1deg_s": 0.4
+    },
+    {
+      "segment": 12,
+      "start_row": 2100,
+      "q": 30,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 2256,
+      "start_q": [
+        49.65977096557617,
+        49.67546844482422
+      ],
+      "duration_device_s": 3.1008,
+      "first_within_1deg_s": 0.4194,
+      "sustained_within_1deg_s": 0.4194
+    },
+    {
+      "segment": 13,
+      "start_row": 2256,
+      "q": 80,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 2284,
+      "start_q": [
+        30.326974868774414,
+        30.377197265625
+      ],
+      "duration_device_s": 0.5418
+    },
+    {
+      "segment": 14,
+      "start_row": 2284,
+      "q": 30,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 2489,
+      "start_q": [
+        52.79558563232422,
+        52.66061019897461
+      ],
+      "duration_device_s": 4.0801,
+      "first_within_1deg_s": 0.88,
+      "sustained_within_1deg_s": 0.88
+    },
+    {
+      "segment": 15,
+      "start_row": 2489,
+      "q": 100,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 2696,
+      "start_q": [
+        29.87967300415039,
+        30.34423828125
+      ],
+      "duration_device_s": 4.1223,
+      "first_within_1deg_s": 1.54,
+      "sustained_within_1deg_s": 1.54
+    },
+    {
+      "segment": 16,
+      "start_row": 2696,
+      "q": 10,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 2902,
+      "start_q": [
+        99.65541076660156,
+        99.41214752197266
+      ],
+      "duration_device_s": 4.1038,
+      "first_within_1deg_s": 1.94,
+      "sustained_within_1deg_s": 1.94
+    },
+    {
+      "segment": 17,
+      "start_row": 2902,
+      "q": 107,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 3109,
+      "start_q": [
+        10.083879470825195,
+        10.152936935424805
+      ],
+      "duration_device_s": 4.1217,
+      "first_within_1deg_s": 2.14,
+      "sustained_within_1deg_s": 2.14
+    },
+    {
+      "segment": 18,
+      "start_row": 3109,
+      "q": 20,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 3316,
+      "start_q": [
+        106.57366180419922,
+        106.51873016357422
+      ],
+      "duration_device_s": 4.1249,
+      "first_within_1deg_s": 1.86,
+      "sustained_within_1deg_s": 1.86
+    },
+    {
+      "segment": 19,
+      "start_row": 3316,
+      "q": 107,
+      "mode": "joint",
+      "rpm": 120,
+      "end_row": 3527,
+      "start_q": [
+        20.329416275024414,
+        20.224260330200195
+      ],
+      "duration_device_s": 4.2042,
+      "first_within_1deg_s": 1.9,
+      "sustained_within_1deg_s": 1.9
+    },
+    {
+      "segment": 20,
+      "start_row": 3527,
+      "q": 20,
+      "mode": "foot",
+      "rpm": 120,
+      "end_row": 3735,
+      "start_q": [
+        106.57994079589844,
+        106.55326080322266
+      ],
+      "duration_device_s": 4.1419,
+      "first_within_1deg_s": 1.86,
+      "sustained_within_1deg_s": 1.86
+    },
+    {
+      "segment": 21,
+      "start_row": 3735,
+      "q": 107,
+      "mode": "foot",
+      "rpm": 120,
+      "end_row": 3942,
+      "start_q": [
+        20.36080551147461,
+        20.243093490600586
+      ],
+      "duration_device_s": 4.1279,
+      "first_within_1deg_s": 1.9,
+      "sustained_within_1deg_s": 1.9
+    },
+    {
+      "segment": 22,
+      "start_row": 3942,
+      "q": 20,
+      "mode": "foot",
+      "rpm": 120,
+      "end_row": 3980,
+      "start_q": [
+        106.57523345947266,
+        106.57523345947266
+      ],
+      "duration_device_s": 0.7416
+    },
+    {
+      "segment": 23,
+      "start_row": 3980,
+      "q": 107,
+      "mode": "foot",
+      "rpm": 120,
+      "end_row": 4183,
+      "start_q": [
+        82.705078125,
+        82.70821380615234
+      ],
+      "duration_device_s": 4.04,
+      "first_within_1deg_s": 0.88,
+      "sustained_within_1deg_s": 0.88
+    }
+  ],
+  "raw": {
+    "result": "build\\dual-leg\\wheel-leg-ui\\native-unified-timing-20261015.json",
+    "csv": "build\\dual-leg\\wheel-leg-ui\\native-unified-timing-20261015.csv",
+    "stages": "build\\dual-leg\\wheel-leg-ui\\fast-final-stages-20261015.bin",
+    "timing": "build\\dual-leg\\wheel-leg-ui\\fast-final-timing-20261015.bin"
+  }
+}

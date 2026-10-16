@@ -1,0 +1,47 @@
+{
+  "geometry": {
+    "pivot": [
+      [
+        35.0,
+        0.0
+      ],
+      [
+        -35.0,
+        0.0
+      ]
+    ],
+    "active": [
+      80.0,
+      80.0
+    ],
+    "passive": [
+      145.0,
+      145.0
+    ],
+    "zero_ccw": [
+      24.75171661376953,
+      -196.93719482421875
+    ],
+    "q_sign": [
+      -1,
+      1
+    ],
+    "elbow_sign": [
+      1,
+      -1
+    ],
+    "assembly_sign": -1,
+    "q_min": [
+      2.0,
+      2.0
+    ],
+    "q_max": [
+      108.0,
+      108.0
+    ],
+    "min_sine": 0.11999999731779099
+  },
+  "calibrated": true,
+  "homed_at_export": true,
+  "note": "Body frame x right/y down, mm. M0 right, M1 left. Motor-shaft estimate includes gearbox uncertainty."
+}

@@ -1,3 +1,4 @@
+#include "realtime.h"
 #include "dual.h"
 volatile float motor_duty_0[3], motor_duty_1[3];
 #include "stm32f4xx_hal.h"
@@ -157,7 +158,7 @@ static void timer_init(TIM_TypeDef *t, bool trigger) {
   t->BDTR |= TIM_BDTR_MOE;
 }
 
-static bool spi_wait(SPI_TypeDef *spi, uint32_t flag, bool set) {
+static bool DUAL_REALTIME spi_wait(SPI_TypeDef *spi, uint32_t flag, bool set) {
   uint32_t start = DWT->CYCCNT;
   while (((spi->SR & flag) != 0u) != set)
 #ifdef FOC_ENCODER_DIAGNOSTIC_ONLY
@@ -179,7 +180,7 @@ static void spi_recover(SPI_TypeDef *spi) {
 
 /* Frames select one lane at a time. Avoid dual-lane arrays/loops on every
    word, retaining the same TX/RX/busy waits and timeout recovery. */
-static bool transfer_word(SPI_TypeDef *spi, uint16_t tx, uint16_t *rx) {
+static bool DUAL_REALTIME transfer_word(SPI_TypeDef *spi, uint16_t tx, uint16_t *rx) {
   if (!spi_wait(spi, SPI_SR_TXE, true))
     return false;
   spi->DR = tx;
@@ -191,7 +192,7 @@ static bool transfer_word(SPI_TypeDef *spi, uint16_t tx, uint16_t *rx) {
 
 /* Keep only one CS low. The board's original encoder wiring can share nets even
  * after the second SPI is wired, and asserting both CS lines corrupted SPI1. */
-static unsigned frame_lane(unsigned lane, unsigned cs, uint16_t command,
+static unsigned DUAL_REALTIME frame_lane(unsigned lane, unsigned cs, uint16_t command,
                            uint16_t *data, uint16_t *safety) {
   unsigned bit = 1u << lane;
   SPI_TypeDef *spi = lane ? SPI1 : SPI3;
@@ -220,7 +221,7 @@ static unsigned frame_lane(unsigned lane, unsigned cs, uint16_t command,
   return active ? bit : 0u;
 }
 
-static unsigned frame_pair(uint16_t command, uint16_t data[2],
+static unsigned DUAL_REALTIME frame_pair(uint16_t command, uint16_t data[2],
                            uint16_t safety[2]) {
   unsigned active = frame_lane(1u, 1u, command, &data[1], &safety[1]);
   active |= frame_lane(0u, 0u, command, &data[0], &safety[0]);
@@ -353,7 +354,7 @@ static void probe_single(unsigned lane, unsigned cs) {
     dual_probe_crc_valid |= 1u << index;
 }
 
-void dual_hw_encoder_pair(float angle[2]) {
+void DUAL_REALTIME dual_hw_encoder_pair(float angle[2]) {
   uint16_t data[2] = {0u, 0u}, safety[2] = {0u, 0u};
   uint32_t start = DWT->CYCCNT;
   unsigned valid = frame_pair(0x8021u, data, safety);
@@ -571,7 +572,7 @@ void dual_hw_halt(void) {
   HAL_NVIC_DisableIRQ(TIM8_UP_TIM13_IRQn);
 }
 
-bool dual_hw_read_adc(dual_adc_t *m0, dual_adc_t *m1) {
+bool DUAL_REALTIME dual_hw_read_adc(dual_adc_t *m0, dual_adc_t *m1) {
   if (((ADC1->SR | ADC2->SR) & ADC_SR_OVR) || !(ADC1->SR & ADC_SR_JEOC) ||
       !(ADC2->SR & ADC_SR_JEOC)) {
     dual_adc_fault_reason = 1;
@@ -599,7 +600,7 @@ bool dual_hw_read_adc(dual_adc_t *m0, dual_adc_t *m1) {
   return true;
 }
 
-bool dual_hw_read_bus(float *voltage) {
+bool DUAL_REALTIME dual_hw_read_bus(float *voltage) {
   if (!(ADC2->SR & ADC_SR_EOC) || (ADC2->SR & ADC_SR_OVR)) {
     dual_adc_fault_reason = 3;
     dual_adc_fault_flags[1]=ADC2->SR;
@@ -609,7 +610,7 @@ bool dual_hw_read_bus(float *voltage) {
   return true;
 }
 
-bool dual_hw_write(unsigned i, const float duty[3], unsigned mode) {
+bool DUAL_REALTIME dual_hw_write(unsigned i, const float duty[3], unsigned mode) {
   TIM_TypeDef *t = timer(i);
   uint32_t counter = t->CNT;
   if (counter < dual_write_counter_min[i])
@@ -630,7 +631,7 @@ bool dual_hw_write(unsigned i, const float duty[3], unsigned mode) {
   return true;
 }
 
-bool dual_hw_update(unsigned i) {
+bool DUAL_REALTIME dual_hw_update(unsigned i) {
   TIM_TypeDef *t = timer(i);
   t->SR = ~TIM_SR_UIF;
   /* An inhibited bridge has no PWM deadline: dual_hw_off() already forced

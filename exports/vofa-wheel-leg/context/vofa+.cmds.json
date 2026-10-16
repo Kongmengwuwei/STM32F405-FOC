@@ -1,0 +1,57 @@
+{
+  "type": "cmds",
+  "vnumber": 100,
+  "ctx": {
+    "name": "轮腿控制",
+    "intro_on": true,
+    "intro": "连接后使用面板按钮，不需要手输位置循环。",
+    "hex_on": false,
+    "loop_on": false,
+    "loop_ms": 100,
+    "loop_count": 1,
+    "cmd_hex": "",
+    "is_group": true,
+    "down": true,
+    "subCmds": [
+      {
+        "name": "停止输出",
+        "intro_on": true,
+        "intro": "关闭两路输出，需支撑腿部",
+        "hex_on": false,
+        "loop_on": true,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "73 74 6F 70 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "刷新面板",
+        "intro_on": true,
+        "intro": "只读状态查询",
+        "hex_on": false,
+        "loop_on": true,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "73 65 6E 64 20 35 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "清除故障",
+        "intro_on": true,
+        "intro": "排除原因后清除，不自动启动",
+        "hex_on": false,
+        "loop_on": true,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "63 6C 65 61 72 0D 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      }
+    ]
+  }
+}

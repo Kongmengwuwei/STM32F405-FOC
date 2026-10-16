@@ -19,7 +19,7 @@
 #undef FOC_POSITION_KP
 #define FOC_POSITION_KP 4.0f
 #undef FOC_POSITION_SPEED_MAX
-#define FOC_POSITION_SPEED_MAX 60.0f
+#define FOC_POSITION_SPEED_MAX 120.0f
 #undef FOC_MOTOR_POSITION_ACCEL_RPM_PER_S
 #define FOC_MOTOR_POSITION_ACCEL_RPM_PER_S 150.0f
 #undef FOC_MOTOR_POSITION_BRAKE_RPM_PER_S
@@ -39,8 +39,9 @@
 #define FOC_LEG_MOVING_DAMPING_A_RPM .04f
 #define FOC_LEG_MOVING_FILTER_S .002f
 #define FOC_LEG_MOVING_EFFORT_SLEW_A_S 240.0f
-#define FOC_LEG_SPEED_MARGIN_RPM 20.0f
-#define FOC_LEG_SPEED_BRAKE_A_RPM .08f
+/* Position error may request at most this extra speed above the shaped
+ * reference. Large gear/load lag must not become an unbounded current kick. */
+#define FOC_LEG_POSITION_CATCHUP_RPM 30.0f
 #undef FOC_PWM_ZERO_SAMPLES
 #define FOC_PWM_ZERO_SAMPLES 0u
 #undef FOC_LOAD_NAME

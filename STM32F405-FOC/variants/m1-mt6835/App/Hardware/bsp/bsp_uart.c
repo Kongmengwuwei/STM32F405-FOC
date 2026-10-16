@@ -101,4 +101,13 @@ size_t bsp_uart_read(void *data, size_t size)
     return count;
 }
 
-uint32_t bsp_uart_millis(void) { return HAL_GetTick(); }
+#if defined(FOC_DUAL_LEG) && (defined(__arm__) || defined(__thumb__))
+__attribute__((section(".RamFunc")))
+#endif
+uint32_t bsp_uart_millis(void) {
+#ifdef FOC_DUAL_LEG
+    return uwTick; /* Avoid a flash call from each real-time watchdog check. */
+#else
+    return HAL_GetTick();
+#endif
+}

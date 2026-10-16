@@ -1,0 +1,543 @@
+{
+  "date": "2026-10-16",
+  "success": true,
+  "stop_verified": true,
+  "frames": 4553,
+  "fault": 0,
+  "firmware_sha256": "88d5fa513a6fba743a849e04ef1a248f0defaac1e96189654167db24b706445b",
+  "path": "Operator-confirmed x=0 y=100..200 mm; staged approach from supported inward pose",
+  "max_stable_joint_error_deg": 0.5840606689453125,
+  "max_stable_joint_std_deg": 0.09245534319386028,
+  "max_estimated_foot_error_mm": 0.6631735765855583,
+  "peak_iq_sampled_A": [
+    3.0056092739105225,
+    3.152860164642334
+  ],
+  "events": [
+    {
+      "command": "leg pos 6.96 3.08",
+      "rpm": 10,
+      "settle": true,
+      "arrival_1deg_s": 0.0773388999996314,
+      "stable_joint_error": [
+        0.197509765625,
+        0.03742337226867676
+      ],
+      "stable_joint_std": [
+        0.0010578851233301375,
+        0.0014935737745731608
+      ],
+      "estimated_foot_error_mm": null,
+      "peak_iq_sampled_A": [
+        0.7640732526779175,
+        0.9504287838935852
+      ]
+    },
+    {
+      "command": "leg pos 8.96 5.08",
+      "rpm": 10,
+      "settle": true,
+      "arrival_1deg_s": 0.37112969999998313,
+      "stable_joint_error": [
+        0.06204652786254883,
+        0.01810145378112793
+      ],
+      "stable_joint_std": [
+        0.001061204531828797,
+        0.0009054550823451264
+      ],
+      "estimated_foot_error_mm": null,
+      "peak_iq_sampled_A": [
+        0.7133319973945618,
+        0.61080402135849
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 10,
+      "settle": true,
+      "arrival_1deg_s": 5.743189599999823,
+      "stable_joint_error": [
+        0.3771629333496094,
+        0.315948486328125
+      ],
+      "stable_joint_std": [
+        0.002554523118225082,
+        0.006918020287531235
+      ],
+      "estimated_foot_error_mm": 0.5643135548425188,
+      "peak_iq_sampled_A": [
+        1.3811930418014526,
+        1.4144920110702515
+      ]
+    },
+    {
+      "command": "foot pos 0 110",
+      "rpm": 10,
+      "settle": true,
+      "arrival_1deg_s": 1.2744579999998678,
+      "stable_joint_error": [
+        0.09543609619140625,
+        0.299468994140625
+      ],
+      "stable_joint_std": [
+        0.0011742436194118087,
+        0.0010431444456758996
+      ],
+      "estimated_foot_error_mm": 0.3787663448758656,
+      "peak_iq_sampled_A": [
+        1.3842101097106934,
+        1.3546711206436157
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 10,
+      "settle": true,
+      "arrival_1deg_s": 1.8491565999993327,
+      "stable_joint_error": [
+        0.2877006530761719,
+        0.519012451171875
+      ],
+      "stable_joint_std": [
+        0.0012506428545324536,
+        0.0010664337147914913
+      ],
+      "estimated_foot_error_mm": 0.5447911209714208,
+      "peak_iq_sampled_A": [
+        2.172549247741699,
+        2.705526113510132
+      ]
+    },
+    {
+      "command": "leg pos 32.75 24.14",
+      "rpm": 45,
+      "settle": true,
+      "arrival_1deg_s": 0.01575959999991028,
+      "stable_joint_error": [
+        0.025112152099609375,
+        0.4316062927246094
+      ],
+      "stable_joint_std": [
+        0.001175840218464888,
+        0.0009294600819803647
+      ],
+      "estimated_foot_error_mm": null,
+      "peak_iq_sampled_A": [
+        2.0156633853912354,
+        1.4190293550491333
+      ]
+    },
+    {
+      "command": "foot pos 0 125",
+      "rpm": 45,
+      "settle": true,
+      "arrival_1deg_s": 0.9331990999999107,
+      "stable_joint_error": [
+        0.34688568115234375,
+        0.2793388366699219
+      ],
+      "stable_joint_std": [
+        0.00173806411535467,
+        0.0016288633427890729
+      ],
+      "estimated_foot_error_mm": 0.518985393127458,
+      "peak_iq_sampled_A": [
+        1.734240174293518,
+        1.215397834777832
+      ]
+    },
+    {
+      "command": "foot pos 0 150",
+      "rpm": 45,
+      "settle": true,
+      "arrival_1deg_s": 0.8552466000001004,
+      "stable_joint_error": [
+        0.2588081359863281,
+        0.3109321594238281
+      ],
+      "stable_joint_std": [
+        0.0008948125705983838,
+        0.004747337066438963
+      ],
+      "estimated_foot_error_mm": 0.5661197165973446,
+      "peak_iq_sampled_A": [
+        1.4477664232254028,
+        1.4961082935333252
+      ]
+    },
+    {
+      "command": "foot pos 0 175",
+      "rpm": 45,
+      "settle": true,
+      "arrival_1deg_s": 0.9012158999994426,
+      "stable_joint_error": [
+        0.0890960693359375,
+        0.02004241943359375
+      ],
+      "stable_joint_std": [
+        0.0011489219292585436,
+        0.0010444119358893576
+      ],
+      "estimated_foot_error_mm": 0.12232343945675651,
+      "peak_iq_sampled_A": [
+        1.478958010673523,
+        1.5800169706344604
+      ]
+    },
+    {
+      "command": "foot pos 0 200",
+      "rpm": 45,
+      "settle": true,
+      "arrival_1deg_s": 0.9498570999994627,
+      "stable_joint_error": [
+        0.3094024658203125,
+        0.23563385009765625
+      ],
+      "stable_joint_std": [
+        0.004950572655282764,
+        0.0016392631061377826
+      ],
+      "estimated_foot_error_mm": 0.3596439724021054,
+      "peak_iq_sampled_A": [
+        1.5303486585617065,
+        1.1877942085266113
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 45,
+      "settle": true,
+      "arrival_1deg_s": 4.17735569999968,
+      "stable_joint_error": [
+        0.19039535522460938,
+        0.551971435546875
+      ],
+      "stable_joint_std": [
+        0.000836960997726554,
+        0.001004838934102259
+      ],
+      "estimated_foot_error_mm": 0.5532963662159339,
+      "peak_iq_sampled_A": [
+        2.769655227661133,
+        2.9308578968048096
+      ]
+    },
+    {
+      "command": "leg pos 32.66 24.11",
+      "rpm": 60,
+      "settle": true,
+      "arrival_1deg_s": 0.03057280000030005,
+      "stable_joint_error": [
+        0.0125579833984375,
+        0.42218971252441406
+      ],
+      "stable_joint_std": [
+        0.0010386444936025816,
+        0.0009902223162447919
+      ],
+      "estimated_foot_error_mm": null,
+      "peak_iq_sampled_A": [
+        1.8727242946624756,
+        1.497864842414856
+      ]
+    },
+    {
+      "command": "foot pos 0 200",
+      "rpm": 60,
+      "settle": true,
+      "arrival_1deg_s": 2.6631407999993826,
+      "stable_joint_error": [
+        0.37845611572265625,
+        0.31410980224609375
+      ],
+      "stable_joint_std": [
+        0.003831367061444251,
+        0.0017232357113601963
+      ],
+      "estimated_foot_error_mm": 0.450945460808294,
+      "peak_iq_sampled_A": [
+        1.7383027076721191,
+        1.594025731086731
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 60,
+      "settle": true,
+      "arrival_1deg_s": 3.5323137000004863,
+      "stable_joint_error": [
+        0.1982421875,
+        0.562957763671875
+      ],
+      "stable_joint_std": [
+        0.0012331060121788375,
+        0.0012304260609805637
+      ],
+      "estimated_foot_error_mm": 0.5660702043024746,
+      "peak_iq_sampled_A": [
+        2.809250593185425,
+        2.909454107284546
+      ]
+    },
+    {
+      "command": "foot pos 0 200",
+      "rpm": 60,
+      "settle": false,
+      "arrival_1deg_s": null,
+      "stable_joint_error": [
+        56.97531509399414,
+        57.7318000793457
+      ],
+      "stable_joint_std": [
+        0.712664941574318,
+        0.47119698864630605
+      ],
+      "estimated_foot_error_mm": 100.29599759630706,
+      "peak_iq_sampled_A": [
+        2.166198253631592,
+        1.0741980075836182
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 60,
+      "settle": true,
+      "arrival_1deg_s": 0.7151241999999911,
+      "stable_joint_error": [
+        0.29241180419921875,
+        0.140167236328125
+      ],
+      "stable_joint_std": [
+        0.002341282701688372,
+        0.0009957286922405932
+      ],
+      "estimated_foot_error_mm": 0.3649250309629415,
+      "peak_iq_sampled_A": [
+        2.2253873348236084,
+        2.663003921508789
+      ]
+    },
+    {
+      "command": "leg pos 32.75 24.80",
+      "rpm": 90,
+      "settle": true,
+      "arrival_1deg_s": 0.015457699999387842,
+      "stable_joint_error": [
+        0.018833160400390625,
+        0.0062770843505859375
+      ],
+      "stable_joint_std": [
+        0.0013552999034012112,
+        0.000784245811871625
+      ],
+      "estimated_foot_error_mm": null,
+      "peak_iq_sampled_A": [
+        2.0003318786621094,
+        1.7044482231140137
+      ]
+    },
+    {
+      "command": "foot pos 0 200",
+      "rpm": 90,
+      "settle": true,
+      "arrival_1deg_s": 1.7143892000003689,
+      "stable_joint_error": [
+        0.384735107421875,
+        0.5840606689453125
+      ],
+      "stable_joint_std": [
+        0.001791160834192657,
+        0.040292458414085984
+      ],
+      "estimated_foot_error_mm": 0.6631735765855583,
+      "peak_iq_sampled_A": [
+        1.7012819051742554,
+        1.6951266527175903
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 90,
+      "settle": true,
+      "arrival_1deg_s": 2.957589200000257,
+      "stable_joint_error": [
+        0.3159523010253906,
+        0.551971435546875
+      ],
+      "stable_joint_std": [
+        0.0021421690874678777,
+        0.0010983749563883245
+      ],
+      "estimated_foot_error_mm": 0.5835299538347486,
+      "peak_iq_sampled_A": [
+        2.842512369155884,
+        3.0406012535095215
+      ]
+    },
+    {
+      "command": "foot pos 0 200",
+      "rpm": 90,
+      "settle": false,
+      "arrival_1deg_s": null,
+      "stable_joint_error": [
+        56.8638801574707,
+        57.7208137512207
+      ],
+      "stable_joint_std": [
+        3.359061010508219,
+        3.5246658539393265
+      ],
+      "estimated_foot_error_mm": 100.19734323611486,
+      "peak_iq_sampled_A": [
+        2.0322463512420654,
+        1.3655760288238525
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 90,
+      "settle": true,
+      "arrival_1deg_s": 0.905723300000318,
+      "stable_joint_error": [
+        0.2986869812011719,
+        0.14330673217773438
+      ],
+      "stable_joint_std": [
+        0.002731568948786448,
+        0.0008563402966781128
+      ],
+      "estimated_foot_error_mm": 0.3703874651844478,
+      "peak_iq_sampled_A": [
+        2.7774481773376465,
+        3.152860164642334
+      ]
+    },
+    {
+      "command": "leg pos 32.76 24.80",
+      "rpm": 120,
+      "settle": true,
+      "arrival_1deg_s": 0.014985699999670032,
+      "stable_joint_error": [
+        0.0094146728515625,
+        0.003139495849609375
+      ],
+      "stable_joint_std": [
+        0.0008886850796232014,
+        0.0008879835219063242
+      ],
+      "estimated_foot_error_mm": null,
+      "peak_iq_sampled_A": [
+        1.9567382335662842,
+        1.6365106105804443
+      ]
+    },
+    {
+      "command": "foot pos 0 200",
+      "rpm": 120,
+      "settle": true,
+      "arrival_1deg_s": 1.3203515999994124,
+      "stable_joint_error": [
+        0.395721435546875,
+        0.57464599609375
+      ],
+      "stable_joint_std": [
+        0.004922677232061608,
+        0.09245534319386028
+      ],
+      "estimated_foot_error_mm": 0.6597802922836872,
+      "peak_iq_sampled_A": [
+        1.9301629066467285,
+        1.4120057821273804
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 120,
+      "settle": true,
+      "arrival_1deg_s": 2.571644899999228,
+      "stable_joint_error": [
+        0.3285064697265625,
+        0.5425548553466797
+      ],
+      "stable_joint_std": [
+        0.0011471022390192875,
+        0.014070890272645345
+      ],
+      "estimated_foot_error_mm": 0.576891477611388,
+      "peak_iq_sampled_A": [
+        3.0056092739105225,
+        2.9126319885253906
+      ]
+    },
+    {
+      "command": "foot pos 0 200",
+      "rpm": 120,
+      "settle": false,
+      "arrival_1deg_s": null,
+      "stable_joint_error": [
+        56.8419075012207,
+        57.71139717102051
+      ],
+      "stable_joint_std": [
+        6.150110248002636,
+        6.038791532984141
+      ],
+      "estimated_foot_error_mm": 100.1732506467227,
+      "peak_iq_sampled_A": [
+        1.803680181503296,
+        1.2665506601333618
+      ]
+    },
+    {
+      "command": "foot pos 0 100",
+      "rpm": 120,
+      "settle": true,
+      "arrival_1deg_s": 1.074405200000001,
+      "stable_joint_error": [
+        0.3002586364746094,
+        0.10877799987792969
+      ],
+      "stable_joint_std": [
+        0.0021249499766513567,
+        0.0008563402966781128
+      ],
+      "estimated_foot_error_mm": 0.35512708865407555,
+      "peak_iq_sampled_A": [
+        2.521360397338867,
+        2.779653787612915
+      ]
+    },
+    {
+      "command": "foot pos 0 200",
+      "rpm": 120,
+      "settle": true,
+      "arrival_1deg_s": 1.3270431000000826,
+      "stable_joint_error": [
+        0.3863067626953125,
+        0.33294677734375
+      ],
+      "stable_joint_std": [
+        0.00396080930791142,
+        0.0018483664262831045
+      ],
+      "estimated_foot_error_mm": 0.46449743676645155,
+      "peak_iq_sampled_A": [
+        2.0079104900360107,
+        1.7891614437103271
+      ]
+    }
+  ],
+  "measurement_note": "50Hz telemetry; arrival from host command start includes ACK/planning/transport latency and has about20ms resolution; motor encoder inferred foot position, no independent physical measurement; sampled current is not a10kHz peak capture.",
+  "timing_and_calibration": {
+    "adc_gap_cycles": 0,
+    "adc_fault_reason": 0,
+    "irq_cycles_max": 16039,
+    "irq_us": 95.4702380952381,
+    "dual_fault": 0,
+    "calibration_unchanged": true,
+    "calibration_bytes": 144,
+    "calibration_sha256": "0c17871dbe2f5ccbdba5f292c64eec47149a5eff5440c8a6f7c8965c965034d9"
+  },
+  "user_report": "No obvious high-frequency vibration or noise"
+}

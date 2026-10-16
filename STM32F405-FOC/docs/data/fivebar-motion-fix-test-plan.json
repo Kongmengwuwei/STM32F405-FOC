@@ -1,0 +1,41 @@
+{
+  "voltage_V": 12,
+  "raised_and_supported_confirmed_by_user": true,
+  "path": "Previously confirmed collision-free synchronous q0=q1 path; goals converted using stored calibrated FK. Rounded x/y endpoints independently pass IK.",
+  "current_limit_A": 10,
+  "hard_current_A": 11,
+  "motor_rates_RPM": [
+    10,
+    45
+  ],
+  "cartesian_requested_speeds_mm_s": [
+    20,
+    150
+  ],
+  "overspeed_trip_motor_RPM": 180,
+  "joint_drive_limits_deg": [
+    0,
+    110
+  ],
+  "staged_targets_deg": [
+    2.5,
+    5,
+    10,
+    20,
+    40,
+    20,
+    80,
+    40,
+    100,
+    60,
+    107,
+    20,
+    107,
+    20,
+    107
+  ],
+  "fast_start_requires": "Earlier 10RPM stages fault-free, <1 degree stable error, <0.15 degree settled standard deviation; all stages continuously protected and synchronous divergence <3 degrees.",
+  "sampling_stop_ms": 250,
+  "command_refresh_ms": 50,
+  "final": "107degree supported posture then explicit stop and verify both IDLE; no unknown lateral Cartesian paths."
+}

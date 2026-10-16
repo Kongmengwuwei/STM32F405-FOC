@@ -16,6 +16,7 @@ extern volatile float motor_duty_0[3], motor_duty_1[3];
   bool foc_leg_calibrate_##n(float);                                           \
   bool foc_apply_parameters_##n(const motor_parameters_t *);                   \
   void foc_acquisition_resume_##n(void);                                       \
+  bool control_position_tracking_##n(float, float);                            \
   bool control_position_##n(float);                                            \
   bool control_hold_position_##n(void);                                        \
   bool control_zero_##n(void);                                                 \
@@ -31,6 +32,7 @@ typedef struct {
   float b, c, bus;
 } dual_adc_t;
 extern volatile uint32_t dual_sequence, dual_fault, dual_encoder_cycles_max;
+extern volatile uint32_t dual_init_attempts, dual_init_crc_valid;
 void dual_hw_safe_pins(void);
 bool dual_hw_init(void);
 bool dual_hw_read_adc(dual_adc_t *, dual_adc_t *);
@@ -49,4 +51,5 @@ unsigned dual_hw_mode(unsigned);
 extern volatile uint32_t dual_write_counter_min[2];
 extern volatile uint32_t dual_irq_cycles_max;
 void dual_app_sample(void);
+extern volatile uint32_t dual_sample_stage_cycles[7], dual_sample_stage_peak[7];
 #endif

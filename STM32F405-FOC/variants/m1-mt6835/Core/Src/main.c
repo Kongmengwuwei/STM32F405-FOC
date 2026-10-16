@@ -122,7 +122,14 @@ int main(void)
     app_abort(foc.fault ? foc.fault : FOC_TIMING);
 #endif
     /* Keep USB enumerable, but never start acquisition or accept motor commands. */
-    while (1) { bsp_usb_poll(); __WFI(); }
+    while (1) {
+#ifdef FOC_DUAL
+      app_poll(); /* Failed-init diagnostics only; all motor actions rejected. */
+#else
+      bsp_usb_poll();
+#endif
+      __WFI();
+    }
   }
   /* USER CODE END 2 */
 

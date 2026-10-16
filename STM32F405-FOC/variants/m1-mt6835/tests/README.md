@@ -8,7 +8,7 @@ python variants/m1-mt6835/tests/run_tests.py --cc gcc
 python variants/m1-mt6835/tests/run_tests.py --cc C:/mingw64/bin/gcc.exe
 ```
 
-需要主机 GCC（不能用 ARM GCC 运行这些测试）、Python、numpy、pyserial。输出在工程根目录 `build/host-tests/`；覆盖 42 个 C 配置、5 个 Python 套件，以及构建入口/预设默认值的一致性。每个子进程有超时，失败立即退出。
+需要主机 GCC（不能用 ARM GCC 运行这些测试）、Python、numpy、pyserial。输出在工程根目录 `build/host-tests/`；覆盖 45 个 C 配置、7 个 Python 套件，以及构建入口/预设默认值的一致性。每个子进程有超时，失败立即退出。
 
 龙邱分支新增 `test_longqiu.c`：使用真实 `foc.c` 和 `control.c`，检查新电机校准身份、正反方向扫描、失败扫描、15° 起始角扣除、WARN/TRIP 电压饱和、外环限流、Flash 保存恢复采样和 stop。编译选择 `FOC_PORT_M1`、`FOC_ENCODER_TLE5012B`、`FOC_MOTOR_L4225_6S420_A`、`FOC_LOAD_FREE_SHAFT`、`FOC_INSTALLATION_ID=4`，分别设置 `FOC_PROTECTION_TRIP=0/1`；包含目录用 App/Config、App/FOC、App/Control、App/Hardware/bsp。硬件 ADC/SPI 时序仍需上板测试。
 
@@ -54,4 +54,14 @@ python tools/bench/selftest.py
 双路轮腿增加 `test_dual_leg.c` 和 `test_tle5012b_response.c`：链接两份真实 FOC/控制状态，用独立 R/L、惯量、摩擦模型验证两方向校准、7:1 关节换算、位置轨迹、矢量过流、被动轴越界时两路关断、坐标清零不扩大限位、10 A 命令边界和 500 ms 失联。`dual_stubs/` 仅提供主机 HAL 接口。实车限位和负载仍需独立验证，见[本次实测](../../../docs/dual-leg.md)。
 
 
-双路新版增加 `leg_workspace`：显式回零、770°连续电机角度、镜像方向、端点向外电流抑制和20 ms越界容忍。`dual_leg` 验证100°正反向模型、写Flash后基准失效、500 ms超时后持续读取、2 s堵转和相/向量过流。完整矩阵现为43个C配置与6个Python套件；离线VOFA逻辑验证独立运行 `docs/vofa/validate_dual_leg.py`。
+双路新版增加 `leg_workspace`：显式回零、770°连续电机角度、镜像方向、端点向外电流抑制和20 ms越界容忍。`dual_leg` 验证100°正反向模型、写Flash后基准失效、500 ms超时后持续读取、2 s堵转和相/向量过流。完整矩阵现为45个C配置与7个Python套件；离线VOFA逻辑验证独立运行 `docs/vofa/validate_dual_leg.py`。
+
+五连杆新增 `fivebar` 网格/Jacobian/分支/奇异点/轨迹回归，`dual_leg` 增加非对称足端闭环和独立主机看门狗；`test_fivebar_tool.py` 检查24通道分帧和标定几何转换，全程不访问硬件。使用见[足端控制](../../../docs/fivebar-foot-control.md)。
+
+`dual_record` 用仿真Flash验证共享扇区保留、几何绑定、CRC与写失败；`dual_leg` 另验证从0°直接起步、保存后基准失效及group5反馈。新版面板独立QA：`python docs/vofa/validate_wheel_leg.py`（从工程根目录运行）。
+
+双路回归还验证50Hz遥测拒收后下一主循环重试、成功发送后保持降频节拍；五连杆轨迹回归覆盖加速/峰值速度/减速过程的正反向换目标、两段轨迹C²连接与全程速度/加速度/限位校验。
+
+快速版本另验证120电机RPM的公共关节/足端规划、最终关节目标立即回显、规划服务回调取消、轻量参考与完整模型一致、人工确认止点仍拒绝陈旧采样和运动中回零。实测与曲线见[快速响应记录](../../../docs/fivebar-fast-response-20261015.md)。
+
+2026-10-16另覆盖初始化磁编失败时USB诊断可读且拒绝使能、近零区域恢复不改原零位、停机快照、连续附加阻尼的阈值连续性、1 ms独立测速的噪声与真实超速分离，以及建立2.5 A重力偏置后的重复足端往返。离线模型不包含实车减速器全部弹性，必须通过实物稳定性测试。

@@ -108,7 +108,7 @@ if(FOC_DUAL_LEG)
 endif()
 add_subdirectory(cmake/stm32cubemx)
 if(FOC_DUAL_LEG)
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE dual/app.c dual/hardware.c dual/record.c dual/leg_guard.c
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE dual/app.c dual/hardware.c dual/record.c dual/leg_guard.c dual/fivebar.c dual/fivebar_motion.c dual/fivebar_point.c
     dual/foc0.c dual/foc1.c dual/control0.c dual/control1.c dual/ident0.c dual/ident1.c
     dual/sensor0.c dual/sensor1.c dual/cog0.c dual/cog1.c App/Hardware/bsp/bsp_can.c
     App/Hardware/bsp/bsp_uart.c App/Hardware/bsp/bsp_usb.c App/Hardware/tle5012b/tle5012b_protocol.c)
@@ -167,5 +167,9 @@ add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
 )
 
 if(FOC_DUAL_LEG)
- set_source_files_properties(dual/app.c dual/hardware.c dual/record.c dual/leg_guard.c dual/foc0.c dual/foc1.c dual/control0.c dual/control1.c dual/ident0.c dual/ident1.c dual/sensor0.c dual/sensor1.c dual/cog0.c dual/cog1.c PROPERTIES COMPILE_OPTIONS "-O3")
+ set_source_files_properties(dual/app.c dual/hardware.c dual/record.c dual/leg_guard.c dual/fivebar.c dual/fivebar_motion.c dual/fivebar_point.c dual/foc0.c dual/foc1.c dual/control0.c dual/control1.c dual/ident0.c dual/ident1.c dual/sensor0.c dual/sensor1.c dual/cog0.c dual/cog1.c PROPERTIES COMPILE_OPTIONS "-O3;-fno-math-errno")
+endif()
+
+if(FOC_DUAL_LEG)
+ set_source_files_properties(Core/Src/stm32f4xx_it.c PROPERTIES COMPILE_OPTIONS "-O3")
 endif()
