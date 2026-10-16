@@ -4,7 +4,9 @@
 #define FOC_REALTIME
 #endif
 #include "control.h"
+#ifndef FOC_DUAL_LEG
 #include "anticogging.h"
+#endif
 #include "bsp_uart.h"
 #include "foc.h"
 #include <math.h>
@@ -54,7 +56,7 @@
 #endif
 static uint32_t mode, fault;
 static float position, reference, speed, speed_target, position_target;
-static float integral_speed, last_deg, speed_reference;
+static float integral_speed, speed_reference;
 #ifdef FOC_DUAL_LEG
 static float leg_position_reference, leg_reference_speed;
 static bool leg_reference_external;
@@ -65,6 +67,7 @@ static float position_origin;
 static uint32_t observer_tick;
 static uint32_t previous_tick, command_ms;
 static bool tracking, commanded;
+#ifndef FOC_DUAL_LEG
 static volatile bool cog_learning;
 static float cog_velocity, cog_velocity_position;
 bool FOC_REALTIME control_cog_learning(void) { return cog_learning; }
@@ -74,6 +77,8 @@ bool control_cog_learn(void)
     cog_velocity=speed;cog_velocity_position=velocity_position;
     cog_learning=true;return true;
 }
+
+#endif
 
 /* The free-shaft Longqiu needs stronger low-speed damping but less reaction
    to fast velocity ripple at higher speed. Interpolate on the shaped reference
@@ -106,9 +111,11 @@ bool FOC_REALTIME control_scheduled(void)
 
 void control_stop(void)
 {
+#ifndef FOC_DUAL_LEG
     cog_learning=false;
     cog_stop();
     cog_cancel();
+#endif
     mode = CONTROL_TORQUE;
     fault = 0u;
     commanded = false;
@@ -180,7 +187,9 @@ bool control_torque(float amps)
 #ifdef FOC_DUAL_LEG
     (void)amps;return false;
 #endif
+#ifndef FOC_DUAL_LEG
     if(cog_learning)return false;
+#endif
     if (!isfinite(amps)) return false;
     if (fabsf(amps) > FOC_CURRENT_MAX) {
         foc_warn(FOC_CURRENT);
@@ -197,7 +206,9 @@ bool control_speed(float rpm)
 #ifdef FOC_DUAL_LEG
     (void)rpm;return false;
 #endif
+#ifndef FOC_DUAL_LEG
     if(cog_learning)return false;
+#endif
     if (!isfinite(rpm)) return false;
     if (fabsf(rpm) > FOC_SPEED_MAX) {
         foc_warn(FOC_SPEED);
@@ -262,6 +273,7 @@ bool control_zero(void)
     return true;
 }
 
+#ifndef FOC_DUAL_LEG
 static float cog_hold_output(float dt, float live_position, float velocity)
 {
     /* Static capture needs stiffness against negative cogging slope,
@@ -277,6 +289,7 @@ static float cog_hold_output(float dt, float live_position, float velocity)
     speed_target=speed_reference=0;
     return limited;
 }
+#endif
 /* Position P -> speed trajectory -> speed PI using the outer velocity estimate. */
 static FOC_REALTIME float outer_output(float dt)
 {
@@ -436,7 +449,7 @@ FOC_REALTIME void control_step_with_angle(uint32_t sample_us, float mechanical_d
     if (!isfinite(mechanical_deg) || !isfinite(encoder_deg)) return;
     absolute_deg = encoder_deg;
     if (!tracking) {
-        last_deg = velocity_position = last_velocity_position = mechanical_deg;
+        velocity_position = last_velocity_position = mechanical_deg;
         position_origin=mechanical_deg-position;
         previous_tick = observer_tick = sample_us;
 #if defined(FOC_DUAL_LEG) && FOC_LEG_AXIS == 1
@@ -461,6 +474,7 @@ FOC_REALTIME void control_step_with_angle(uint32_t sample_us, float mechanical_d
         velocity_position += observation_dt / (0.0002f + observation_dt) *
             (mechanical_deg - velocity_position);
     }
+#ifndef FOC_DUAL_LEG
     /* Static capture runs at the current-sample cadence. The normal 1 kHz
      * cascade is retained for user motion; its sampling delay is unsuitable
      * for a stiff hold on this very light free shaft. */
@@ -477,6 +491,7 @@ FOC_REALTIME void control_step_with_angle(uint32_t sample_us, float mechanical_d
             reference=cog_hold_output(dt,mechanical_deg-position_origin,cog_velocity);
         }
     }
+#endif
 #ifdef FOC_DUAL_LEG
     /* Target conversion uses the latest leg observation at 10 kHz. Publish
      * position at the same cadence to avoid adding stale 1 kHz position to it. */
@@ -485,7 +500,6 @@ FOC_REALTIME void control_step_with_angle(uint32_t sample_us, float mechanical_d
     uint32_t elapsed = (sample_us - previous_tick) & 0xffffffu;
     if (elapsed < CONTROL_PERIOD_US) return;
     /* At the 9400 RPM limit, one millisecond moves less than 57 degrees. */
-    last_deg = mechanical_deg;
     position = mechanical_deg-position_origin;
     if (elapsed > CONTROL_JUMP_US) {
         previous_tick = sample_us; /* Resynchronise without integrating the gap. */
@@ -511,23 +525,40 @@ FOC_REALTIME void control_step_with_angle(uint32_t sample_us, float mechanical_d
 #ifdef FOC_MOTOR_SPEED_HIGH_KP
     filter_s += speed_gain_blend() * (FOC_MOTOR_SPEED_HIGH_FILTER_S - filter_s);
 #endif
+#ifndef FOC_DUAL_LEG
     if(cog_learning)filter_s=.0005f;
+#endif
     speed += (dt / (filter_s + dt)) * (measured - speed);
-    if (foc.state != FOC_RUN) { reference = 0.0f; cog_stop(); return; }
+    if (foc.state != FOC_RUN) {
+        reference = 0.0f;
+#ifndef FOC_DUAL_LEG
+        cog_stop();
+#endif
+        return;
+    }
     if (!commanded) return;
+#ifndef FOC_DUAL_LEG
     /* Learning has a hard keepalive even under WARN. A vanished host cannot
      * leave a calibration target energized indefinitely. */
     if(cog_learning && (uint32_t)(bsp_uart_millis()-command_ms)>=200u) {
         fault=FOC_UART;return;
     }
+#endif
     /* Persistent WARN targets need no keepalive, including a position hold. */
     if (FOC_PROTECTION_TRIP && (uint32_t)(bsp_uart_millis() - command_ms) >= CONTROL_COMMAND_MS) {
         foc_warn(FOC_UART);
         fault = FOC_UART; return;
     }
     if (fault == FOC_UART) fault = 0u;
+#ifndef FOC_DUAL_LEG
     if(cog_learning)return;
-    if (mode == CONTROL_TORQUE) { cog_stop(); return; } /* Direct Iq excludes compensation. */
+#endif
+    if (mode == CONTROL_TORQUE) {
+#ifndef FOC_DUAL_LEG
+        cog_stop();
+#endif
+        return;
+    } /* Direct Iq excludes compensation. */
     reference = outer_output(dt);
 }
 void control_step(uint32_t sample_us, float mechanical_deg)

@@ -2,7 +2,9 @@
 #ifdef FOC_DUAL_LEG
 #include "leg_guard.h"
 #endif
+#ifndef FOC_DUAL_LEG
 #include "anticogging.h"
+#endif
 #include "bsp_motor.h" /* motor_sample_us: the sample-phase timestamp. */
 #include "control.h"
 #include "sensor_cal.h"
@@ -260,7 +262,9 @@ bool foc_calibrate(void)
         foc_warn(FOC_SPEED);
         if (FOC_PROTECTION_TRIP) return false;
     }
+#ifndef FOC_DUAL_LEG
     cog_reset();
+#endif
     select_parameters(false);motor_ident.valid=false;rollback_available=false;
     aligning = true;
     integral_d = integral_q = 0.0f;
@@ -276,7 +280,9 @@ bool foc_autocalibrate(float current,float bus)
     if(foc.state!=FOC_IDLE || !foc.zero_ready || fabsf(foc.rpm)>=5.0f ||
        !isfinite(current) || current<.2f || current>fminf(3.0f,FOC_PHASE_TRIP/2.0f) ||
        !isfinite(bus) || bus<FOC_BUS_MIN || bus>FOC_BUS_MAX || !sensor_cal_start(FOC_SAMPLE_HZ)) return false;
+#ifndef FOC_DUAL_LEG
     cog_reset();
+#endif
     control_stop();autoaligning=aligning=true;identifying=false;
     autoalignment_current=current; identification_current_limit=1.8f*current;
     integral_d=integral_q=0;position=previous;mechanical_turns=0;ticks=0;
@@ -285,7 +291,9 @@ bool foc_autocalibrate(float current,float bus)
 bool foc_apply_calibration(void)
 {
     if(foc.state!=FOC_IDLE || !sensor_cal.valid || sensor_cal.phase!=SENSOR_CAL_READY) return false;
+#ifndef FOC_DUAL_LEG
     cog_reset();
+#endif
     foc.calibration=sensor_cal.candidate;foc.calibrated=true;
     select_parameters(false);motor_ident.valid=false;rollback_available=false;
     integral_d=integral_q=0;return true;
@@ -293,7 +301,9 @@ bool foc_apply_calibration(void)
 
 void foc_init(const foc_calibration_t *calibration)
 {
+#ifndef FOC_DUAL_LEG
     cog_reset();
+#endif
     memset(&foc, 0, sizeof foc);
     memset(&motor_ident,0,sizeof motor_ident);
     memset(&sensor_cal,0,sizeof sensor_cal);
@@ -456,11 +466,13 @@ FOC_REALTIME void foc_step(float mechanical_deg, float bus_voltage, float b_volt
     }
     foc.id = ia * c + beta * s;
     foc.iq = -ia * s + beta * c;
+#ifndef FOC_DUAL_LEG
     if(control_cog_learning()) {
         if(hypotf(foc.id,foc.iq)>3.0f){foc_trip(FOC_CURRENT);return;}
         if(fabsf(foc.rpm)>100.0f){foc_trip(FOC_SPEED);return;}
         if(bus_voltage<FOC_BUS_MIN || bus_voltage>FOC_BUS_MAX){foc_trip(FOC_BUS);return;}
     }
+#endif
     if ((identifying || autoaligning) && hypotf(foc.id,foc.iq) > identification_current_limit) { foc_trip(FOC_CURRENT);return; }
     if(autoaligning && (fabsf(delta)>FOC_MAX_STEP_DEG || fabsf(foc.rpm)>120.0f)) { foc_trip(FOC_SENSOR);return; }
     if (foc.state == FOC_PRECHARGE || foc.state == FOC_RUN || foc.state == FOC_CALIBRATE || foc.state == FOC_PWM_ZERO) {

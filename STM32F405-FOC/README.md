@@ -1,34 +1,26 @@
-# STM32F405 有感 FOC 工程导航
+# STM32F405 五连杆轮腿 FOC
 
-本次轮腿实测已使用 **M0 + M1 / 两台 L4225 / TLE5012B / 7:1 减速箱 / TRIP**，构建选 `Debug-dual-leg`，详见[双路轮腿使用与实测](docs/dual-leg.md)。两路校准与小行程联动已通过；关节目标临时限制 ±2.5°，默认位置电流上限 5 A，可设置到 9 A。
-
-当前默认为 **M1 / L4225-6S420-A / TLE5012B / 安装 4 / FREE_SHAFT / WARN**，12 V 空载。SPI3/PA0 接线不变。唯一共用源码在 `variants/m1-mt6835/`；目录名沿用参考工程历史，接口、编码器、电机和负载可独立选择。
-
-## 构建与测试
+当前实测配置：双路 M0/M1、龙邱 L4225-6S420-A、TLE5012B、7∶1减速、12 V。使用 **Debug-dual-leg**，关节范围0°～110°，电流指令上限10 A，快速档120电机RPM；保留180 RPM及ADC/PWM保护。
 
 ```powershell
-cmake --preset Debug
-cmake --build --preset Debug
+cmake --preset Debug-dual-leg
+cmake --build --preset Debug-dual-leg
 python variants/m1-mt6835/tests/run_tests.py --cc gcc
 ```
 
-需安装 CMake、Ninja、ARM GCC；主机测试另需可在本机执行的 GCC、Python、numpy 和 pyserial。本机可用 `Debug-local`。默认产物为 `build/longqiu/Debug/STM32F405-FOC.elf/.hex/.bin`。顶层和独立固件入口共用 `cmake/foc-defaults.cmake` 及工具链实现；显式 `-D` 和预设覆盖默认值，主机回归会检查预设与默认值一致。
-
-## 阅读入口
+需要 CMake、Ninja、ARM GCC；主机回归使用可在本机执行的 GCC、Python、numpy、pyserial。构建输出为 `build/dual-leg/Debug/STM32F405-FOC.elf/.bin/.hex`。本地工具链路径可写入不入库的 `CMakeUserPresets.json`。
 
 | 目的 | 入口 |
-| --- | --- |
-| 了解调用链和模块职责 | [架构](docs/architecture.md)、[应用层](variants/m1-mt6835/App/README.md) |
-| 学习公式与逐文件阅读 | [初学者教程](variants/m1-mt6835/docs/FOC-从零读懂这个工程.md)、[文件导览](variants/m1-mt6835/docs/文件导览.md) |
-| 选择接口、编码器、电机和负载 | [统一固件指南](docs/unified-firmware.md)、[接线映射](docs/hardware-map.md) |
-| 编译、烧录和调试 | [VS Code 操作](docs/vscode-build.md) |
-| 使用 VOFA | [龙邱配置](docs/vofa-longqiu.md)、[通道表](docs/vofa-quickstart.md) |
-| 自动适配电机 | [极对数与磁编扫描](docs/motor-sensor-autocal.md)、[R/L 与电流环整定](docs/motor-autotune.md)、[改进与实测](docs/longqiu-autotune-improvement-2026-10-10.md) |
-| 改善低速波动 | [抗齿槽方案、命令与实测](docs/anticogging.md) |
-| 查动态响应 | [龙邱动态响应](docs/longqiu-dynamic-response-2026-10-10.md) |
-| 运行主机回归和实机工具 | [测试](variants/m1-mt6835/tests/README.md)、[台架工具](variants/m1-mt6835/tools/bench/README.md) |
-| 查清理范围与后续优化 | [整理记录](docs/code-cleanup-2026-10-10.md) |
+|---|---|
+| 上电、恢复位置、定点控制 | [VOFA日常操作](docs/wheel-leg-quickstart.md) |
+| 接线、关节命令和诊断 | [双路接口](docs/dual-leg.md)、[硬件映射](docs/hardware-map.md) |
+| 足端坐标、正逆解与标定 | [五连杆控制](docs/fivebar-foot-control.md) |
+| 了解调度与代码职责 | [架构](docs/architecture.md)、[源码导览](variants/m1-mt6835/docs/文件导览.md) |
+| 查看已通过的路径与响应 | [最近实测](docs/fast-reversal-fix-20261016.md) |
+| 回归测试和实机工具 | [测试](variants/m1-mt6835/tests/README.md)、[工具](variants/m1-mt6835/tools/bench/README.md) |
+| 单电机兼容配置 | [统一固件选项](docs/unified-firmware.md)、[单电机VOFA](docs/vofa-longqiu.md) |
+| 自适配与抗齿槽 | [R/L整定](docs/motor-autotune.md)、[磁编扫描](docs/motor-sensor-autocal.md)、[抗齿槽](docs/anticogging.md) |
 
-单路默认配置的电流环 10 kHz、速度/位置外环 1 kHz、USB `send 6` 总览 2.5 kHz。VOFA 选 JustFloat、实际 COM 口、1000000、8N1、DTR。上电只进行静止电流零偏估计，加载有效 Flash 校准/电流参数；抗齿槽表恢复后保持关闭，需要 `cog on` 开启。首次新安装须校准和验收，日常运行结束发送 `stop`。WARN 下断开 USB 不会自动停机；抗齿槽采集和自动辨识仍有独立硬中止。
+上电不自动转动。原零点附近0°～40°内静止、支撑好机构后，在VOFA确认恢复位置；不是将当前位置设为零。进入合法行程后即可控制。同次通电连续跟踪有效时，不需要重复恢复；停止输出后需支撑重力负载。
 
-按日期保存的 ZH3620-1、塑料臂和旧安装记录仍可用于对照，不能代表当前电机的带载表现。HAL/CMSIS、USB 中间件和 CubeMX `.ioc` 保留；手写初始化与 `.ioc` 不完全等价。
+源码仍集中在 `variants/m1-mt6835/`，目录名沿用历史。默认 `Debug/Release` 继续提供单电机M1兼容构建，轮腿请选择上面的专用预设。CubeMX、HAL/CMSIS和USB源码保留；不要用 `.ioc` 覆盖手写双路初始化。VOFA生成包在仓库外层 `exports/`，可用 `python docs/vofa/configure_wheel_leg.py` 重新生成，不再重复入库。

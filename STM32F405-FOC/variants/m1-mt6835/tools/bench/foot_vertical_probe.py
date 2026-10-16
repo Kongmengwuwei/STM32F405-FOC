@@ -13,11 +13,65 @@ import time
 from pathlib import Path
 
 import serial
-from fivebar_point_probe import Probe
 from fivebar_tool import Frames, Solver, decode_geometry, geometry_from_dict, read_group
 
 
-class VerticalProbe(Probe):
+class UIFrames:
+    def __init__(self):
+        self.pending = bytearray()
+
+    def feed(self, data):
+        self.pending.extend(data)
+        rows = []
+        while len(self.pending) >= 100:
+            if self.pending[96:100] != b"\x00\x00\x80\x7f":
+                del self.pending[0]
+                continue
+            row = struct.unpack("<24f", self.pending[:96])
+            del self.pending[:100]
+            if row[23] == 5005:
+                rows.append(row)
+        return rows
+
+
+class VerticalProbe:
+    def __init__(self, link):
+        self.link = link
+        self.frames = UIFrames()
+        self.last = None
+        self.rows = []
+        self.target = None
+        self.sent = self.progress = 0
+        self.sequence = None
+        self.driving = self.started = False
+
+    def send(self, line):
+        self.link.write((line + "\r\n").encode())
+        self.link.flush()
+
+    def wait(self, seconds):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            self.pump()
+
+    def command(self, line):
+        old_target = self.target
+        self.target = None
+        self.wait(.04)
+        before = self.last[16]
+        self.send(line)
+        end = time.monotonic() + .8
+        while time.monotonic() < end:
+            self.pump()
+            if self.last[16] != before:
+                assert self.last[15] == 0, (
+                    f"{line}: rejected code={self.last[15]} kinematics={self.last[19]}"
+                )
+                self.target = line if line.startswith(('foot pos ', 'leg pos ')) else old_target
+                self.sent = time.monotonic()
+                return
+        raise AssertionError(f"{line}: no ACK")
+
     def pump(self):
         now = time.monotonic()
         if self.target and now - self.sent >= .05:

@@ -1,6 +1,6 @@
 # 龙邱 M1 单电机 VOFA 配置
 
-当前安装编号为 4，低速已完成[抗齿槽补偿实测](anticogging.md)。有效补偿表已保存，启动默认关闭；在原发送框发送 `cog on` / `cog off`，总览仍使用 `send 6`。旧安装配置备份的本机归档位置见[清理记录](code-cleanup-2026-10-10.md)。
+当前安装编号为 4，低速已完成[抗齿槽补偿实测](anticogging.md)。有效补偿表已保存，启动默认关闭；在原发送框发送 `cog on` / `cog off`，总览仍使用 `send 6`。本页为单电机兼容固件使用说明；已装车双路请用[轮腿面板](wheel-leg-quickstart.md)。生成包由配置脚本重建，本机备份仍保留在exports目录。
 
 适配当前分支的 L4225-6S420-A、M1、原 TLE5012B、12 V 固件，复用之前单电机的 24 张数值卡片及速度、位置、电流三张曲线。VOFA+ 1.3.10 使用 `vnumber=100` 的配置格式。
 
@@ -33,6 +33,6 @@ python STM32F405-FOC/docs/vofa/configure_longqiu.py --port COM8 --install
 
 自动 R/L 与电流环整定请用[自动适配工具](motor-autotune.md)。辨识诊断 `send 7` 为 12 通道，与总览画布不同；结束恢复 `send 6`。控制条发送数字已修正为固件接受的最多两位小数。
 
-完整通道表见 [VOFA 操作与通道](vofa-quickstart.md)，当前控制表现见 [龙邱控制调试](longqiu-control-tuning-2026-10-09.md)。
+完整通道表见 [VOFA 操作与通道](vofa-quickstart.md)，当前控制表现见 [龙邱控制调试](longqiu-dynamic-response-2026-10-10.md)。
 
 2026-10-09 本机验收：COM8 实际收到 24 通道、400 μs 间隔的总览数据，待机母线约 12.21 V，故障和告警均为零。VOFA 重启后通道名正确，画布停机和 `send 6` 按钮均已核对真实串口发送回显，命令拒绝计数未增加。本次配置只验证待机通信，没有发送运动目标。

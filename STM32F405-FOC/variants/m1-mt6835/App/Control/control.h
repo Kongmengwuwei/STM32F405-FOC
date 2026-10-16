@@ -34,7 +34,9 @@ float control_speed_reference(void); /* Slewed speed used by the PI, RPM. */
 float control_position_deg(void);     /* Multi-turn, relative to the last control_zero(). */
 float control_position_target(void);
 float control_absolute_deg(void); /* Encoder mechanical origin, unaffected by zero. */
+#ifndef FOC_DUAL_LEG
 bool control_cog_learn(void); /* Idle: quiet bounded position hold for map capture. */
 bool control_cog_learning(void);
+#endif
 
 #endif

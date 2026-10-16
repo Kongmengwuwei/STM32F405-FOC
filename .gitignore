@@ -42,3 +42,6 @@ scope*.csv
 
 # VOFA install backups are local user settings/data, not distributable source.
 /exports/*/backup/
+
+# VOFA exports are regenerated from docs/vofa/ (keep local backups).
+/exports/

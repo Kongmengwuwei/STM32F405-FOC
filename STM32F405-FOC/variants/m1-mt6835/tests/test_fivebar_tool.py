@@ -151,3 +151,49 @@ for scenario in ["normal", "uncalibrated", "fault", "stopped"]:
 print(
     "PASS: simulated hardware tool calibration gate, target refresh, fault/stop cancellation and final stop"
 )
+
+
+# The current vertical probe no longer imports a retired synchronous test.
+sys.path.insert(0, str(ROOT / "tools/bench"))
+import foot_vertical_probe as vertical
+
+
+class VerticalLink:
+    def __init__(self, wire):
+        self.wire = wire
+        self.commands = []
+
+    def read(self, size):
+        data, self.wire = self.wire, b""
+        return data
+
+    def write(self, data):
+        self.commands.append(data)
+
+    def flush(self):
+        pass
+
+
+row = [0.0] * 24
+row[0:4] = [32.47, 24.66, 32.47, 24.66]
+row[10:15] = [12, 4, 4, 0, 257]
+row[20], row[23] = 1234, 5005
+packet = struct.pack("<24f", *row) + b"\x00\x00\x80\x7f"
+parser = vertical.UIFrames()
+assert parser.feed(packet[:37]) == []
+assert len(parser.feed(packet[37:] + packet)) == 2
+link = VerticalLink(packet)
+probe = vertical.VerticalProbe(link)
+probe.driving = True
+probe.pump()  # q0-q1=7.81 degrees is expected under current calibration.
+assert probe.started and len(probe.rows) == 1
+probe.send("stop")
+assert link.commands == [b"stop\r\n"]
+row[13], row[20] = 11, 1235
+link.wire = struct.pack("<24f", *row) + b"\x00\x00\x80\x7f"
+try:
+    probe.pump()
+    raise RuntimeError("Vertical test accepted a fault")
+except AssertionError as error:
+    assert "fault 11" in str(error)
+print("PASS: retained vertical tool framing, asymmetric tracking, fault cancellation and CRLF")

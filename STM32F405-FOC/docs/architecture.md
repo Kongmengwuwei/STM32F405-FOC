@@ -1,42 +1,40 @@
 # 当前 FOC 架构
 
-唯一固件源码在 `variants/m1-mt6835/`，目录名保留来源历史。当前默认 **M1 / TLE5012B / 龙邱 L4225-6S420-A / FREE_SHAFT / 安装 4 / WARN**；默认值集中于 `cmake/foc-defaults.cmake`，顶层和独立构建共用工具链实现。
+共用源码位于 `variants/m1-mt6835/`。当前轮腿使用 `Debug-dual-leg`；`Debug/Release` 为保留的单电机M1兼容构建，配置默认值集中于 `cmake/foc-defaults.cmake`。
 
-## 配置与模块
+| 模块 | 文件 | 职责 |
+|---|---|---|
+| 双路硬件 | `dual/hardware.c` | TIM1/TIM8、ADC、SPI1/SPI3、门极、采样时序 |
+| 双路应用 | `dual/app.c` | 成对命令、预检提交、主机超时、遥测和停机快照 |
+| 关节坐标 | `dual/leg_guard.c`、`leg_reference_config.h` | 7∶1圈数、近零恢复、行程/速度与限流 |
+| 五连杆 | `dual/fivebar.c`、`fivebar_motion.c`、`fivebar_point.c` | 正逆解、雅可比、C²轨迹和动态约束 |
+| 保存 | `dual/record.c`、`foot_record.h` | 两路电气与几何标定、共享Flash兼容和校验 |
+| 共用电流环 | `App/FOC/foc.c` | Clarke/Park、Id/Iq PI、SVPWM、校准与保护 |
+| 共用外环 | `App/Control/control.c` | 1 kHz反馈、轨迹速度前馈、重力积分、连续阻尼 |
+| 单电机维护 | `App/Control/app.c`、`sensor_cal.c`、`motor_ident.c`、`anticogging.c` | 单路命令、扫描、R/L整定、抗齿槽 |
 
-`FOC_PORT` 选择功率接口及 PWM/ADC 路径；`FOC_ENCODER` 选择磁编协议；`FOC_MOTOR` 和 `FOC_LOAD_PROFILE` 选择电机/负载参数；`FOC_INSTALLATION_ID` 标记磁铁、编码器与相线的装配实例。M0/M1 只是功率接口。
-
-| 模块 | 主要文件 | 职责 |
-| --- | --- | --- |
-| 硬件接口 | `foc_port.h`、`bsp_motor.c`、`bsp_adc*.c` | PWM/ADC、周期统计、采样窗口、功率关断 |
-| 磁编 | `foc_encoder_profile.h`、`bsp_encoder_*.c`、`spi.c` | TLE5012B/MT6835 协议和有效角度 |
-| 电机配置 | `foc_motor.h`、`foc_profile.h` | 型号/负载参数、组合限值、Flash 身份 |
-| 电流环 | `foc.c` | 角度与电流变换、PI、Ld/Lq 前馈、SVPWM、状态机 |
-| 外环 | `control.c` | 速度 PI、位置轨迹、目标保持和采集 PID |
-| 自动适配 | `sensor_cal.c`、`motor_ident.c` | 极对数/零点/方向、R/L 辨识和候选验证 |
-| 抗齿槽 | `anticogging.c` | 720 点 Iq 前馈、安装绑定和速度退出 |
-| 应用 | `app.c`、`telemetry.h` | 命令事务、遥测、告警和保存调度 |
-
-M0 为 TIM1/10 kHz，ADC1 顺序采样或可选双 ADC；M1/TLE5012B 为 TIM8/双 ADC DMA/10 kHz，M1/MT6835 为 20 kHz。TLE5012B 同步 SPI 完成后进入采样函数，MT6835 由 SPI DMA 完成回调进入。普通外环 1 kHz，抗齿槽静态学习按采样频率执行。频率选择以 `foc_port.h` 为准。
-
-## 调度与保存
+`dual/foc0.c`、`foc1.c`等薄封装通过 `alias0.h/alias1.h` 实例化共用状态机，避免复制两套算法。双路编译排除不可调用的裸轴抗齿槽采集，不再实例化两份表和采集状态；单电机的抗齿槽功能保留。
 
 ```mermaid
 flowchart LR
-    ADC[固定相位 ADC] --> ENC[读取磁编]
-    ENC --> FOC[角度更新与电流环]
-    FOC --> PWM[下一周期 PWM 预装载]
-    PWM --> OUT[外环 / 采集 PID]
-    OUT --> LOG[遥测窗口与分频]
-    CMD[主循环命令解析] --> FOC
-    CMD --> OUT
-    CMD --> FLASH[停机 Flash 保存]
+  ADC[10 kHz采样] --> ENC[双磁编CRC与角度]
+  ENC --> FOC[两路电流环和PWM]
+  FOC --> OUT[错相1 kHz外环]
+  OUT --> GUARD[保护与成对命令提交]
+  MAIN[主循环USB/UART] --> PLAN[200 Hz轨迹与预检]
+  PLAN --> GUARD
+  MAIN --> UI[50 Hz模型与遥测]
+  MAIN --> SAVE[停机后Flash保存]
 ```
 
-角度由整数圈数加瞬时机械角重建，外环位置通过原点差计算，抗齿槽表直接索引瞬时角度。电流参数保持 SI 单位，离散 PI 系数在参数事务时缓存。主循环修改运行状态和参数使用短中断临界区；Flash 擦写前关闭功率输出并暂停采集，恢复后不把暂停时间当作一个控制周期。
+轨迹与遥测使用非活动缓冲构建，提交仅切换索引和少量状态。中断锁恢复调用前PRIMASK；长几何计算不在锁内。清理版移除临时阶段计时和临界区定位统计，保留中断总耗时、ADC/PWM故障原因以及 `send 7` 停机快照。
 
-Flash sector 11：角度校准记录在 +0，电流参数在 +64，抗齿槽表在 +128。校准支持现行 v4 与兼容的 v3；参数和补偿分别检查版本、安装身份、角度绑定及校验码。上电只做静止电流零偏估计，不自动旋转；有效表恢复后保持关闭。具体命令与 ABI 见[自动适配](motor-autotune.md)和[抗齿槽](anticogging.md)。
+控制参数集中在 `dual/leg_config.h`，保护与减速比在 `leg_guard.h`。保持FOC10 kHz、外环1 kHz、轨迹200 Hz、遥测50 Hz、10 A指令和180 RPM保护。绝对电流比例、减速器齿隙、真实杆件位置和任意横向碰撞约束仍需实物验证。
 
-USB `send 6` 是 24 float 的单电机总览；其余兼容组有两个头字和十个载荷，`send 7/8/9` 分别用于 R/L、磁编扫描、抗齿槽。UART 共用命令解析，CAN 当前只有底层收发队列，没有电机控制协议。
+Flash ABI、校验和身份绑定未改变。双路记录兼容单路历史区域；禁止通过删除旧结构定义来压缩保存格式。最新实测仍对应清理前已验证固件，见[报告](fast-reversal-fix-20261016.md)；清理后的构建只做离线回归，不自动烧录或启动机构。
 
-构建和主机回归能验证算法及配置组合，ADC/SPI 最坏时序、绝对电流比例与机械负载表现仍需对应实物测量。历史文档按当时的固件与安装解释；本次整理范围和优化顺序见[清理记录](code-cleanup-2026-10-10.md)。
+## 清理验证
+
+删除115个过时文档、数据、旧界面/运动脚本和重复生成包，约7.01 MB；保留原始机械边界、当前几何、最新通过数据和本机配置备份。VOFA生成物统一忽略，不再复制控件源码入库。
+
+ARM双路构建通过，45项C配置、7套Python及VOFA离线交互回归通过。双路RAM从52704降至45336字节（减少7368），Flash从135188降至131420字节（减少3768）；CCM链接区域仍为固定64 KB，不以该保留区域大小推断运行时负载。控制参数、几何默认值、机械基准和Flash实现文件哈希未变。临时计时移除后的实际中断耗时尚未重新上板测量。

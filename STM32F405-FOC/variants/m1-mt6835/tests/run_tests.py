@@ -78,7 +78,7 @@ def main():
                     'FOC_PROTECTION_TRIP=1', 'LEG_REFERENCE_RAW_M0=18.0f', 'LEG_REFERENCE_RAW_M1=350.0f',
                     'FIVEBAR_ZERO_M0_CCW=20.0f', 'FIVEBAR_ZERO_M1_CCW=160.0f', 'FIVEBAR_ZERO_CALIBRATED=0'],
         ['tests/test_dual_leg.c', 'dual/app.c', 'dual/leg_guard.c', 'dual/fivebar.c', 'dual/fivebar_motion.c', 'dual/fivebar_point.c'] +
-        [f'dual/{unit}{i}.c' for unit in ['foc', 'control', 'ident', 'sensor', 'cog'] for i in [0, 1]],
+        [f'dual/{unit}{i}.c' for unit in ['foc', 'control', 'ident', 'sensor'] for i in [0, 1]],
         ['dual', 'tests/dual_stubs'])
     add('dual_record', ['FOC_DUAL', 'FOC_DUAL_LEG', 'FOC_PORT_M0', 'FOC_ENCODER_TLE5012B', 'FOC_MOTOR_L4225_6S420_A', 'FOC_LOAD_FREE_SHAFT', 'FOC_INSTALLATION_ID=5'], ['tests/test_dual_record.c', 'dual/record.c', 'dual/fivebar.c'], ['tests/flash_stubs', 'dual'])
     add('fivebar', ['FIVEBAR_ZERO_M0_CCW=20.0f', 'FIVEBAR_ZERO_M1_CCW=160.0f', 'FIVEBAR_ZERO_CALIBRATED=0'], ['tests/test_fivebar.c', 'dual/fivebar.c', 'dual/fivebar_motion.c', 'dual/fivebar_point.c'], ['dual'])

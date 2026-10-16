@@ -53,40 +53,10 @@ static volatile unsigned ui_result;
 static bool foot_cal_bad_pose;
 static unsigned home_failure_result;
 static unsigned foot_commit_failure;
-volatile uint32_t foot_plan_ms_last, foot_plan_ms_max;
-volatile uint32_t dual_sample_stage_cycles[7], dual_sample_stage_peak[7];
-volatile uint32_t dual_critical_cycles_max, dual_critical_site;
-#if defined(__arm__) || defined(__thumb__)
-#define APP_LOCK()                                                             \
-  __disable_irq();                                                             \
-  uint32_t lock_started = DWT->CYCCNT;                                         \
-  bool lock_running = foc_0.state == FOC_RUN || foc_1.state == FOC_RUN
-#define APP_RELOCK()                                                           \
-  __disable_irq();                                                             \
-  lock_started = DWT->CYCCNT;                                                  \
-  lock_running = foc_0.state == FOC_RUN || foc_1.state == FOC_RUN
-#define APP_UNLOCK(key)                                                        \
-  do {                                                                         \
-    uint32_t cost = DWT->CYCCNT - lock_started;                                \
-    if (lock_running && cost > dual_critical_cycles_max) {                     \
-      dual_critical_cycles_max = cost;                                         \
-      dual_critical_site = __LINE__;                                           \
-    }                                                                          \
-    __set_PRIMASK(key);                                                        \
-  } while (0)
-#else
+/* All publication locks restore the caller's interrupt mask. */
 #define APP_LOCK() __disable_irq()
 #define APP_RELOCK() __disable_irq()
 #define APP_UNLOCK(key) __set_PRIMASK(key)
-#endif
-#if defined(__arm__) || defined(__thumb__)
-#define SAMPLE_BEGIN uint32_t sample_started = DWT->CYCCNT
-#define SAMPLE_MARK(n)                                                         \
-  (dual_sample_stage_cycles[n] = DWT->CYCCNT - sample_started)
-#else
-#define SAMPLE_BEGIN
-#define SAMPLE_MARK(n) ((void)0)
-#endif
 /* Widget feedback codes: accepted, fault, home, geometry, offset, stop,
  * range/model, format, moving, electrical calibration, wrong home, saving. */
 static fb_geometry_t foot_drive_geometry(void) {
@@ -498,16 +468,16 @@ static void telemetry(float bus) {
 void DUAL_REALTIME dual_app_sample(void) {
   if (acquisition_halted)
     return;
-  SAMPLE_BEGIN;
+
   dual_adc_t a0, a1;
   float angles[2], bus;
   if (!dual_hw_read_adc(&a0, &a1)) {
     app_abort(FOC_ADC);
     return;
   }
-  SAMPLE_MARK(0);
+
   dual_hw_encoder_pair(angles);
-  SAMPLE_MARK(1);
+
   if (!dual_hw_read_bus(&bus)) {
     app_abort(FOC_ADC);
     return;
@@ -530,11 +500,11 @@ void DUAL_REALTIME dual_app_sample(void) {
   if (!leg_teach_state() && !dual_fault) {
     if (!publish(0, &foc_0, &a0, angles[1]))
       return;
-    SAMPLE_MARK(2);
+
     if (!publish(1, &foc_1, &a1, angles[0]))
       return;
   }
-  SAMPLE_MARK(3);
+
   uint32_t f0 = leg_observe(0, angles[1], motor_sample_us_0);
   uint32_t f1 = leg_observe(1, angles[0], motor_sample_us_0);
   if (f0 || f1) {
@@ -559,14 +529,14 @@ void DUAL_REALTIME dual_app_sample(void) {
   }
   if (!post_protect(0, &foc_0) || !post_protect(1, &foc_1))
     return;
-  SAMPLE_MARK(4);
+
   foc_outer_step_0();
   foc_outer_step_1();
-  SAMPLE_MARK(5);
+
   current_profile(0, &foc_0);
   current_profile(1, &foc_1);
   apply_command();
-  SAMPLE_MARK(6);
+
   ++dual_sequence;
 }
 static bool number(const char *s, float *v) {
@@ -844,9 +814,7 @@ static bool plan_position(float goal[2], bool hold,
                                        &candidate, &service);
   if (foot_status != FB_OK)
     return false;
-  foot_plan_ms_last = (uint32_t)(bsp_uart_millis() - now);
-  if (foot_plan_ms_last > foot_plan_ms_max)
-    foot_plan_ms_max = foot_plan_ms_last;
+  uint32_t plan_ms = (uint32_t)(bsp_uart_millis() - now);
   /* Evaluate readiness without masking acquisition; faults/stops change
    * the epoch and are checked again in the short atomic publication. */
   bool positions_ready = can_position(&foc_0) && can_position(&foc_1);
@@ -864,7 +832,7 @@ static bool plan_position(float goal[2], bool hold,
   bool ok = epoch == foot_epoch && (!pending || own_pending) && !dual_fault &&
             calibrating < 0 && positions_ready && fresh;
   if (!ok)
-    foot_commit_failure = foot_plan_ms_last >= 100u ? 18u : 12u;
+    foot_commit_failure = plan_ms >= 100u ? 18u : 12u;
   if (ok) {
     if (own_pending)
       pending = false;

@@ -48,7 +48,7 @@ ZH3620-1 是 14 磁极，即 **7 极对**。转子机械转一圈，电角度转
 | `rpm 30` | 速度 PI 每 1 ms 比较目标与实际转速，计算 Iq 目标 |
 | `pos 15` | 位置 P 根据距离计算速度目标，考虑最高接近速度和刹车距离；速度 PI 再产生 Iq 目标 |
 
-带臂默认速度 PI `Kp=0.18`、`Ki=0.48`，速度目标变化率 4500 rpm/s；位置 P 为 `12 rpm/°`，位置加速/刹车 4000/3200 rpm/s，接近速度上限 150 rpm。裸轴的惯量和稳定性不同，需选 `FOC_LOAD_PROFILE=FREE_SHAFT`；不能把 M0/M1 当负载档案。带臂的定位到位、超调和电流代价见[最新实测](../../../docs/position-speedup-and-foc-roadmap-2026-09-28.md)。
+带臂默认速度 PI `Kp=0.18`、`Ki=0.48`，速度目标变化率 4500 rpm/s；位置 P 为 `12 rpm/°`，位置加速/刹车 4000/3200 rpm/s，接近速度上限 150 rpm。裸轴的惯量和稳定性不同，需选 `FOC_LOAD_PROFILE=FREE_SHAFT`；不能把 M0/M1 当负载档案。带臂的定位到位、超调和电流代价见[最新实测](../../../docs/current-sampling-noise.md)。
 
 命令通过原生 USB CDC 或 USART2 收到，必须以实际换行结束。默认 `WARN` 下单次目标持续有效；即使拔掉 USB 也不会自动停机。`stop` 关闭输出；`Iq 0` 只是零转矩目标，`rpm 0` 和 `pos 0` 仍在闭环。`clear` 清告警，不关闭输出。语法、VOFA 连接和通道表见[VOFA 指南](../../../docs/vofa-quickstart.md)。
 

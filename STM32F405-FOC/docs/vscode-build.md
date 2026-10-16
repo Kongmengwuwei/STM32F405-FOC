@@ -1,6 +1,6 @@
 # 在 VS Code 构建并烧录默认固件
 
-**龙邱分支更新：本机默认构建/烧录/F5 已改为 M1 / TLE5012B / L4225_6S420_A / 安装 4 / FREE_SHAFT / WARN。ELF 为 `STM32F405-FOC/build/longqiu/Debug/STM32F405-FOC.elf`。** 接线、配置输出和首次校准以[龙邱首测说明](longqiu-first-test.md)为准。当前调参、自动适配和抗齿槽说明见工程首页。
+**龙邱分支更新：本机默认构建/烧录/F5 已改为 M1 / TLE5012B / L4225_6S420_A / 安装 4 / FREE_SHAFT / WARN。ELF 为 `STM32F405-FOC/build/longqiu/Debug/STM32F405-FOC.elf`。** 接线、配置输出和首次校准以[龙邱首测说明](unified-firmware.md)为准。当前调参、自动适配和抗齿槽说明见工程首页。
 
 这里的默认固件是 **M1 功率接口 + TLE5012B + L4225-6S420-A + 安装编号 4**。工作区目录是 `D:\STM32F405-FOC`，固件的 CMake 工程在其下的 `STM32F405-FOC/`。本机已配置 `Debug-local` 预设及 STM32CubeIDE 的 ARM 工具链。
 

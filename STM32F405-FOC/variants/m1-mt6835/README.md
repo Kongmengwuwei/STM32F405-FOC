@@ -21,4 +21,4 @@ TLE5012B 使用原 SPI3/PA0；M1 使用 TIM8 和 PC3/PC2 电流采样，M0 使�
 
 双路轮腿的足端位置接口、主动杆零偏标定和离线可达域工具见[五连杆足端控制](../../docs/fivebar-foot-control.md)。
 
-日常使用[VOFA轮腿按钮面板](../../docs/wheel-leg-quickstart.md)：回零、滑块/足端目标和机内标定保存，不需要手动发送保持循环。
+当前双路轮腿从根目录使用 `Debug-dual-leg`；日常使用[VOFA轮腿面板](../../docs/wheel-leg-quickstart.md)恢复当前位置、设置关节/足端目标和保存几何，不需要手动发送保持循环。上面的默认预设说明仅适用于保留的单电机构建。

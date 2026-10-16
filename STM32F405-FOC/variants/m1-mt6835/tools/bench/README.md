@@ -1,252 +1,42 @@
-# tools：电机测试数据系统
+# 主机工具
 
-`autotune.py` 支持当前配置的双次停机 R/L 辨识、离散模型 PI 计算、阶跃验收和保存；默认只读。`--apply` 自动进行短时正反 0.2 A 电流验收，失败 `tune rollback`；`--save` 也先验收，再写 Flash。`--validate` 只验收现有 PI，会短暂转动自由轴。运行前断开 VOFA，退出 stop/send 6。当前电流验收器用于本分支的 **10 kHz / USB divider=2** 构建。研究方案和实测见[ODrive/VESC 对照与改进](../../../../docs/longqiu-autotune-improvement-2026-10-10.md)。
+从工程根目录运行下列命令。Python依赖numpy、pyserial；运动学工具另需主机GCC，绘图需matplotlib。实机串口与VOFA不能同时占用，退出运动会关闭输出，需支撑机械腿。工具默认查询；只有明确运动选项才驱动。
 
-再次换电机的安装 4 实测：修正为最近 60° 均衡辨识方向后，3 A 扫描 / 1.5 A R/L 的完整流程、保存与复位加载通过；速度外环试验仍被主机边界中止。见[安装 4 记录](../../../../docs/motor-installation4-autotune-2026-10-10.md)。
-
-`--commission` 先执行约 28 s 的极对数/磁编方向/电角度零点扫描并应用到 RAM，再自动完成 R/L 辨识与 PI 应用；加 `--save` 才保存整组结果。磁编固定为当前 TLE5012B，SPI 接口不变。`--cal-current` 独立指定扫描电流，`--current` 指定 R/L 电流，均为 0.2～3 A；不会自动增加陌生电机的电流上限。换回 ZH3620-1 后已在 12 V 空载通过整链路；使用 2 A 扫描与 3 A R/L 注入，仍可能因回程/拟合质量拒绝。详见[ZH3620 实测](../../../../docs/zh3620-autotune-2026-10-10.md)与[极对数/磁编方案](../../../../docs/motor-sensor-autocal.md)。
+## 当前双路轮腿
 
 ```powershell
-python tools/bench/autotune.py --identify --apply --save --out build/autotune
+# 只读检查：不会启动、回零或清故障
+python variants/m1-mt6835/tools/bench/restore_position_probe.py
+
+# 人工确认两轴在原上止点向内0°～40°、静止支撑后恢复位置
+python variants/m1-mt6835/tools/bench/restore_position_probe.py --restore
+
+# 使用当前实测几何离线解算，不访问电机
+python variants/m1-mt6835/tools/bench/fivebar_tool.py --config docs/data/fivebar-current-geometry-20261016.json ik 0 160
+
+# 只读板端状态和几何
+python variants/m1-mt6835/tools/bench/foot_vertical_probe.py
 ```
 
-`longqiu_dynamic.py` 用于 12 V 空载龙邱的**连续**阶跃反向；每段之间保持闭环。输出 `.npy` 与 JSON，从设备目标变化和时间戳计算 T90，速度使用 20 ms 尾随平均，到位要求误差带内保持 100 ms。每目标 0.5–2 s，独立总时限和退出发送 stop，检查母线、转速、d/q 电流与目标电流边界；结束恢复 `send 6`。先断开 VOFA，示例从 variant 目录运行：
+`fivebar_tool.py` 提供 `ik/fk/workspace/export/move`；`move` 会持续发送目标并驱动，`export`只读取标定。详见[足端接口](../../../../docs/fivebar-foot-control.md)。`leg_teach.py` 仅用于重新记录物理边界，日常恢复不需要示教。
 
-```powershell
-python tools/bench/longqiu_dynamic.py --kind speed --targets 60 300 -300 0 300 -300 --dwell 1.2 --max-rpm 450 --max-current 4 --out build/dynamic
-```
+`foot_vertical_probe.py --drive --max-rpm 120` 从支撑好的合法姿态小幅起步，再验证x=0、y100～200的10/45/60/90/120 RPM与途中反向。它读取板端当前几何，按每路自身参考监督，不假设两轴等角；不会重启、回零、清故障或修改标定。必须先确认机构起始姿态、到该路径及全路径机械净空。失败立即stop，保存CSV和首次故障快照，并读取门极模式验证双路关闭。默认输出在忽略目录 `build/dual-leg/wheel-leg-ui/`。
 
-当前参数与全部指标见[2026-10-10 动态响应](../../../../docs/longqiu-dynamic-response-2026-10-10.md)。以下 `longqiu_probe.py`、`longqiu_tune.py` 保留首次小幅测试边界，没有随固件限幅自动放宽。
+已删除固定旧几何、旧同步假设和旧回零流程的重复试验脚本。日常操作优先[VOFA轮腿面板](../../../../docs/wheel-leg-quickstart.md)，最新实测见[报告](../../../../docs/fast-reversal-fix-20261016.md)。
 
+`send 7`为24个JustFloat通道、末通道5007：故障、时间ms、q0/q1、FOC转速0/1、外环转速0/1、Iq0/1、Iq参考0/1、关节参考0/1、足端目标x/y、位置控制目标0/1、独立速度RMS0/1、母线、状态位、采样计数、5007。状态位1=圈数有效、2=足端所有权、4=关节终点、8=初始化成功。stop不覆盖首次故障快照；它不等于独立的预触发峰值采集。
 
-龙邱 M1/TLE5012B / 12 V 空载调试工具：`longqiu_probe.py` 用于待机、校准及小电流检查；`longqiu_tune.py` 用于短时速度/位置对比。依赖 pyserial/numpy，运行前断开 VOFA。每目标最多 5 s、命令限 ±60 rpm/deg，检查母线、电流、速度和位置边界，每段结束及退出发送 stop 并检查 PWM 关闭；不能替代硬件保护。位置测试会在待机发送 zero。示例（从 variant 目录）：
+## 保留的单电机工具
 
-```powershell
-python tools/bench/longqiu_tune.py --stage speed --targets 10 -10 30 -30 --seconds 3 --out build/longqiu-speed
-python tools/bench/longqiu_tune.py --stage position --targets 1 -1 10 -10 30 -30 0 --seconds 3 --out build/longqiu-position
-```
+以下使用单路固件协议；不能直接用于已装车的双路轮腿。
 
-除固件速度统计外，工具从位置采样计算独立的 20 ms 速度，避免仅改变显示滤波就判为纹波改善。定位稳定时间要求进入 ±0.5° 后至少持续 0.25 s。本次参数和实测见[龙邱控制调试](../../../../docs/longqiu-control-tuning-2026-10-09.md)。
-
-本工具集的 `bench.py` 与 `frames.f32` 使用兼容遥测组 `send 0`～`send 5`，每帧 52 字节。**固件上电默认 `send 6` 是 24 通道、100 字节/帧，M0 为 2.5 kHz**；需要看全部目标/实际值时使用[VOFA 总览](../../../../docs/vofa-quickstart.md)，不要用下文 52 字节解析器直接解析总览。工具会按所需组号向固件发送 `send X`。
-
-电流环的最新带载比较见[电流采样与调参](../../../../docs/current-sampling-noise.md)，当前 ZH3620-1 Kp=0.20、Ki=192/s。`current_probe.py` 的参数只是记录已烧录的增益；切组时会先排空旧帧，再检查序号连续性。
-
-新增 `overview_probe.py --port COM8 --out build/overview`：先断开 VOFA 串口，在约 12 V 空载条件下验证组 6 的转速、位置、电流目标与实际值；退出会发送 `stop` 并排空接收。该工具有自己的实验边界检查，不修改固件保护策略。[VOFA 总览说明](../../../../docs/vofa-quickstart.md)记录了显示修正、实测数据和仍存在的问题。
-
-**当前策略（2026-09-27）：** 固件默认 WARN，各型号均取消目标范围拒绝、通信超时关断和阈值跳闸，`send 4` 为数值诊断组。下文旧限幅与看门狗描述对应 TRIP/历史版本；详见[台架告警模式](../../../../docs/bench-warning-mode.md)。主机 `bench.py run` 的参考电机工况库和自有 `--iq-limit/--rpm-limit/--pos-limit` 检查独立于固件，不用于默认 ZH3620-1 的 VOFA 手动电流测试。
-
-本目录保存**主机端工具**。固件接口与命令见 [App/README.md](../../App/README.md)，
-主机回归测试见 [tests/README.md](../../tests/README.md)，硬件接线见
-[硬件映射](../../../../docs/hardware-map.md)。
-
-## bench/：一键电机台架
-
-从仓库根目录用 `download/bench.cmd`，或直接调用 Python：
-
-```sh
-download\bench.cmd list                 # 列出串口，FOC 板前有 * 标记
-download\bench.cmd discover             # 探活：帧率、字节率、帧尾校验、连续性
-download\bench.cmd run --dry-run        # 只打印工况清单与预估时长，不发命令
-download\bench.cmd run                  # 全量工况（需 --yes 或交互确认）
-download\bench.cmd run --mode speed --groups 3 --per-cel 5
-download\bench.cmd report %TEMP%\foc_bench\<时间戳>
-download\bench.cmd chain  %TEMP%\foc_bench\<时间戳> step_pos_360
-```
-
-`run` 默认写入 `%TEMP%\foc_bench\<时间戳>\`（可用 `--out` 改）。每个
-`(工况, 日志组)` 一个压缩包：`<工况>_g<组>_r<重复>.zip`，内含
-
-| 文件 | 内容 |
+| 工具 | 用途 |
 |---|---|
-| `meta.json` | 工况名、模式、组号、目标值、命令时间线、抖动、限制、git 版本、列名 |
-| `frames.f32` | 原始帧流，**每帧 12 个小端 float32 + 4 字节帧尾 = 52 字节** |
+| `autotune.py`、`current_acceptance.py` | R/L辨识、PI候选验收和保存；[操作](../../../../docs/motor-autotune.md) |
+| `anticogging.py` | 裸轴抗齿槽采集/对比；[说明](../../../../docs/anticogging.md) |
+| `longqiu_dynamic.py`、`longqiu_probe.py`、`longqiu_tune.py` | 龙邱单路小幅和连续反向 |
+| `current_probe.py`、`response_probe.py`、`overview_probe.py`、`outer_probe.py` | 电流、外环和24通道总览采集 |
+| `loaded_arm_probe.py`、`analyze_loaded_arm.py` | 旧塑料臂工况的采集和离线分析，需对应单路配置 |
+| `bench.py`、`benchlib.py`、`selftest.py` | 12通道兼容帧、归档、离线解析自检 |
 
-`frames.f32` 可直接用 numpy 读：
-
-```python
-import numpy as np, json, zipfile
-with zipfile.ZipFile("step_pos_360_g3_r0.zip") as z:
-    meta = json.loads(z.read("meta.json"))
-    data = np.frombuffer(z.read("frames.f32"), dtype="<f4").reshape(-1, 13)[:, :12]
-```
-
-或让库代劳（解压到临时目录并给出连续性统计）：
-
-```python
-import sys; sys.path.insert(0, "tools/bench")  # 从固件根目录运行
-import benchlib
-table, meta = benchlib.load(r"...\step_pos_360_g3_r0.zip")
-print(meta["continuity"])
-```
-
-## 当前帧格式（控制频率与 USB 帧率独立）
-
-`send X` 选择遥测组。USB 默认 1000000/8N1/DTR，divider=2；M0 电流环 10 kHz、USB 5 kHz/260 kB/s，M1 电流环 20 kHz、USB 10 kHz/520 kB/s。每帧 **12 个小端 float32 + 帧尾 `00 00 80 7F` = 52 字节**。控制频率不因遥测分频改变。
-
-| 下标 | 内容 |
-|---|---|
-| 0 | 低 24 位 = `t_u24`（TIM5 微秒，16.78 s 回绕）；高 8 位 = 状态字：bit0..2 状态、bit3..6 故障、bit7 为 PWM 已开启 |
-| 1 | 低 24 位 = `seq`（按电流环频率计数）；高 8 位 = 日志组号 |
-| 2..11 | 该组的 10 个数据通道（见下表） |
-
-**时间与丢帧**：`t_u24` 与 `seq` 是权威采样身份，与组号无关；组号切换不重置它们。
-相邻帧应满足 `seq` 差 divider，时间差为 `1e6*divider/sample_hz` µs，入口抖动容许 ±5 µs。默认 M0 为差 2 / 200 µs，M1 为差 2 / 100 µs。`seq` 仍计数全部控制周期，回绕时间 M0 27.96 min、M1 13.98 min。
-新归档写入 `sample_hz`、`usb_divider`，`benchlib.load()` 据此检验丢帧；缺少这些字段的历史包按 M1 20 kHz/divider=1 读取。`run` 工况仍针对参考电机，默认 sample_hz=20000/divider=2，不要直接对 ZH3620-1 执行。 `discover` 的速率是按帧头推算值，均匀丢帧仍可能误导推算；严格校验需给出构建参数。
-
-状态字：状态 `0..7` = IDLE/PRECHARGE/CALIBRATE/SAVE/RUN/FAULT/OFFSET/PWM_ZERO；
-故障 `0..14` = OK/SENSOR/ADC/TIMING/WINDOW/ALIGNMENT/FLASH/UART/BUS/ZERO/CURRENT/SPEED/POSITION/NUMERIC/VOLTAGE；
-bit7=1 表示 PWM 已开启；OFF/PRECHARGE 由状态区分。
-
-### 原四组通道（第 4 组诊断另见下表）
-
-| 下标 | 组 0 raw | 组 1 current | 组 2 voltage | 组 3 control |
-|---|---|---|---|---|
-| 2 | `adc_raw_b` | `ib` A | `ud` V | `iq_ref` A |
-| 3 | `adc_raw_c` | `ic` A | `uq` V | `iq_ref_cmd` A |
-| 4 | `adc_raw_bus` | `elec_deg` ° | `ccr_a` | `pos_deg` ° |
-| 5 | `v_b` V | `iq_ref` A | `ccr_b` | `pos_tgt` ° |
-| 6 | `v_c` V | `integral_d` V | `ccr_c` | `rpm` |
-| 7 | `v_bus` V | `integral_q` V | `duty_a` | `rpm_encoder` |
-| 8 | `angle_raw_deg` ° | `ud` V | `duty_b` | `rpm_tgt` |
-| 9 | `sample_us` | `uq` V | `duty_c` | `iq` A |
-| 10 | `bus_v_nominal` V | `b_offset` V | `edge_limit_v` V | `mode` |
-| 11 | `b_offset` V | `c_offset` V | `vec_limit_v` V | `bus_v` V |
-
-| 下标 | 组 4 diagnostics |
-|---|---|
-| 2 / 3 | `iq_ref` / `iq_ref_cmd` A |
-| 4 / 5 | 告警位掩码 / 最近新增告警编号 |
-| 6 / 7 | 普通数值状态 / `rpm_encoder` |
-| 8 / 9 | 拒绝命令累计数 / 实际 `iq` A |
-| 10 / 11 | 当前停止原因（0=无） / 母线 V |
-
-- **组 0**：ADC 原始码值与编码器**未修正**角度（二阶谐波补偿前的真值）。
-  原始码值不是为了标定增益（软件无法自标定），而是把标定自由度留到将来：
-  一旦有电流探头或已知负载，可以用同一批历史数据重算，不必重做实验。
-  换算（`App/Hardware/bsp/bsp_adc.c`）：`v_b = adc_raw_b * 3.3/4095`，
-  `v_bus = adc_raw_bus * (3.3/4095) * (41.2/2.2)`，
-  `i = (v - offset) * 50`（标称，未标定）。
-- **组 1**：PI 积分器与输出是电流环内部状态，主机无法从别处反算。
-- **组 2**：`ccr_*` 是本周期实际生效的量化值（uint16 精确），电压余量对应
-  `foc_modulate` 的采样窗口上限与 `Vbus/√3` 线性上限。
-- **组 3**：`pos_deg`/`rpm` 是编码器 Ground Truth，进入无感 FOC 后仍然采集，
-  用于与估计角度/速度对比。`mode`：0=Torque、1=Speed、2=Position。
-
-同一工况在 4 个组上分别跑，`chain` 按每段采集开始后的样本序号并列导出宽表 CSV。
-各次运行的全局 `seq` 不相同，这种并列仅供重复性比较，**不能视作同一物理瞬间**；
-目前组 0 的电流与组 2 的 PWM 不同时采集，尚不能做严格的逐样本无感 FOC 回放。
-
-## 命令
-
-| 命令 | 含义 |
-|---|---|
-| `Iq <A>` | Torque 模式，目标 Iq，±5 A、最多两位小数 |
-| `rpm <v>` | Speed 模式，目标转速，±9400 RPM |
-| `pos <deg>` | Position 模式，**绝对**多圈机械角度，±1e6° |
-| `zero` | 把当前位置定义为 0°（需停机且静止） |
-| `stop` | 立即关断 |
-| `clear` | 清已消失的故障，不自动启动 |
-| `cal` | 停机重校准 |
-| `send X` | 切换日志组，X = 0..5；默认 M0 5 kHz、M1 10 kHz（不改变电机状态） |
-| `hello` | **仅 UART** 回 `#FOC 1.1 <状态字>`；不发到 USB 二进制流，避免破坏分帧 |
-
-三条模式命令**命令即切模式**，不需要额外的 mode 命令。速度环/位置环是 1 kHz
-外环，最终输出 Iq 参考，底层仍是现有 20 kHz Id/Iq 电流环。
-
-默认 WARN 单次目标保持，超时只记告警，Iq 无斜坡；TRIP 才保留看门狗、限制和斜坡。历史工况脚本仍用 100 ms 重发及参考电机幅值，只适合已验证的对应台架。当前 ZH3620-1 使用下面的小电流工具。
-
-### 电流环短测
-
-```sh
-python tools/bench/current_probe.py COM8 --out build/bench_debug/current --label trial --steps --kp 0.20 --ki 24
-```
-
-`--steps` 明确启用运动；省略时仅记录待机。工具预先 stop、检查待机母线与数据，依次发送 ±0.05/0.10/0.20 A 的短阶跃，每轮最后 stop，异常退出也尝试 stop；不发 cal/rpm/pos，不改固件限制。`--kp/--ki` 仅记载已烧录参数，不在线修改。默认 USB divider=2；全速对照固件对应 `--usb-divider 1`。`--repeat 1` 可减少重复。
-
-`.f32` 保存精确原帧，JSON 保存命令时间、状态、连续性和统计。计时使用帧头，不用主机到达间隔；稳态窗口剔除阶跃后 30 ms。组 5 的原始记录在 divider=2 下已是两点窗口平均，不能称为未滤波 10 kHz 电流。
-
-### 第 5 组电流窗口
-
-| 通道 | 内容 |
-|---|---|
-| I2 / I3 | 最新 Iq 目标 / 命令 |
-| I4 | 窗口平均 Id |
-| I5 / I6 | 窗口平均 Ud / Uq |
-| I7 | 窗口平均转速 |
-| I8 | 窗口最小实际/请求电压比例，1=未饱和；停机为 0 |
-| I9 | 窗口平均 Iq，沿用电流图绑定 |
-| I10 / I11 | 累计告警 / 窗口平均母线 |
-
-窗口在目标或状态边沿清空，最多包含 divider 次连续采样；时间戳取末端，命令取最新值。divider=1 是单样本原值。组 0–4 仍取末端单样本；组 5 的平均仅用于记录，电流 PI 没有加反馈滤波。平均不能证明物理纹波变小，也不是完整抗混叠滤波器。
-
-## 安全性
-
-- 主机侧默认 `--iq-limit 0.4 A`、`--rpm-limit 1000`、`--pos-limit 1200°`，
-  超限的工况在**发命令之前**就会被拒绝并打印 `SKIP`。
-- 每个 (工况, 组) 采集结束后立刻检查归档：出现故障帧或配置帧率下连续性丢失即
-  终止整轮，不静默重试。
-- 每次切换工况前执行固定前置序列（`stop` → 静置 → 位置模式 `zero`），
-  保证同一工况跨组、跨重复的输入一致。
-- 电机**无负载**固定台架；母线允许范围与电机额定范围不同，扩大幅值前先确认供电。
-
-## 分析配方
-
-- **电流/速度/位置闭环**：用组 3 的 `iq_ref_cmd`/`rpm_tgt`/`pos_tgt` 与
-  `rpm`/`pos_deg` 算跟随误差、超调、静差、低速纹波。
-- **Rs/Ld/Lq/磁链辨识**：组 0 的 `adc_raw_b/c/bus` + 组 1 的 `elec_deg`、
-  `ud/uq`、组 2 的 `duty_*`；先在 `send 0` 下用静止注入或低速旋转取样。
-- **机械参数（负载/惯量/摩擦）**：`send 0` 下施加已知 `Iq` 阶跃，用组 0 的
-  未修正角度差分得快照速度，拟合加速段斜率。
-- **无感 FOC 离线回放**：组 0（Vbus、原始电流码、真实角度）+ 组 2（实际施加的
-  `duty`/`ccr`）足以在 PC 上重放电压与电流；组 3 提供目标轨迹与 Ground Truth 转速。
-- **角度估计对比**：任何估计器都用组 0 的 `angle_raw_deg` 与组 3 的 `pos_deg`/
-  `rpm` 作基准，注意前者是补偿前的真值。
-
-未标定项：相电流绝对精度与增益、编码器内部测量延迟、`FOC_EDGE_LIMIT` 隐含的
-模拟建立时间。不要把这些数字当成已标定事实。
-
-## 外环快速响应实验
-
-`response_probe.py` 在 COM8 上重复速度反向和位置换目标，保存每批原始 `.f32` 与 JSON。仅在已完成校准、确认负载可自由双向旋转且供电条件符合实验范围时使用；退出或越过主机实验边界会发送 stop。参数支持 `--kind speed/position/both`、`--repeat`、`--dwell`、`--rpm`、`--deg`、`--max-iq-ref`、`--max-position`。后两个只是 PC 实验中止边界，不改变固件限制。例如：
-
-```sh
-python tools/bench/response_probe.py --label response --out build/response --kind position --repeat 2 --dwell 0.4 --deg 15
-```
-
-时间从遥测目标变化计算，不从电脑写串口时间计算；位置要求 ±0.5° 连续保持 100 ms。短等待期间末值统计只取最后四分之一，避免把运动过程算成稳态。最新塑料臂带载参数、完整指标及同固件空载复测协议见[带载快速响应记录](../../../../docs/loaded-arm-fast-tuning-2026-09-28.md)。
-
-## 解析器自检
-
-不接硬件也可以验证解析器：
-
-```sh
-python tools/bench/selftest.py
-```
-
-覆盖帧字节往返、拆分/粘连读取、错位重同步、丢帧检测、损坏拒绝、通道表、
-归档往返与工况限值校验。
-
-抗齿槽采集与开关对比使用 `anticogging.py`，完整方案、采集边界和 VOFA 命令见[抗齿槽说明](../../../../docs/anticogging.md)。
-
-双路轮腿使用 `dual_leg.py`，支持只读预检、受限校准、成对关节目标、连续序列和失联验收。协议、减速比和临时运动范围见[双路轮腿指南](../../../../docs/dual-leg.md)，使用前断开 VOFA 串口并支撑机构。
-
-
-当前 0°～110° 关节程序使用 `workspace_leg.py`：先在用户确认的可靠边界执行 `--home`，仅同步递进，默认5 A，试验目标2°～108°；阶段间持续刷新，最后选择下方目标再停机。旧 `dual_leg.py` 的 ±2° 原点/200 ms试验CLI仅供历史流程，其 `Link` 类继续作为共享USB读取器。
-
-历史关节轨迹曾验证推荐45电机RPM（38.57关节度/秒），指令电流最大10 A、硬过流11 A。`--rates` 对应各目标在线切换速度；没有重启/采样失效时，不传 `--home` 从合法当前姿态继续。`--clear` 仅在人工恢复支撑姿态后显式清除有效基准的UART/速度故障；不会清采样故障或自动重定义零位。`--converge-start` 以10 RPM先向两路当前均值收敛，初始差超过5°时只允许小于7°且不能继续扩大，完成后恢复5°监督阈值。默认原验收0.5°均值/0.15°标准差，推荐6秒档用于观察；动作时间另报最后离开±0.5°的名义帧计时。失败保存 `failed-stage.npy` 和 `failure-diag.npy`，不自动清故障。
-
-旧关节轨迹60 RPM曾触发超速；现已由公共预检轨迹替代，最新10～120 RPM分级通过。完整数据和当前参数见[轮腿位置控制指南](../../../../docs/dual-leg-workspace.md)。
-
-
-2026-10-15快速版：`leg_native_speed_probe.py` 同时验证公共规划器的关节/足端接口，默认只读；人工确认车模架起、支撑且为原上止点后使用 `--drive --home`。若普通止点读数不匹配且操作者明确确认物理上止点，可附加 `--confirm-stop`（仅与 `--home`配合，禁止任意姿态使用）。同次上电连续跟踪有效、当前两路处于2～108°且差值<3°时，使用 `--drive` 从当前位置开始。工具预先离线生成足端坐标，运动时不编译DLL；每50ms刷新，异常立即stop，不自动清故障。24段10/45/60/90/120 RPM、途中反向与107↔20°通过，最终停止已确认，详见[快速实测](../../../../docs/fivebar-fast-response-20261015.md)。
-
-`fivebar_speed_probe.py` 是前一轮纯足端分级工具；`workspace_leg.py` 保留历史验收，不能用旧45 RPM报告代表新版本。两者均需显式 `--drive` 才运动，工具的模型可达并不证明任意横向路径无机械碰撞。
-
-
-2026-10-16：日常VOFA改用近零位 `leg restore`，不再要求严格贴止点，也不把当前位置置零。`restore_position_probe.py` 默认只读；仅在操作者确认两路均在原上止点向内0°～40°并支撑静止后使用 `--restore`。该工具只发送查询与恢复，不会启动电机；校验非零角度恢复、重复操作不改零位、采样继续和双桥保持关闭。其JSON允许恢复前未定义的FK以null记录。旧运动工具的 `--home` 仍为原维护语义，禁止在任意姿态执行；运动测试应优先不传 `--home` 使用已有效、合法的位置跟踪。详见[日常操作](../../../../docs/wheel-leg-quickstart.md)。
-
-
-`foot_vertical_probe.py` 从当前板端读取几何，针对操作者确认过的 x=0、y=100～200 mm 路径，先小幅、低速，再逐级45/60/90/120 RPM，并检查运动中反向。默认只读，显式 `--drive` 才运动；不会回零、重启、清故障或修改标定。要求有效圈数、两路起始0～108°且机构已支撑；起始姿态及到x=0路径必须由操作者确认可行。按各自规划参考监督，不沿用旧工具的 q0=q1 假设；当前标定下 x=0 两路角度相差约7.81°。失败立即停止并保存CSV及 `send 7` 故障快照。
-
-新增只读 `send 7`：24个JustFloat通道、末通道5007，首次故障时锁存，stop不覆盖；通道依次为故障、时间ms、q0/q1、FOC转速0/1、外环转速0/1、Iq0/1、Iq参考0/1、关节参考0/1、足端目标x/y、位置控制目标0/1、独立1ms位移速度RMS0/1、母线、状态位、采样计数、5007。状态位1=圈数有效、2=轨迹所有权、4=关节终点模式、8=初始化成功。若单轴已先跳闸，一部分参考可能已清除；这是应用层停机快照，不代表独立预触发峰值采集。
+单路兼容组0～5为12个float加帧尾（52字节）；单路总览组6和双路组为24个float加帧尾（100字节），不能混用解析器。采样周期和遥测分频应以对应构建配置为准。通道定义见[单路总览](../../../../docs/vofa-quickstart.md)，主机测试入口见[测试说明](../../tests/README.md)。

@@ -262,10 +262,7 @@ void ADC_IRQHandler(void)
   uint32_t started=DWT->CYCCNT;
   dual_app_sample();
   uint32_t cost=DWT->CYCCNT-started;
-  if(cost>dual_irq_cycles_max) {
-    dual_irq_cycles_max=cost;
-    for(unsigned n=0;n<7;n++) dual_sample_stage_peak[n]=dual_sample_stage_cycles[n];
-  }
+  if(cost>dual_irq_cycles_max) dual_irq_cycles_max=cost;
   return;
 #else
 #ifdef FOC_PORT_M0

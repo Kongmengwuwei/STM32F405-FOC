@@ -51,5 +51,4 @@ unsigned dual_hw_mode(unsigned);
 extern volatile uint32_t dual_write_counter_min[2];
 extern volatile uint32_t dual_irq_cycles_max;
 void dual_app_sample(void);
-extern volatile uint32_t dual_sample_stage_cycles[7], dual_sample_stage_peak[7];
 #endif

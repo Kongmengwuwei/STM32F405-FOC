@@ -1,8 +1,8 @@
 # 台架告警模式：电流命令持续有效，越限只记录
 
-龙邱分支例外：L4225-6S420-A 新增独立运行电压矢量上限，WARN/TRIP 都限制为母线的 10%（12 V 时 1.2 V）。速度/位置外环输出与积分另限 ±2 A，WARN 下也执行。直接 Iq 命令、转速诊断和超时策略仍按本文 WARN 行为。旧电机保持原电压策略，详见[龙邱首测说明](longqiu-first-test.md)。
+龙邱分支例外：L4225-6S420-A 新增独立运行电压矢量上限，WARN/TRIP 都限制为母线的 10%（12 V 时 1.2 V）。速度/位置外环输出与积分另限 ±2 A，WARN 下也执行。直接 Iq 命令、转速诊断和超时策略仍按本文 WARN 行为。旧电机保持原电压策略，详见[龙邱首测说明](unified-firmware.md)。
 
-默认 `FOC_PROTECTION=WARN`，适用于所有接口、编码器和电机组合。电流采样结果见[电流采样与调参](current-sampling-noise.md)，最新外环行为见[带臂定位提速](position-speedup-and-foc-roadmap-2026-09-28.md)。
+默认 `FOC_PROTECTION=WARN`，适用于所有接口、编码器和电机组合。电流采样结果见[电流采样与调参](current-sampling-noise.md)，最新外环行为见[带臂定位提速](current-sampling-noise.md)。
 
 ## 1. 修改后的行为
 
